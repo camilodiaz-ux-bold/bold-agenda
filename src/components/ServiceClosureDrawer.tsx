@@ -1,0 +1,349 @@
+import { useState } from 'react';
+import { CheckCircle2, UserX, CalendarClock, CreditCard, Smartphone, Link2, Check } from 'lucide-react';
+import type { Appointment, Professional, Service, PaymentMethod } from '../types';
+import { formatCOP, formatDuration } from '../data/appointments';
+
+interface Props {
+  appointment: Appointment;
+  professional: Professional;
+  service: Service;
+  onClose: () => void;
+  onComplete: (result: ClosureResult) => void;
+}
+
+export interface ClosureResult {
+  appointmentId: string;
+  outcome: 'completada' | 'no-show' | 'reprogramar';
+  tip: number;
+  paymentMethod?: PaymentMethod;
+}
+
+type Step = 'outcome' | 'payment' | 'noshow-confirm' | 'done';
+type Outcome = 'completada' | 'no-show' | 'reprogramar';
+type TipPreset = 0 | 5 | 10 | 'custom';
+
+const PAYMENT_OPTIONS: { method: PaymentMethod; label: string; Icon: React.ComponentType<{ size: number; color: string; strokeWidth: number }> }[] = [
+  { method: 'datafono', label: 'Datáfono', Icon: CreditCard },
+  { method: 'qr', label: 'QR Pago', Icon: Smartphone },
+  { method: 'link', label: 'Link de pago', Icon: Link2 },
+];
+
+function calcTip(basePrice: number, preset: TipPreset, customAmount: string): number {
+  if (preset === 0) return 0;
+  if (preset === 'custom') return parseInt(customAmount.replace(/\D/g, ''), 10) || 0;
+  return Math.round(basePrice * (preset / 100));
+}
+
+export function ServiceClosureDrawer({ appointment, professional, service, onClose, onComplete }: Props) {
+  const [step, setStep] = useState<Step>(
+    appointment.paymentStatus === 'pagado-anticipado' ? 'outcome' : 'outcome'
+  );
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [tipPreset, setTipPreset] = useState<TipPreset>(0);
+  const [customTip, setCustomTip] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+
+  const isPrepaid = appointment.paymentStatus === 'pagado-anticipado';
+  const tipAmount = calcTip(service.price, tipPreset, customTip);
+  const total = service.price + tipAmount;
+
+  function handleOutcomeSelect(o: Outcome) {
+    setOutcome(o);
+    if (o === 'no-show') {
+      setStep('noshow-confirm');
+    } else if (o === 'reprogramar') {
+      // Reprogramar is out of scope for this slice — surface the hint
+      setStep('noshow-confirm');
+    } else {
+      setStep('payment');
+    }
+  }
+
+  function handleConfirmClosure() {
+    onComplete({
+      appointmentId: appointment.id,
+      outcome: outcome as 'completada' | 'no-show',
+      tip: tipAmount,
+      paymentMethod: paymentMethod ?? undefined,
+    });
+    setStep('done');
+  }
+
+  // ── Step: Outcome ──────────────────────────────────────────────────────
+  if (step === 'outcome') {
+    return (
+      <div className="px-5 pb-8 flex flex-col gap-4">
+        {/* Service summary */}
+        <div className="bg-[#f7f8fb] rounded-xl px-3 py-3 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-[#1e1e1e]">{appointment.clientName}</p>
+            <p className="text-xs text-[#969696] mt-0.5">{service.name} · {formatDuration(service.duration)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-bold text-[#121e6c] tabular-nums">{formatCOP(service.price)}</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: professional.color }} />
+              <p className="text-[11px] text-[#969696]">{professional.name.split(' ')[0]}</p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-sm font-bold text-[#121e6c]">¿Cómo terminó la cita?</p>
+
+        {/* Option: Completado */}
+        <button
+          onClick={() => handleOutcomeSelect('completada')}
+          className="w-full flex items-center gap-3 bg-white border-2 border-gray-100 rounded-2xl px-4 py-4 text-left transition-all active:border-[#E8194B] active:bg-[#FFF1F2]"
+        >
+          <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center shrink-0">
+            <CheckCircle2 size={20} color="#15803D" strokeWidth={2} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-[#1e1e1e]">Completada</p>
+            <p className="text-xs text-[#969696] mt-0.5">El servicio se realizó correctamente</p>
+          </div>
+        </button>
+
+        {/* Option: No llegó */}
+        <button
+          onClick={() => handleOutcomeSelect('no-show')}
+          className="w-full flex items-center gap-3 bg-white border-2 border-gray-100 rounded-2xl px-4 py-4 text-left transition-all active:border-[#BE123C] active:bg-[#FFF1F2]"
+        >
+          <div className="w-10 h-10 rounded-full bg-[#FFF1F2] flex items-center justify-center shrink-0">
+            <UserX size={20} color="#BE123C" strokeWidth={2} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-[#1e1e1e]">El cliente no llegó</p>
+            <p className="text-xs text-[#969696] mt-0.5">Se aplicará la política de cancelación</p>
+          </div>
+        </button>
+
+        {/* Link: Reprogramar */}
+        <button
+          onClick={() => handleOutcomeSelect('reprogramar')}
+          className="w-full flex items-center justify-center gap-2 text-sm text-[#606060] py-2 transition-opacity active:opacity-60"
+        >
+          <CalendarClock size={16} color="#606060" strokeWidth={2} />
+          ¿La cita se movió? Reprogramar para otro día
+        </button>
+      </div>
+    );
+  }
+
+  // ── Step: No-show confirm ──────────────────────────────────────────────
+  if (step === 'noshow-confirm') {
+    const isReschedule = outcome === 'reprogramar';
+    return (
+      <div className="px-5 pb-8 flex flex-col gap-4">
+        <div
+          className="rounded-2xl p-4 flex flex-col gap-2"
+          style={{ backgroundColor: isReschedule ? '#EFF6FF' : '#FFF1F2' }}
+        >
+          <p className="text-sm font-bold" style={{ color: isReschedule ? '#1D4ED8' : '#BE123C' }}>
+            {isReschedule ? 'Reprogramar cita' : 'Registrar no-show'}
+          </p>
+          {isReschedule ? (
+            <p className="text-xs text-[#606060] leading-relaxed">
+              La edición y reprogramación de citas estará disponible en la próxima versión del prototipo.
+              Por ahora marca la cita como completada o no-show.
+            </p>
+          ) : (
+            <p className="text-xs text-[#606060] leading-relaxed">
+              Se registrará que {appointment.clientName} no se presentó.
+              {isPrepaid
+                ? ' Según la política de cancelación, se retiene el valor prepagado.'
+                : ' No se generará cobro.'}
+            </p>
+          )}
+        </div>
+
+        {!isReschedule && (
+          <button
+            onClick={handleConfirmClosure}
+            className="w-full h-12 rounded-full font-bold text-sm text-white flex items-center justify-center transition-all active:scale-[0.98]"
+            style={{ backgroundColor: '#BE123C' }}
+          >
+            <UserX size={18} color="white" strokeWidth={2} className="mr-2" />
+            Confirmar no-show
+          </button>
+        )}
+
+        <button
+          onClick={() => setStep('outcome')}
+          className="w-full h-12 rounded-full font-semibold text-sm text-[#121e6c] border border-[#d2d4e1] bg-white flex items-center justify-center transition-all active:scale-[0.98]"
+        >
+          Volver
+        </button>
+      </div>
+    );
+  }
+
+  // ── Step: Payment ──────────────────────────────────────────────────────
+  if (step === 'payment') {
+    return (
+      <div className="px-5 pb-8 flex flex-col gap-5">
+        {/* Price summary */}
+        <div className="bg-[#f7f8fb] rounded-xl px-4 py-3 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-[#606060]">{service.name}</span>
+            <span className="text-sm font-semibold text-[#1e1e1e] tabular-nums">{formatCOP(service.price)}</span>
+          </div>
+          {tipAmount > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#606060]">Propina</span>
+              <span className="text-sm font-semibold text-[#15803D] tabular-nums">+ {formatCOP(tipAmount)}</span>
+            </div>
+          )}
+          <div className="h-px bg-gray-200" />
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-[#121e6c]">Total</span>
+            <span className="text-base font-bold text-[#121e6c] tabular-nums">{formatCOP(total)}</span>
+          </div>
+        </div>
+
+        {/* Tip selector */}
+        {!isPrepaid && (
+          <div>
+            <p className="text-xs font-bold text-[#969696] uppercase tracking-wider mb-2">Propina</p>
+            <div className="flex gap-2">
+              {([0, 5, 10, 'custom'] as TipPreset[]).map(preset => {
+                const isActive = tipPreset === preset;
+                return (
+                  <button
+                    key={String(preset)}
+                    onClick={() => setTipPreset(preset)}
+                    className="flex-1 h-9 rounded-full text-xs font-semibold border transition-all active:opacity-70"
+                    style={{
+                      backgroundColor: isActive ? '#121e6c' : '#fff',
+                      color: isActive ? '#fff' : '#606060',
+                      borderColor: isActive ? '#121e6c' : '#d2d4e1',
+                    }}
+                  >
+                    {preset === 0 ? 'Sin propina' : preset === 'custom' ? 'Otra' : `${preset}%`}
+                  </button>
+                );
+              })}
+            </div>
+            {tipPreset === 'custom' && (
+              <input
+                type="number"
+                placeholder="Ingresa el monto"
+                value={customTip}
+                onChange={e => setCustomTip(e.target.value)}
+                className="mt-2 w-full h-10 rounded-xl bg-[#f7f8fb] border border-[#d2d4e1] px-3 text-sm text-[#1e1e1e] outline-none focus:border-[#121e6c]"
+              />
+            )}
+          </div>
+        )}
+
+        {isPrepaid ? (
+          /* Prepaid confirmation */
+          <div className="bg-[#F0FDF4] rounded-xl px-4 py-3 flex items-center gap-3">
+            <CheckCircle2 size={18} color="#15803D" strokeWidth={2} />
+            <p className="text-sm text-[#15803D] font-semibold">
+              Este servicio ya fue prepagado por {formatCOP(service.price)}.
+            </p>
+          </div>
+        ) : (
+          /* Payment method */
+          <div>
+            <p className="text-xs font-bold text-[#969696] uppercase tracking-wider mb-2">Método de pago</p>
+            <div className="flex flex-col gap-2">
+              {PAYMENT_OPTIONS.map(({ method, label, Icon }) => {
+                const isActive = paymentMethod === method;
+                return (
+                  <button
+                    key={method}
+                    onClick={() => setPaymentMethod(method)}
+                    className="w-full flex items-center gap-3 border-2 rounded-2xl px-4 py-3 text-left transition-all active:opacity-70"
+                    style={{
+                      borderColor: isActive ? '#121e6c' : '#e5e7eb',
+                      backgroundColor: isActive ? '#f7f8fb' : '#fff',
+                    }}
+                  >
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: isActive ? '#121e6c' : '#f3f3f3' }}
+                    >
+                      <Icon size={18} color={isActive ? '#fff' : '#606060'} strokeWidth={2} />
+                    </div>
+                    <span
+                      className="text-sm font-semibold"
+                      style={{ color: isActive ? '#121e6c' : '#1e1e1e' }}
+                    >
+                      {label}
+                    </span>
+                    {isActive && (
+                      <Check size={16} color="#121e6c" strokeWidth={2.5} className="ml-auto" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* CTA */}
+        <button
+          onClick={handleConfirmClosure}
+          disabled={!isPrepaid && !paymentMethod}
+          className="w-full h-14 rounded-full font-bold text-base text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
+          style={{ backgroundColor: '#E8194B' }}
+        >
+          <CheckCircle2 size={20} color="white" strokeWidth={2.5} />
+          {isPrepaid ? 'Confirmar servicio' : `Cobrar ${formatCOP(total)}`}
+        </button>
+      </div>
+    );
+  }
+
+  // ── Step: Done ─────────────────────────────────────────────────────────
+  if (step === 'done') {
+    const isNoShow = outcome === 'no-show';
+    return (
+      <div className="px-5 pb-8 pt-4 flex flex-col items-center gap-4 text-center">
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: isNoShow ? '#FFF1F2' : '#F0FDF4' }}
+        >
+          {isNoShow
+            ? <UserX size={28} color="#BE123C" strokeWidth={2} />
+            : <CheckCircle2 size={28} color="#15803D" strokeWidth={2} />
+          }
+        </div>
+
+        <div>
+          <p className="text-base font-bold text-[#121e6c]">
+            {isNoShow ? 'No-show registrado' : 'Servicio cerrado'}
+          </p>
+          <p className="text-sm text-[#606060] mt-1 leading-relaxed">
+            {isNoShow
+              ? `Se registró que ${appointment.clientName} no se presentó.`
+              : isPrepaid
+                ? `Servicio de ${appointment.clientName} confirmado. Pago ya recibido.`
+                : `${formatCOP(total)} cobrado a ${appointment.clientName}. Comisión calculada.`
+            }
+          </p>
+        </div>
+
+        {!isNoShow && tipAmount > 0 && (
+          <div className="bg-[#F0FDF4] rounded-xl px-4 py-2.5 w-full text-left">
+            <p className="text-xs text-[#15803D] font-semibold">
+              Propina {formatCOP(tipAmount)} no incluida en la comisión
+            </p>
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          className="w-full h-12 rounded-full font-bold text-sm text-white mt-2 transition-all active:scale-[0.98]"
+          style={{ backgroundColor: '#121e6c' }}
+        >
+          Volver a la agenda
+        </button>
+      </div>
+    );
+  }
+
+  return null;
+}

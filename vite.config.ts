@@ -3,6 +3,6 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/cobro-productos-servicios/',
+  base: '/bold-agenda/',
   plugins: [react(), tailwindcss()],
 })
