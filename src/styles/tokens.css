@@ -1,0 +1,67 @@
+/* Merlin Design System v1.6.6 — Tokens
+   Fuente: docs/MERLIN-SYSTEM.md
+   Primario Bold: #ff2947 */
+
+:root {
+  /* ── Brand Blue ── */
+  --blue-hover: #091144;
+  --blue-100: #121e6c;
+  --blue-80: #1f2a74;
+  --blue-60: #3e4983;
+  --blue-50: #6c759f;
+  --blue-40: #969bbd;
+  --blue-30: #babdd3;
+  --blue-20: #d2d4e1;
+  --blue-10: #f1f2f6;
+
+  /* ── Coral / CTA ── */
+  --coral-hover: #e4102e;
+  --coral-100: #ff2947;
+  --coral-60: #ffb2bc;
+  --coral-30: #ffdfe4;
+  --coral-10: #fef1f3;
+
+  /* ── Neutrals ── */
+  --black-100: #1e1e1e;
+  --black-60: #606060;
+  --black-40: #969696;
+  --black-10: #f3f3f3;
+  --black-0: #ffffff;
+
+  /* ── Background ── */
+  --background-page: #f7f8fb;
+
+  /* ── Feedback ── */
+  --error-150: #910022;
+  --error-10: #fbf3f5;
+  --warning-100: #ffc217;
+  --warning-10: #fff3d1;
+  --success-150: #1b8959;
+  --success-100: #6cdcab;
+  --success-10: #f4fdf9;
+  --info-150: #0a53a5;
+  --info-10: #f1f9ff;
+
+  /* ── Tipografía ── */
+  --font-family: 'Montserrat', sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ── Border radius ── */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-pill: 32px;
+  --radius-full: 100px;
+
+  /* ── Sombras ── */
+  --shadow-2: 0px 4px 12px 0px rgba(18, 30, 108, 0.08);
+  --shadow-4: 0px 4px 16px 0px rgba(18, 30, 108, 0.08);
+  --shadow-8: 0px 8px 20px 0px rgba(18, 30, 108, 0.08);
+}
+
+/* Familia base para todo el prototipo */
+html {
+  font-family: var(--font-family);
+}

@@ -1,0 +1,24 @@
+@font-face { font-family: "Montserrat:Light";   src: local("Montserrat Light"),   local("Montserrat"); font-weight: 300; font-style: normal; }
+@font-face { font-family: "Montserrat:Regular"; src: local("Montserrat Regular"), local("Montserrat"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Montserrat:Medium";  src: local("Montserrat Medium"),  local("Montserrat"); font-weight: 500; font-style: normal; }
+@font-face { font-family: "Montserrat:Semibold";src: local("Montserrat SemiBold"),local("Montserrat"); font-weight: 600; font-style: normal; }
+@font-face { font-family: "Montserrat:SemiBold";src: local("Montserrat SemiBold"),local("Montserrat"); font-weight: 600; font-style: normal; }
+@font-face { font-family: "Montserrat:Bold";    src: local("Montserrat Bold"),    local("Montserrat"); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Roboto:Regular";     src: local("Roboto Regular"),     local("Roboto");     font-weight: 400; font-style: normal; }
+@font-face { font-family: "Roboto:SemiBold";    src: local("Roboto SemiBold"),    local("Roboto");     font-weight: 600; font-style: normal; }
+
+/*
+  Failsafe: Tailwind's arbitrary font-family utilities (e.g. font-['Montserrat:Bold',sans-serif])
+  generate rules AFTER this file in the cascade, so they override the @font-face aliases above.
+  These attribute-selector rules force the correct Montserrat weight on any element whose
+  class attribute contains the Figma-exported font variant string.
+  !important ensures they beat Tailwind's specificity-equal generated rules.
+*/
+[class*="Montserrat:Light"]   { font-family: 'Montserrat', sans-serif !important; font-weight: 300 !important; }
+[class*="Montserrat:Regular"] { font-family: 'Montserrat', sans-serif !important; font-weight: 400 !important; }
+[class*="Montserrat:Medium"]  { font-family: 'Montserrat', sans-serif !important; font-weight: 500 !important; }
+[class*="Montserrat:Semibold"]{ font-family: 'Montserrat', sans-serif !important; font-weight: 600 !important; }
+[class*="Montserrat:SemiBold"]{ font-family: 'Montserrat', sans-serif !important; font-weight: 600 !important; }
+[class*="Montserrat:Bold"]    { font-family: 'Montserrat', sans-serif !important; font-weight: 700 !important; }
+[class*="Roboto:Regular"]     { font-family: 'Roboto', sans-serif !important;     font-weight: 400 !important; }
+[class*="Roboto:SemiBold"]    { font-family: 'Roboto', sans-serif !important;     font-weight: 600 !important; }

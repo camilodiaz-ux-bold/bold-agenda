@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@import "./styles/tokens.css";
+@import "./styles/fonts.css";
+@import "./styles/theme.css";
+
+/* ── Responsive phone frame ───────────────────────────────────────────────── */
+
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+#root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Desktop: centrar la app dentro de un marco tipo teléfono */
+@media (min-width: 768px) {
+  html, body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #e5e7eb;
+    overflow: auto;
+  }
+
+  #root {
+    width: 390px;
+    height: 844px;
+    border-radius: 40px;
+    box-shadow:
+      0 32px 64px rgba(0, 0, 0, 0.22),
+      0 8px 24px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+}
