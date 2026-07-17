@@ -60,9 +60,9 @@ export function AppointmentCard({ appointment, professional, service, onTap }: P
             <div className="flex items-center gap-1.5">
               <div
                 className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: professional.color }}
+                style={{ backgroundColor: '#e8eaf0' }}
               >
-                <span className="text-[8px] font-bold text-white leading-none">
+                <span className="text-[8px] font-bold leading-none" style={{ color: '#606060' }}>
                   {professional.initials.slice(0, 1)}
                 </span>
               </div>

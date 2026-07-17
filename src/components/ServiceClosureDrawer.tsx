@@ -78,10 +78,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
           </div>
           <div className="text-right">
             <p className="text-sm font-bold text-[#121e6c] tabular-nums">{formatCOP(service.price)}</p>
-            <div className="flex items-center gap-1 mt-0.5 justify-end">
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: professional.color }} />
-              <p className="text-[11px] text-[#969696]">{professional.name.split(' ')[0]}</p>
-            </div>
+            <p className="text-[11px] text-[#969696] mt-0.5">{professional.name.split(' ')[0]}</p>
           </div>
         </div>
 

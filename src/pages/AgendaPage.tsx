@@ -284,16 +284,19 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
                   onClick={() => setProfFilter(isActive ? 'all' : prof.id)}
                   className="flex items-center gap-1.5 rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
                   style={{
-                    backgroundColor: isActive ? prof.color : '#fff',
+                    backgroundColor: isActive ? '#121e6c' : '#fff',
                     color: isActive ? '#fff' : '#606060',
-                    borderColor: isActive ? prof.color : '#d2d4e1',
+                    borderColor: isActive ? '#121e6c' : '#d2d4e1',
                   }}
                 >
                   <div
                     className="w-4 h-4 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : prof.color }}
+                    style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : '#e8eaf0' }}
                   >
-                    <span className="text-[8px] font-bold text-white leading-none">
+                    <span
+                      className="text-[8px] font-bold leading-none"
+                      style={{ color: isActive ? '#fff' : '#606060' }}
+                    >
                       {prof.initials.slice(0, 1)}
                     </span>
                   </div>

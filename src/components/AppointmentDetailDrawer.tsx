@@ -52,11 +52,11 @@ export function AppointmentDetailDrawer({
       {/* ── Professional bar ───────────────────────── */}
       <div
         className="mx-5 mt-1 mb-5 rounded-xl px-3 py-2.5 flex items-center gap-3"
-        style={{ backgroundColor: `${professional.color}12` }}
+        style={{ backgroundColor: '#f0f1f5' }}
       >
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-          style={{ backgroundColor: professional.color }}
+          style={{ backgroundColor: '#121e6c' }}
         >
           <span className="text-sm font-bold text-white">{professional.initials}</span>
         </div>
