@@ -9,11 +9,12 @@ interface Props {
   service: Service;
   onClose: () => void;
   onComplete: (result: ClosureResult) => void;
+  onReschedule: () => void;
 }
 
 export interface ClosureResult {
   appointmentId: string;
-  outcome: 'completada' | 'no-show' | 'reprogramar';
+  outcome: 'completada' | 'no-show';
   tip: number;
   paymentMethod?: PaymentMethod;
 }
@@ -34,7 +35,7 @@ function calcTip(basePrice: number, preset: TipPreset, customAmount: string): nu
   return Math.round(basePrice * (preset / 100));
 }
 
-export function ServiceClosureDrawer({ appointment, professional, service, onClose, onComplete }: Props) {
+export function ServiceClosureDrawer({ appointment, professional, service, onClose, onComplete, onReschedule }: Props) {
   const [step, setStep] = useState<Step>('outcome');
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [tipPreset, setTipPreset] = useState<TipPreset>(0);
@@ -50,7 +51,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
     if (o === 'no-show') {
       setStep('noshow-confirm');
     } else if (o === 'reprogramar') {
-      setStep('noshow-confirm');
+      onReschedule();
     } else {
       setStep('payment');
     }
@@ -126,38 +127,27 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
 
   // ── Step: No-show confirm ──────────────────────────────────────────────
   if (step === 'noshow-confirm') {
-    const isReschedule = outcome === 'reprogramar';
     return (
       <div className="px-5 pb-6 flex flex-col gap-3">
-        {/* Warning — reduced red surface area */}
         <div className="rounded-2xl px-4 py-3 bg-[#f7f8fb]">
           <p className="text-sm font-bold text-[#1e1e1e] mb-1">
-            {isReschedule ? 'Reprogramar cita' : `${appointment.clientName} no se presentó`}
+            {appointment.clientName} no se presentó
           </p>
-          {isReschedule ? (
-            <p className="text-xs text-[#969696] leading-relaxed">
-              La edición y reprogramación de citas estará disponible en la próxima versión del prototipo.
-              Por ahora marca la cita como completada o no-show.
-            </p>
-          ) : (
-            <p className="text-xs text-[#969696] leading-relaxed">
-              {isPrepaid
-                ? 'Según la política de cancelación, se retiene el valor prepagado.'
-                : 'No se generará ningún cobro.'}
-            </p>
-          )}
+          <p className="text-xs text-[#969696] leading-relaxed">
+            {isPrepaid
+              ? 'El valor prepagado queda retenido según la política de cancelación del salón. Esta decisión debe confirmarse con la administración.'
+              : 'No se generará ningún cobro por esta cita.'}
+          </p>
         </div>
 
-        {!isReschedule && (
-          <button
-            onClick={handleConfirmClosure}
-            className="w-full h-12 rounded-full font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-            style={{ backgroundColor: '#BE123C' }}
-          >
-            <UserX size={17} color="white" strokeWidth={2} />
-            Confirmar no-show
-          </button>
-        )}
+        <button
+          onClick={handleConfirmClosure}
+          className="w-full h-12 rounded-full font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+          style={{ backgroundColor: '#BE123C' }}
+        >
+          <UserX size={17} color="white" strokeWidth={2} />
+          Confirmar no-show
+        </button>
 
         <button
           onClick={() => setStep('outcome')}

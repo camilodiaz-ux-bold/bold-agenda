@@ -1,16 +1,17 @@
 import { useState, useMemo, type ReactNode } from 'react';
-import { Bell, ChevronDown } from 'lucide-react';
+import { Bell, ChevronDown, Edit3 } from 'lucide-react';
 import {
   APPOINTMENTS,
   PROFESSIONALS,
   SERVICES,
+  INITIAL_SALE_RECORDS,
   formatCOP,
   formatDuration,
 } from '../data/appointments';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
-import type { Appointment, Professional, Service } from '../types';
+import type { Appointment, Professional, Service, SaleRecord } from '../types';
 
 interface Props {
   onOpenDrawer: (content: ReactNode, title?: string, height?: string) => void;
@@ -60,6 +61,8 @@ function minToTime(min: number): string {
 
 export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
   const [appointments, setAppointments] = useState<Appointment[]>(APPOINTMENTS);
+  // Slice 4 (Ventas) will read _salesRecords; declared here so closures populate it now
+  const [_salesRecords, setSalesRecords] = useState<SaleRecord[]>(INITIAL_SALE_RECORDS);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [profFilter, setProfFilter] = useState<string>('all');
   const [role, setRole] = useState<Role>('admin');
@@ -95,17 +98,71 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
   }, [appointments, selectedDate, role]);
 
   function updateAppointment(result: ClosureResult) {
+    const apt = appointments.find(a => a.id === result.appointmentId);
+    const svc = apt ? SERVICES.find(s => s.id === apt.serviceId) : null;
+    const prof = apt ? PROFESSIONALS.find(p => p.id === apt.professionalId) : null;
+
     setAppointments(prev =>
       prev.map(a => {
         if (a.id !== result.appointmentId) return a;
         return {
           ...a,
-          status: result.outcome === 'no-show' ? 'no-show' : result.outcome === 'reprogramar' ? 'reprogramada' : 'completada',
+          status: result.outcome === 'no-show' ? 'no-show' : 'completada',
           paymentStatus: result.paymentMethod ? 'pagado' : a.paymentStatus,
           paymentMethod: result.paymentMethod ?? a.paymentMethod,
           tip: result.tip > 0 ? result.tip : a.tip,
         };
       })
+    );
+
+    if (result.outcome === 'completada' && apt && svc && prof) {
+      const newSale: SaleRecord = {
+        id: `sr-${Date.now()}`,
+        appointmentId: result.appointmentId,
+        clientName: apt.clientName,
+        serviceId: svc.id,
+        professionalId: prof.id,
+        serviceValue: svc.price,
+        tip: result.tip,
+        total: svc.price + result.tip,
+        paymentMethod: result.paymentMethod ?? 'anticipado',
+        paymentStatus: result.paymentMethod ? 'pagado' : 'pagado-anticipado',
+        commission: Math.round(svc.price * prof.commissionRate),
+        completedAt: new Date().toISOString(),
+      };
+      setSalesRecords(prev => [...prev, newSale]);
+    }
+  }
+
+  function openEdit(apt: Appointment, svc: Service) {
+    onOpenDrawer(
+      <div className="px-5 pb-6 flex flex-col gap-4">
+        {/* Appointment context */}
+        <div className="bg-[#f7f8fb] rounded-xl px-3 py-2.5">
+          <p className="text-sm font-bold text-[#1e1e1e]">{apt.clientName}</p>
+          <p className="text-xs text-[#969696] mt-0.5">{svc.name} · {apt.date} · {apt.startTime}</p>
+        </div>
+        {/* Field previews — inactive, visual placeholder */}
+        <div className="flex flex-col gap-2">
+          {[
+            { label: 'Servicio', value: svc.name },
+            { label: 'Profesional', value: PROFESSIONALS.find(p => p.id === apt.professionalId)?.name.split(' ')[0] ?? '—' },
+            { label: 'Fecha', value: apt.date },
+            { label: 'Hora', value: apt.startTime },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between px-3 py-2.5 bg-white border border-[#e8eaf0] rounded-xl">
+              <span className="text-xs text-[#b0b5c8]">{label}</span>
+              <span className="text-sm font-semibold text-[#1e1e1e]">{value}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-center gap-2 py-4">
+          <Edit3 size={14} color="#b0b5c8" strokeWidth={2} />
+          <p className="text-xs text-[#b0b5c8]">Edición completa disponible en la próxima versión</p>
+        </div>
+      </div>,
+      'Editar cita',
+      '56%'
     );
   }
 
@@ -118,8 +175,9 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
         onClose={onCloseDrawer}
         onComplete={(result) => {
           updateAppointment(result);
-          // Keep drawer open to show "done" step — user taps "Volver a la agenda" to close
+          // Keep drawer open — "done" step shown; user closes with "Volver a la agenda"
         }}
+        onReschedule={() => openEdit(apt, svc)}
       />,
       'Cierre del servicio',
       '78%'
@@ -135,9 +193,7 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
         professional={prof}
         service={svc}
         onClosure={() => openClosure(apt, prof, svc)}
-        onEdit={() => {
-          // Wired in Slice 2
-        }}
+        onEdit={() => openEdit(apt, svc)}
         onViewClient={onCloseDrawer}
       />,
       undefined,

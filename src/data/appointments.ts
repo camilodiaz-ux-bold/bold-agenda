@@ -1,4 +1,4 @@
-import type { Professional, Service, Appointment, Client } from '../types';
+import type { Professional, Service, Appointment, Client, SaleRecord } from '../types';
 
 export const SALON = {
   name: 'Salón Camila',
@@ -296,6 +296,67 @@ export const SALES_HISTORY = [
   { id: 'v10', appointmentId: null, professionalId: 'p3', serviceId: 's5', date: '2026-07-12', amount: 38000, tip: 0, paymentMethod: 'qr' as const },
   { id: 'v11', appointmentId: null, professionalId: 'p2', serviceId: 's3', date: '2026-07-11', amount: 220000, tip: 0, paymentMethod: 'anticipado' as const },
   { id: 'v12', appointmentId: null, professionalId: 'p1', serviceId: 's2', date: '2026-07-10', amount: 30000, tip: 0, paymentMethod: 'datafono' as const },
+];
+
+// Seed sale records for the already-completed appointments in APPOINTMENTS.
+// Commission = serviceValue × commissionRate (rounded). Tip excluded from commission.
+export const INITIAL_SALE_RECORDS: SaleRecord[] = [
+  {
+    id: 'sr1',
+    appointmentId: 'a1',
+    clientName: 'Laura Jiménez',
+    serviceId: 's1',
+    professionalId: 'p1',
+    serviceValue: 45000,
+    tip: 5000,
+    total: 50000,
+    paymentMethod: 'datafono',
+    paymentStatus: 'pagado',
+    commission: 20250, // 45% of 45000
+    completedAt: '2026-07-16T09:00:00',
+  },
+  {
+    id: 'sr2',
+    appointmentId: 'a3',
+    clientName: 'Sofía Gómez',
+    serviceId: 's5',
+    professionalId: 'p3',
+    serviceValue: 38000,
+    tip: 0,
+    total: 38000,
+    paymentMethod: 'qr',
+    paymentStatus: 'pagado',
+    commission: 13300, // 35% of 38000
+    completedAt: '2026-07-16T10:00:00',
+  },
+  {
+    id: 'sr3',
+    appointmentId: 'a10',
+    clientName: 'Laura Jiménez',
+    serviceId: 's1',
+    professionalId: 'p1',
+    serviceValue: 45000,
+    tip: 3000,
+    total: 48000,
+    paymentMethod: 'datafono',
+    paymentStatus: 'pagado',
+    commission: 20250,
+    completedAt: '2026-07-15T10:00:00',
+  },
+  {
+    id: 'sr4',
+    appointmentId: 'a11',
+    clientName: 'Sofía Gómez',
+    serviceId: 's5',
+    professionalId: 'p3',
+    serviceValue: 38000,
+    tip: 5000,
+    total: 43000,
+    paymentMethod: 'qr',
+    paymentStatus: 'pagado',
+    commission: 13300,
+    completedAt: '2026-07-15T14:30:00',
+  },
 ];
 
 export function getProfessional(id: string) {

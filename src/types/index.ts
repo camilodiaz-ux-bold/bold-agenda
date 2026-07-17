@@ -82,3 +82,18 @@ export interface Client {
   preferredProfessionalId?: string;
   notes?: string;
 }
+
+export interface SaleRecord {
+  id: string;
+  appointmentId: string;
+  clientName: string;
+  serviceId: string;
+  professionalId: string;
+  serviceValue: number;
+  tip: number;
+  total: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  commission: number;
+  completedAt: string; // ISO datetime
+}
