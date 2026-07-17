@@ -45,17 +45,28 @@ export function OperatorShell() {
         <FAB
           onPress={() =>
             openDrawer(
-              <div className="px-5 py-8 flex flex-col items-center gap-3 text-center">
-                <div className="w-12 h-12 rounded-full bg-[#FFF1F2] flex items-center justify-center">
-                  <CalendarPlus size={22} color="#E8194B" strokeWidth={1.8} />
+              <div className="px-5 py-8 flex flex-col items-center gap-4 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#FFF1F2] flex items-center justify-center">
+                  <CalendarPlus size={26} color="#E8194B" strokeWidth={1.8} />
                 </div>
-                <p className="text-sm font-semibold text-[#121e6c]">Nueva cita</p>
-                <p className="text-xs text-[#969696] max-w-[200px]">
-                  El flujo completo de agendar una cita estará disponible en Slice 1.
-                </p>
+                <div>
+                  <p className="text-base font-bold text-[#121e6c]">Agendar nueva cita</p>
+                  <p className="text-xs text-[#969696] mt-1.5 max-w-[220px] leading-relaxed">
+                    Selecciona servicio, profesional, cliente y horario disponible.
+                  </p>
+                </div>
+                <div className="w-full bg-[#f7f8fb] rounded-2xl px-4 py-3 text-left flex flex-col gap-2">
+                  {['Servicio', 'Profesional', 'Cliente', 'Fecha y hora'].map(label => (
+                    <div key={label} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#d2d4e1]" />
+                      <span className="text-xs text-[#b0b5c8]">{label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-[#c0c4d3]">Disponible en la próxima versión</p>
               </div>,
               'Nueva cita',
-              '40%'
+              '52%'
             )
           }
         />

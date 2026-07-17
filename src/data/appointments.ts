@@ -42,7 +42,7 @@ export const SERVICES: Service[] = [
   { id: 's5', name: 'Manicure', duration: 45, price: 38000, requiresDeposit: false },
 ];
 
-// Today: 2026-07-16
+// Today: 2026-07-16 (Thursday). Wed 15 and Fri 17 also have appointments for a live week strip.
 export const APPOINTMENTS: Appointment[] = [
   {
     id: 'a1',
@@ -158,6 +158,63 @@ export const APPOINTMENTS: Appointment[] = [
     status: 'confirmada',
     paymentStatus: 'pagado-anticipado',
     paymentMethod: 'anticipado',
+  },
+
+  // Wednesday 2026-07-15 (yesterday)
+  {
+    id: 'a10',
+    professionalId: 'p1',
+    serviceId: 's1',
+    clientName: 'Laura Jiménez',
+    clientPhone: '3001234567',
+    clientCedula: '1023456789',
+    date: '2026-07-15',
+    startTime: '10:00',
+    status: 'completada',
+    paymentStatus: 'pagado',
+    paymentMethod: 'datafono',
+    tip: 3000,
+  },
+  {
+    id: 'a11',
+    professionalId: 'p3',
+    serviceId: 's5',
+    clientName: 'Sofía Gómez',
+    clientPhone: '3201122334',
+    clientCedula: '1098765432',
+    date: '2026-07-15',
+    startTime: '14:30',
+    status: 'completada',
+    paymentStatus: 'pagado',
+    paymentMethod: 'qr',
+    tip: 5000,
+  },
+
+  // Friday 2026-07-17 (tomorrow)
+  {
+    id: 'a12',
+    professionalId: 'p2',
+    serviceId: 's4',
+    clientName: 'María Torres',
+    clientPhone: '3109876543',
+    clientCedula: '52345678',
+    date: '2026-07-17',
+    startTime: '11:00',
+    status: 'confirmada',
+    paymentStatus: 'pendiente',
+  },
+  {
+    id: 'a13',
+    professionalId: 'p1',
+    serviceId: 's2',
+    clientName: 'Carlos Martínez',
+    clientPhone: '3182345678',
+    clientCedula: '80123456',
+    date: '2026-07-17',
+    startTime: '15:00',
+    status: 'confirmada',
+    paymentStatus: 'pendiente',
+    notes: 'Prefiere corte clásico, poco de los lados',
   },
 ];
 

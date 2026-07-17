@@ -5,6 +5,7 @@ import {
   PROFESSIONALS,
   SERVICES,
   formatCOP,
+  formatDuration,
 } from '../data/appointments';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
@@ -51,6 +52,10 @@ function formatDateHeader(dateStr: string): string {
 function timeToMin(t: string): number {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
+}
+
+function minToTime(min: number): string {
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 }
 
 export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
@@ -140,24 +145,49 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
     );
   }
 
-  // Inject "Ahora" indicator between appointments based on DEMO_NOW
+  // Build the agenda list: appointments interleaved with free-time gaps and the AHORA marker.
   const isToday = selectedDate === TODAY;
-  type ListItem = { type: 'appointment'; apt: Appointment } | { type: 'now' };
+  type ListItem =
+    | { type: 'appointment'; apt: Appointment }
+    | { type: 'now' }
+    | { type: 'gap'; fromTime: string; toTime: string; durationMin: number };
+
   const listItems = useMemo<ListItem[]>(() => {
-    if (!isToday || dayAppointments.length === 0) {
-      return dayAppointments.map(apt => ({ type: 'appointment', apt }));
-    }
-    const nowMin = timeToMin(DEMO_NOW);
+    if (dayAppointments.length === 0) return [];
+
+    const nowMin = isToday ? timeToMin(DEMO_NOW) : -1;
     const items: ListItem[] = [];
-    let inserted = false;
+    let maxEndMin = -1;
+    let nowInserted = !isToday;
+
     for (const apt of dayAppointments) {
-      if (!inserted && nowMin <= timeToMin(apt.startTime)) {
+      const svc = SERVICES.find(s => s.id === apt.serviceId)!;
+      const startMin = timeToMin(apt.startTime);
+      const endMin = startMin + svc.duration;
+
+      if (maxEndMin >= 0 && startMin - maxEndMin > 15) {
+        // Free block before this appointment — show it, then AHORA if it falls inside.
+        items.push({
+          type: 'gap',
+          fromTime: minToTime(maxEndMin),
+          toTime: minToTime(startMin),
+          durationMin: startMin - maxEndMin,
+        });
+        if (!nowInserted && nowMin >= maxEndMin && nowMin <= startMin) {
+          items.push({ type: 'now' });
+          nowInserted = true;
+        }
+      } else if (!nowInserted && nowMin >= 0 && nowMin <= startMin) {
+        // AHORA is right at or just before this appointment (gap ≤ 15 min).
         items.push({ type: 'now' });
-        inserted = true;
+        nowInserted = true;
       }
+
       items.push({ type: 'appointment', apt });
+      maxEndMin = maxEndMin < 0 ? endMin : Math.max(maxEndMin, endMin);
     }
-    if (!inserted) items.push({ type: 'now' });
+
+    if (!nowInserted) items.push({ type: 'now' });
     return items;
   }, [dayAppointments, isToday]);
 
@@ -304,6 +334,17 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
                   <span className="text-[10px] font-bold shrink-0 tracking-wide" style={{ color: '#E8194B' }}>
                     AHORA
                   </span>
+                </div>
+              );
+            }
+            if (item.type === 'gap') {
+              return (
+                <div key={`gap-${item.fromTime}`} className="flex items-center gap-3 py-0.5">
+                  <div className="flex-1 h-px" style={{ backgroundColor: '#e8eaf0' }} />
+                  <span className="text-[11px] font-medium shrink-0" style={{ color: '#b0b5c8' }}>
+                    libre {formatDuration(item.durationMin)}
+                  </span>
+                  <div className="flex-1 h-px" style={{ backgroundColor: '#e8eaf0' }} />
                 </div>
               );
             }

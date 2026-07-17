@@ -43,7 +43,6 @@ export function AppointmentDetailDrawer({
   const endTime = addMinutes(appointment.startTime, service.duration);
   const isCloseable = appointment.status === 'confirmada';
   const isEditable = appointment.status === 'confirmada' || appointment.status === 'reprogramada';
-  const isClosed = appointment.status === 'completada' || appointment.status === 'no-show';
 
   return (
     <div className="flex flex-col">
@@ -93,6 +92,30 @@ export function AppointmentDetailDrawer({
                 Pago anticipado
               </span>
             )}
+
+            {/* Commission — shown for all statuses except no-show */}
+            {appointment.status !== 'no-show' && (
+              <>
+                <div className="h-px bg-gray-200 mt-2.5 mb-2" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#606060]">
+                    {appointment.status === 'completada' ? 'Tu comisión' : 'Comisión estimada'}
+                    <span className="ml-1 text-[#b0b5c8]">({Math.round(professional.commissionRate * 100)}%)</span>
+                  </span>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: '#E8194B' }}>
+                    {formatCOP(Math.round(service.price * professional.commissionRate))}
+                  </span>
+                </div>
+                {appointment.tip != null && appointment.tip > 0 && (
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-xs text-[#606060]">Propina (100% tuya)</span>
+                    <span className="text-xs font-semibold text-[#15803D] tabular-nums">
+                      + {formatCOP(appointment.tip)}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -102,7 +125,9 @@ export function AppointmentDetailDrawer({
           <div className="bg-[#f7f8fb] rounded-xl px-3 py-3 flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5">
               <Calendar size={13} color="#606060" strokeWidth={2} />
-              <p className="text-xs text-[#606060] capitalize">{formatFullDate(appointment.date)}</p>
+              <p className="text-xs text-[#606060]" style={{ textTransform: 'none' }}>
+                {formatFullDate(appointment.date).replace(/^\w/, c => c.toUpperCase())}
+              </p>
             </div>
             <div className="flex items-center gap-1.5">
               <Clock size={13} color="#606060" strokeWidth={2} />
@@ -117,11 +142,6 @@ export function AppointmentDetailDrawer({
         <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge status={appointment.status} size="md" />
           <StatusBadge status={appointment.paymentStatus} size="md" />
-          {appointment.tip != null && appointment.tip > 0 && (
-            <span className="text-xs text-[#969696]">
-              + {formatCOP(appointment.tip)} propina
-            </span>
-          )}
         </div>
 
         {/* Notes */}
@@ -129,17 +149,6 @@ export function AppointmentDetailDrawer({
           <div className="bg-[#FFFBEB] rounded-xl px-3 py-2.5">
             <p className="text-[10px] font-bold text-[#B45309] uppercase tracking-wider mb-1">Nota</p>
             <p className="text-xs text-[#606060] leading-relaxed">{appointment.notes}</p>
-          </div>
-        )}
-
-        {/* Closed state info */}
-        {isClosed && (
-          <div className="bg-[#f7f8fb] rounded-xl px-3 py-3 text-center">
-            <p className="text-xs text-[#969696]">
-              {appointment.status === 'completada'
-                ? 'Servicio cerrado. Comisión calculada automáticamente.'
-                : 'No-show registrado. Política de cancelación aplicada.'}
-            </p>
           </div>
         )}
 
