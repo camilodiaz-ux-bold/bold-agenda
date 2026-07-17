@@ -122,7 +122,7 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
         }}
       />,
       'Cierre del servicio',
-      '92%'
+      '78%'
     );
   }
 
@@ -301,6 +301,8 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
                 </button>
               );
             })}
+            {/* Trailing spacer so the last chip is never clipped by the scroll boundary */}
+            <div className="w-2 shrink-0" />
           </div>
         )}
 
@@ -362,8 +364,8 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
             );
           })
         )}
-        {/* FAB clearance */}
-        <div className="h-20" />
+        {/* FAB clearance — must exceed FAB top edge (h-12 button at bottom-76px above nav-64px) */}
+        <div className="h-36" />
       </div>
     </div>
   );

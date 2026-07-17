@@ -35,9 +35,7 @@ function calcTip(basePrice: number, preset: TipPreset, customAmount: string): nu
 }
 
 export function ServiceClosureDrawer({ appointment, professional, service, onClose, onComplete }: Props) {
-  const [step, setStep] = useState<Step>(
-    appointment.paymentStatus === 'pagado-anticipado' ? 'outcome' : 'outcome'
-  );
+  const [step, setStep] = useState<Step>('outcome');
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [tipPreset, setTipPreset] = useState<TipPreset>(0);
   const [customTip, setCustomTip] = useState('');
@@ -52,7 +50,6 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
     if (o === 'no-show') {
       setStep('noshow-confirm');
     } else if (o === 'reprogramar') {
-      // Reprogramar is out of scope for this slice — surface the hint
       setStep('noshow-confirm');
     } else {
       setStep('payment');
@@ -72,17 +69,17 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
   // ── Step: Outcome ──────────────────────────────────────────────────────
   if (step === 'outcome') {
     return (
-      <div className="px-5 pb-8 flex flex-col gap-4">
-        {/* Service summary */}
-        <div className="bg-[#f7f8fb] rounded-xl px-3 py-3 flex items-center justify-between">
+      <div className="px-5 pb-6 flex flex-col gap-3">
+        {/* Service context */}
+        <div className="bg-[#f7f8fb] rounded-xl px-3 py-2.5 flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-[#1e1e1e]">{appointment.clientName}</p>
             <p className="text-xs text-[#969696] mt-0.5">{service.name} · {formatDuration(service.duration)}</p>
           </div>
           <div className="text-right">
             <p className="text-sm font-bold text-[#121e6c] tabular-nums">{formatCOP(service.price)}</p>
-            <div className="flex items-center gap-1 mt-0.5">
-              <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: professional.color }} />
+            <div className="flex items-center gap-1 mt-0.5 justify-end">
+              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: professional.color }} />
               <p className="text-[11px] text-[#969696]">{professional.name.split(' ')[0]}</p>
             </div>
           </div>
@@ -90,13 +87,13 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
 
         <p className="text-sm font-bold text-[#121e6c]">¿Cómo terminó la cita?</p>
 
-        {/* Option: Completado */}
+        {/* Option: Completada */}
         <button
           onClick={() => handleOutcomeSelect('completada')}
-          className="w-full flex items-center gap-3 bg-white border-2 border-gray-100 rounded-2xl px-4 py-4 text-left transition-all active:border-[#E8194B] active:bg-[#FFF1F2]"
+          className="w-full flex items-center gap-3 bg-white border-2 border-gray-100 rounded-2xl px-4 py-3 text-left transition-all active:border-[#E8194B] active:bg-[#FFF1F2]"
         >
-          <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center shrink-0">
-            <CheckCircle2 size={20} color="#15803D" strokeWidth={2} />
+          <div className="w-9 h-9 rounded-full bg-[#F0FDF4] flex items-center justify-center shrink-0">
+            <CheckCircle2 size={18} color="#15803D" strokeWidth={2} />
           </div>
           <div>
             <p className="text-sm font-bold text-[#1e1e1e]">Completada</p>
@@ -107,24 +104,24 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         {/* Option: No llegó */}
         <button
           onClick={() => handleOutcomeSelect('no-show')}
-          className="w-full flex items-center gap-3 bg-white border-2 border-gray-100 rounded-2xl px-4 py-4 text-left transition-all active:border-[#BE123C] active:bg-[#FFF1F2]"
+          className="w-full flex items-center gap-3 bg-white border-2 border-gray-100 rounded-2xl px-4 py-3 text-left transition-all active:border-[#BE123C] active:bg-[#FFF1F2]"
         >
-          <div className="w-10 h-10 rounded-full bg-[#FFF1F2] flex items-center justify-center shrink-0">
-            <UserX size={20} color="#BE123C" strokeWidth={2} />
+          <div className="w-9 h-9 rounded-full bg-[#FFF1F2] flex items-center justify-center shrink-0">
+            <UserX size={18} color="#BE123C" strokeWidth={2} />
           </div>
           <div>
             <p className="text-sm font-bold text-[#1e1e1e]">El cliente no llegó</p>
-            <p className="text-xs text-[#969696] mt-0.5">Se aplicará la política de cancelación</p>
+            <p className="text-xs text-[#969696] mt-0.5">Se registrará como no-show</p>
           </div>
         </button>
 
-        {/* Link: Reprogramar */}
+        {/* Secondary: Reprogramar */}
         <button
           onClick={() => handleOutcomeSelect('reprogramar')}
-          className="w-full flex items-center justify-center gap-2 text-sm text-[#606060] py-2 transition-opacity active:opacity-60"
+          className="w-full flex items-center justify-center gap-2 text-sm text-[#969696] py-1.5 transition-opacity active:opacity-60"
         >
-          <CalendarClock size={16} color="#606060" strokeWidth={2} />
-          ¿La cita se movió? Reprogramar para otro día
+          <CalendarClock size={15} color="#969696" strokeWidth={2} />
+          ¿La cita se movió? Reprogramar
         </button>
       </div>
     );
@@ -134,25 +131,22 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
   if (step === 'noshow-confirm') {
     const isReschedule = outcome === 'reprogramar';
     return (
-      <div className="px-5 pb-8 flex flex-col gap-4">
-        <div
-          className="rounded-2xl p-4 flex flex-col gap-2"
-          style={{ backgroundColor: isReschedule ? '#EFF6FF' : '#FFF1F2' }}
-        >
-          <p className="text-sm font-bold" style={{ color: isReschedule ? '#1D4ED8' : '#BE123C' }}>
-            {isReschedule ? 'Reprogramar cita' : 'Registrar no-show'}
+      <div className="px-5 pb-6 flex flex-col gap-3">
+        {/* Warning — reduced red surface area */}
+        <div className="rounded-2xl px-4 py-3 bg-[#f7f8fb]">
+          <p className="text-sm font-bold text-[#1e1e1e] mb-1">
+            {isReschedule ? 'Reprogramar cita' : `${appointment.clientName} no se presentó`}
           </p>
           {isReschedule ? (
-            <p className="text-xs text-[#606060] leading-relaxed">
+            <p className="text-xs text-[#969696] leading-relaxed">
               La edición y reprogramación de citas estará disponible en la próxima versión del prototipo.
               Por ahora marca la cita como completada o no-show.
             </p>
           ) : (
-            <p className="text-xs text-[#606060] leading-relaxed">
-              Se registrará que {appointment.clientName} no se presentó.
+            <p className="text-xs text-[#969696] leading-relaxed">
               {isPrepaid
-                ? ' Según la política de cancelación, se retiene el valor prepagado.'
-                : ' No se generará cobro.'}
+                ? 'Según la política de cancelación, se retiene el valor prepagado.'
+                : 'No se generará ningún cobro.'}
             </p>
           )}
         </div>
@@ -160,10 +154,10 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         {!isReschedule && (
           <button
             onClick={handleConfirmClosure}
-            className="w-full h-12 rounded-full font-bold text-sm text-white flex items-center justify-center transition-all active:scale-[0.98]"
+            className="w-full h-12 rounded-full font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
             style={{ backgroundColor: '#BE123C' }}
           >
-            <UserX size={18} color="white" strokeWidth={2} className="mr-2" />
+            <UserX size={17} color="white" strokeWidth={2} />
             Confirmar no-show
           </button>
         )}
@@ -181,7 +175,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
   // ── Step: Payment ──────────────────────────────────────────────────────
   if (step === 'payment') {
     return (
-      <div className="px-5 pb-8 flex flex-col gap-5">
+      <div className="px-5 pb-6 flex flex-col gap-4">
         {/* Price summary */}
         <div className="bg-[#f7f8fb] rounded-xl px-4 py-3 flex flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -204,7 +198,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         {/* Tip selector */}
         {!isPrepaid && (
           <div>
-            <p className="text-xs font-bold text-[#969696] uppercase tracking-wider mb-2">Propina</p>
+            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-2">Propina</p>
             <div className="flex gap-2">
               {([0, 5, 10, 'custom'] as TipPreset[]).map(preset => {
                 const isActive = tipPreset === preset;
@@ -237,17 +231,17 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         )}
 
         {isPrepaid ? (
-          /* Prepaid confirmation */
-          <div className="bg-[#F0FDF4] rounded-xl px-4 py-3 flex items-center gap-3">
-            <CheckCircle2 size={18} color="#15803D" strokeWidth={2} />
-            <p className="text-sm text-[#15803D] font-semibold">
-              Este servicio ya fue prepagado por {formatCOP(service.price)}.
+          /* Prepaid confirmation — calm, positive */
+          <div className="bg-[#F0FDFA] rounded-xl px-4 py-3 flex items-center gap-3">
+            <CheckCircle2 size={17} color="#0D9488" strokeWidth={2} />
+            <p className="text-sm text-[#0D9488] font-semibold">
+              Prepagado · {formatCOP(service.price)} ya recibido
             </p>
           </div>
         ) : (
           /* Payment method */
           <div>
-            <p className="text-xs font-bold text-[#969696] uppercase tracking-wider mb-2">Método de pago</p>
+            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-2">Método de pago</p>
             <div className="flex flex-col gap-2">
               {PAYMENT_OPTIONS.map(({ method, label, Icon }) => {
                 const isActive = paymentMethod === method;
@@ -262,10 +256,10 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
                     }}
                   >
                     <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                       style={{ backgroundColor: isActive ? '#121e6c' : '#f3f3f3' }}
                     >
-                      <Icon size={18} color={isActive ? '#fff' : '#606060'} strokeWidth={2} />
+                      <Icon size={16} color={isActive ? '#fff' : '#606060'} strokeWidth={2} />
                     </div>
                     <span
                       className="text-sm font-semibold"
@@ -274,7 +268,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
                       {label}
                     </span>
                     {isActive && (
-                      <Check size={16} color="#121e6c" strokeWidth={2.5} className="ml-auto" />
+                      <Check size={15} color="#121e6c" strokeWidth={2.5} className="ml-auto" />
                     )}
                   </button>
                 );
@@ -287,10 +281,10 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         <button
           onClick={handleConfirmClosure}
           disabled={!isPrepaid && !paymentMethod}
-          className="w-full h-14 rounded-full font-bold text-base text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
-          style={{ backgroundColor: '#E8194B' }}
+          className="w-full h-13 rounded-full font-bold text-base text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
+          style={{ backgroundColor: '#E8194B', height: '52px' }}
         >
-          <CheckCircle2 size={20} color="white" strokeWidth={2.5} />
+          <CheckCircle2 size={19} color="white" strokeWidth={2.5} />
           {isPrepaid ? 'Confirmar servicio' : `Cobrar ${formatCOP(total)}`}
         </button>
       </div>
@@ -301,42 +295,67 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
   if (step === 'done') {
     const isNoShow = outcome === 'no-show';
     return (
-      <div className="px-5 pb-8 pt-4 flex flex-col items-center gap-4 text-center">
+      <div className="px-5 pb-6 pt-2 flex flex-col items-center gap-4 text-center">
+        {/* Icon */}
         <div
-          className="w-16 h-16 rounded-full flex items-center justify-center"
+          className="w-14 h-14 rounded-full flex items-center justify-center"
           style={{ backgroundColor: isNoShow ? '#FFF1F2' : '#F0FDF4' }}
         >
           {isNoShow
-            ? <UserX size={28} color="#BE123C" strokeWidth={2} />
-            : <CheckCircle2 size={28} color="#15803D" strokeWidth={2} />
+            ? <UserX size={24} color="#BE123C" strokeWidth={2} />
+            : <CheckCircle2 size={24} color="#15803D" strokeWidth={2} />
           }
         </div>
 
+        {/* Title + description */}
         <div>
-          <p className="text-base font-bold text-[#121e6c]">
+          <p className="text-base font-bold text-[#1e1e1e]">
             {isNoShow ? 'No-show registrado' : 'Servicio cerrado'}
           </p>
-          <p className="text-sm text-[#606060] mt-1 leading-relaxed">
+          <p className="text-sm text-[#969696] mt-1 leading-relaxed">
             {isNoShow
-              ? `Se registró que ${appointment.clientName} no se presentó.`
+              ? `${appointment.clientName} no se presentó a su cita.`
               : isPrepaid
-                ? `Servicio de ${appointment.clientName} confirmado. Pago ya recibido.`
-                : `${formatCOP(total)} cobrado a ${appointment.clientName}. Comisión calculada.`
+                ? `Servicio de ${appointment.clientName} confirmado.`
+                : `${formatCOP(total)} cobrado a ${appointment.clientName}.`
             }
           </p>
         </div>
 
-        {!isNoShow && tipAmount > 0 && (
-          <div className="bg-[#F0FDF4] rounded-xl px-4 py-2.5 w-full text-left">
-            <p className="text-xs text-[#15803D] font-semibold">
-              Propina {formatCOP(tipAmount)} no incluida en la comisión
-            </p>
+        {/* Confirmation bullets */}
+        <div className="w-full bg-[#f7f8fb] rounded-2xl px-4 py-3 flex flex-col gap-2 text-left">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={13} color="#15803D" strokeWidth={2.5} />
+            <span className="text-xs text-[#606060]">La cita fue actualizada en la agenda</span>
           </div>
-        )}
+          {isNoShow ? (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={13} color="#15803D" strokeWidth={2.5} />
+              <span className="text-xs text-[#606060]">No se generó ningún cobro</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={13} color="#15803D" strokeWidth={2.5} />
+                <span className="text-xs text-[#606060]">
+                  Comisión {Math.round(professional.commissionRate * 100)}%  →  {formatCOP(Math.round(service.price * professional.commissionRate))}
+                </span>
+              </div>
+              {tipAmount > 0 && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={13} color="#15803D" strokeWidth={2.5} />
+                  <span className="text-xs text-[#606060]">
+                    Propina {formatCOP(tipAmount)} (100% tuya)
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
         <button
           onClick={onClose}
-          className="w-full h-12 rounded-full font-bold text-sm text-white mt-2 transition-all active:scale-[0.98]"
+          className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
           style={{ backgroundColor: '#121e6c' }}
         >
           Volver a la agenda

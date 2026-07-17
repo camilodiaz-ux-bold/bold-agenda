@@ -32,6 +32,8 @@ function addMinutes(time: string, minutes: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
+const SECTION_LABEL = 'text-[10px] font-semibold text-[#b0b5c8] uppercase tracking-widest mb-2';
+
 export function AppointmentDetailDrawer({
   appointment,
   professional,
@@ -46,10 +48,11 @@ export function AppointmentDetailDrawer({
 
   return (
     <div className="flex flex-col">
-      {/* Professional bar */}
+
+      {/* ── Professional bar ───────────────────────── */}
       <div
-        className="mx-5 mt-1 mb-4 rounded-xl px-3 py-2.5 flex items-center gap-3"
-        style={{ backgroundColor: `${professional.color}14` }}
+        className="mx-5 mt-1 mb-5 rounded-xl px-3 py-2.5 flex items-center gap-3"
+        style={{ backgroundColor: `${professional.color}12` }}
       >
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
@@ -63,24 +66,24 @@ export function AppointmentDetailDrawer({
         </div>
       </div>
 
-      <div className="px-5 flex flex-col gap-4">
+      <div className="px-5 flex flex-col gap-5">
 
-        {/* Client */}
+        {/* ── Client ─────────────────────────────────
+            Plain text — no card container needed; content is self-explanatory */}
         <div>
-          <p className="text-[10px] font-bold text-[#969696] uppercase tracking-wider mb-2">Cliente</p>
-          <div className="bg-[#f7f8fb] rounded-xl px-3 py-3 flex flex-col gap-1.5">
-            <p className="text-sm font-bold text-[#1e1e1e]">{appointment.clientName}</p>
-            <div className="flex items-center gap-1.5">
-              <Phone size={12} color="#969696" strokeWidth={2} />
-              <p className="text-xs text-[#606060]">{formatPhone(appointment.clientPhone)}</p>
-            </div>
-            <p className="text-xs text-[#969696]">CC {appointment.clientCedula}</p>
+          <p className={SECTION_LABEL}>Cliente</p>
+          <p className="text-sm font-bold text-[#1e1e1e]">{appointment.clientName}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <Phone size={12} color="#b0b5c8" strokeWidth={2} />
+            <p className="text-xs text-[#606060]">{formatPhone(appointment.clientPhone)}</p>
           </div>
+          <p className="text-xs text-[#b0b5c8] mt-0.5">CC {appointment.clientCedula}</p>
         </div>
 
-        {/* Service */}
+        {/* ── Service + Commission ───────────────────
+            Card: financial data benefits from visual grouping */}
         <div>
-          <p className="text-[10px] font-bold text-[#969696] uppercase tracking-wider mb-2">Servicio</p>
+          <p className={SECTION_LABEL}>Servicio</p>
           <div className="bg-[#f7f8fb] rounded-xl px-3 py-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-[#1e1e1e]">{service.name}</p>
@@ -88,12 +91,12 @@ export function AppointmentDetailDrawer({
             </div>
             <p className="text-xs text-[#969696] mt-1">{formatDuration(service.duration)}</p>
             {service.requiresDeposit && (
-              <span className="inline-block mt-1.5 text-[10px] font-semibold text-[#E8194B] bg-[#FFF1F2] px-2 py-0.5 rounded-full">
+              <span className="inline-block mt-1.5 text-[10px] font-semibold text-[#0D9488] bg-[#F0FDFA] px-2 py-0.5 rounded-full">
                 Pago anticipado
               </span>
             )}
 
-            {/* Commission — shown for all statuses except no-show */}
+            {/* Commission — except no-show */}
             {appointment.status !== 'no-show' && (
               <>
                 <div className="h-px bg-gray-200 mt-2.5 mb-2" />
@@ -119,32 +122,31 @@ export function AppointmentDetailDrawer({
           </div>
         </div>
 
-        {/* Date & time */}
+        {/* ── Date & time ────────────────────────────
+            Plain text with icons — icons carry the context, no card needed */}
         <div>
-          <p className="text-[10px] font-bold text-[#969696] uppercase tracking-wider mb-2">Fecha y hora</p>
-          <div className="bg-[#f7f8fb] rounded-xl px-3 py-3 flex flex-col gap-1.5">
-            <div className="flex items-center gap-1.5">
-              <Calendar size={13} color="#606060" strokeWidth={2} />
-              <p className="text-xs text-[#606060]" style={{ textTransform: 'none' }}>
-                {formatFullDate(appointment.date).replace(/^\w/, c => c.toUpperCase())}
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Clock size={13} color="#606060" strokeWidth={2} />
-              <p className="text-xs text-[#606060]">
-                {appointment.startTime} – {endTime}
-              </p>
-            </div>
+          <p className={SECTION_LABEL}>Fecha y hora</p>
+          <div className="flex items-center gap-1.5">
+            <Calendar size={13} color="#b0b5c8" strokeWidth={2} />
+            <p className="text-xs text-[#606060]">
+              {formatFullDate(appointment.date).replace(/^\w/, c => c.toUpperCase())}
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <Clock size={13} color="#b0b5c8" strokeWidth={2} />
+            <p className="text-xs text-[#606060]">
+              {appointment.startTime} – {endTime}
+            </p>
           </div>
         </div>
 
-        {/* Status row */}
+        {/* ── Status row ─────────────────────────── */}
         <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge status={appointment.status} size="md" />
           <StatusBadge status={appointment.paymentStatus} size="md" />
         </div>
 
-        {/* Notes */}
+        {/* ── Notes ──────────────────────────────── */}
         {appointment.notes && (
           <div className="bg-[#FFFBEB] rounded-xl px-3 py-2.5">
             <p className="text-[10px] font-bold text-[#B45309] uppercase tracking-wider mb-1">Nota</p>
@@ -152,7 +154,7 @@ export function AppointmentDetailDrawer({
           </div>
         )}
 
-        {/* Actions */}
+        {/* ── Actions ────────────────────────────── */}
         <div className="flex flex-col gap-2 pb-6">
           {isCloseable && (
             <button
@@ -177,10 +179,10 @@ export function AppointmentDetailDrawer({
 
           <button
             onClick={onViewClient}
-            className="w-full h-10 flex items-center justify-center gap-1 text-sm text-[#606060] transition-opacity active:opacity-60"
+            className="w-full h-10 flex items-center justify-center gap-1 text-sm text-[#969696] transition-opacity active:opacity-60"
           >
             Ver perfil del cliente
-            <ChevronRight size={14} color="#606060" strokeWidth={2} />
+            <ChevronRight size={14} color="#969696" strokeWidth={2} />
           </button>
         </div>
       </div>
