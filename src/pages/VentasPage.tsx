@@ -5,7 +5,7 @@ export function VentasPage() {
     <div className="flex flex-col h-full">
       <PageHeader title="Ventas" subtitle="Salón Camila" />
 
-      {/* Period selector placeholder */}
+      {/* Period selector */}
       <div className="bg-white px-4 pb-3 border-b border-gray-100">
         <div className="flex bg-[#f3f3f3] rounded-full p-1 gap-1">
           {['Hoy', 'Semana', 'Mes'].map((p, i) => (
@@ -31,7 +31,7 @@ export function VentasPage() {
           ))}
         </div>
         <p className="text-center text-xs text-[#969696] mt-4">
-          Métricas disponibles en Slice 4
+          Próximamente
         </p>
       </div>
     </div>

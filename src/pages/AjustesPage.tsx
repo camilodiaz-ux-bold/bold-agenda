@@ -44,9 +44,6 @@ export function AjustesPage() {
           ))}
         </div>
 
-        <p className="text-center text-xs text-[#969696] mt-2">
-          Edición completa disponible en Slice 6
-        </p>
       </div>
     </div>
   );

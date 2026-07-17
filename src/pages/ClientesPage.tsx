@@ -6,7 +6,7 @@ export function ClientesPage() {
     <div className="flex flex-col h-full">
       <PageHeader title="Clientes" subtitle="Salón Camila" />
 
-      {/* Search bar placeholder */}
+      {/* Search bar */}
       <div className="bg-white px-4 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2 bg-[#f3f3f3] rounded-xl px-3 py-2.5">
           <Search size={16} color="#969696" strokeWidth={2} />
@@ -20,7 +20,7 @@ export function ClientesPage() {
           <div key={i} className="bg-white rounded-2xl h-16 animate-pulse" style={{ opacity: 0.5 }} />
         ))}
         <p className="text-center text-xs text-[#969696] mt-4">
-          Directorio disponible en Slice 5
+          Próximamente
         </p>
       </div>
     </div>
