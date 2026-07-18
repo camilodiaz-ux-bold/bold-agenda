@@ -70,6 +70,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
   // ── Step: Outcome ──────────────────────────────────────────────────────
   if (step === 'outcome') {
     return (
+      <div className="flex-1 overflow-y-auto">
       <div className="px-5 pb-6 flex flex-col gap-3">
         {/* Service context */}
         <div className="bg-[#f7f8fb] rounded-xl px-3 py-2.5 flex items-center justify-between">
@@ -122,12 +123,14 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
           ¿La cita se movió? Reprogramar
         </button>
       </div>
+      </div>
     );
   }
 
   // ── Step: No-show confirm ──────────────────────────────────────────────
   if (step === 'noshow-confirm') {
     return (
+      <div className="flex-1 overflow-y-auto">
       <div className="px-5 pb-6 flex flex-col gap-3">
         <div className="rounded-2xl px-4 py-3 bg-[#f7f8fb]">
           <p className="text-sm font-bold text-[#1e1e1e] mb-1">
@@ -156,12 +159,14 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
           Volver
         </button>
       </div>
+      </div>
     );
   }
 
   // ── Step: Payment ──────────────────────────────────────────────────────
   if (step === 'payment') {
     return (
+      <div className="flex-1 overflow-y-auto">
       <div className="px-5 pb-6 flex flex-col gap-4">
         {/* Price summary */}
         <div className="bg-[#f7f8fb] rounded-xl px-4 py-3 flex flex-col gap-2">
@@ -275,6 +280,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
           {isPrepaid ? 'Confirmar servicio' : `Cobrar ${formatCOP(total)}`}
         </button>
       </div>
+      </div>
     );
   }
 
@@ -282,6 +288,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
   if (step === 'done') {
     const isNoShow = outcome === 'no-show';
     return (
+      <div className="flex-1 overflow-y-auto">
       <div className="px-5 pb-6 pt-2 flex flex-col items-center gap-4 text-center">
         {/* Icon */}
         <div
@@ -343,10 +350,11 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         <button
           onClick={onClose}
           className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-          style={{ backgroundColor: '#121e6c' }}
+          style={{ backgroundColor: '#E8194B' }}
         >
           Volver a la agenda
         </button>
+      </div>
       </div>
     );
   }

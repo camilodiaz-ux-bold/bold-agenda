@@ -1,5 +1,5 @@
 import { useState, useMemo, type ReactNode } from 'react';
-import { Bell, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Bell, ChevronDown, AlertTriangle, CalendarOff } from 'lucide-react';
 import { PROFESSIONALS, SERVICES, formatCOP, formatDuration } from '../data/appointments';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
@@ -17,7 +17,7 @@ interface Props {
   onOpenDrawer: (content: ReactNode, title?: string, height?: string) => void;
   onCloseDrawer: () => void;
   onOpenEdit: (apt: Appointment) => void;
-  onOpenAvailability: () => void;
+  onOpenAvailability: (showProfSelector: boolean) => void;
 }
 
 const DEMO_NOW = '13:30';
@@ -45,45 +45,65 @@ function formatDateHeader(dateStr: string): string {
   return dateStr === TODAY ? `Hoy, ${rest}` : `${cap(weekday)}, ${rest}`;
 }
 
-function hasConflict(apt: Appointment, blocks: AvailabilityBlock[], services: Service[]): boolean {
-  if (['cancelada', 'cancelada-tarde', 'completada', 'no-show'].includes(apt.status)) return false;
+interface ConflictInfo {
+  profName: string;
+  startTime: string;
+  endTime: string;
+}
+
+function getConflictInfo(apt: Appointment, blocks: AvailabilityBlock[], services: Service[]): ConflictInfo | null {
+  if (['cancelada', 'cancelada-tarde', 'completada', 'no-show'].includes(apt.status)) return null;
   const profBlocks = blocks.filter(b => b.professionalId === apt.professionalId && b.date === apt.date);
-  if (profBlocks.some(b => b.type === 'full-day')) return true;
+  const prof = PROFESSIONALS.find(p => p.id === apt.professionalId);
+  const profName = prof?.name.split(' ')[0] ?? 'la profesional';
+
+  const fullDay = profBlocks.find(b => b.type === 'full-day');
+  if (fullDay) {
+    return { profName, startTime: '08:00', endTime: '19:00' };
+  }
+
   const svc = services.find(s => s.id === apt.serviceId);
-  if (!svc) return false;
+  if (!svc) return null;
   const aptStart = timeToMin(apt.startTime);
   const aptEnd = aptStart + svc.duration;
-  return profBlocks.some(b => {
-    if (b.type !== 'range') return false;
+
+  for (const b of profBlocks) {
+    if (b.type !== 'range') continue;
     const bStart = timeToMin(b.startTime!);
     const bEnd = timeToMin(b.endTime!);
-    return aptStart < bEnd && aptEnd > bStart;
-  });
+    if (aptStart < bEnd && aptEnd > bStart) {
+      return { profName, startTime: b.startTime!, endTime: b.endTime! };
+    }
+  }
+  return null;
 }
 
 export function AgendaPage({
-  role, onRoleChange, appointments, availabilityBlocks,
-  onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
+  role, appointments, availabilityBlocks,
+  onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit, onOpenAvailability,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [profFilter, setProfFilter] = useState<string>('all');
+  const [viewScope, setViewScope] = useState<'team' | 'mine'>('team');
 
+  const isAdmin = role === 'admin';
   const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
 
   const dayAppointments = useMemo<Appointment[]>(() => {
     let apts = appointments.filter(a => a.date === selectedDate);
-    if (role === 'staff') {
+    if (role === 'staff' || viewScope === 'mine') {
       apts = apts.filter(a => a.professionalId === STAFF_PROF_ID);
     } else if (profFilter !== 'all') {
       apts = apts.filter(a => a.professionalId === profFilter);
     }
     return [...apts].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [appointments, selectedDate, profFilter, role]);
+  }, [appointments, selectedDate, profFilter, role, viewScope]);
 
   const metrics = useMemo(() => {
     const base = appointments.filter(a => {
       if (a.date !== selectedDate) return false;
-      return role === 'staff' ? a.professionalId === STAFF_PROF_ID : true;
+      if (role === 'staff' || viewScope === 'mine') return a.professionalId === STAFF_PROF_ID;
+      return true;
     });
     const total = base.filter(a => !['cancelada', 'cancelada-tarde'].includes(a.status)).length;
     const confirmadas = base.filter(a => a.status === 'confirmada').length;
@@ -94,7 +114,7 @@ export function AgendaPage({
         return sum + (a.originalPrice ?? svc?.price ?? 0);
       }, 0);
     return { total, confirmadas, ingresos };
-  }, [appointments, selectedDate, role]);
+  }, [appointments, selectedDate, role, viewScope]);
 
   function handleClosure(result: ClosureResult) {
     const apt = appointments.find(a => a.id === result.appointmentId);
@@ -203,19 +223,36 @@ export function AgendaPage({
             <h1 className="text-lg font-bold text-[#121e6c] leading-tight">Salón Camila</h1>
             <p className="text-xs text-[#969696] mt-0.5">{formatDateHeader(selectedDate)}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { onRoleChange(role === 'admin' ? 'staff' : 'admin'); setProfFilter('all'); }}
-              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold border transition-all active:opacity-70"
-              style={{
-                backgroundColor: role === 'admin' ? '#121e6c' : '#f7f8fb',
-                color: role === 'admin' ? '#fff' : '#606060',
-                borderColor: role === 'admin' ? '#121e6c' : '#d2d4e1',
-              }}
-            >
-              {role === 'admin' ? 'Admin' : 'Mi agenda'}
-              <ChevronDown size={11} color={role === 'admin' ? '#fff' : '#606060'} strokeWidth={2.5} />
-            </button>
+          <div className="flex items-center gap-1.5">
+            {/* Scope selector — admin only */}
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setViewScope(s => s === 'team' ? 'mine' : 'team');
+                  setProfFilter('all');
+                }}
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold border transition-all active:opacity-70"
+                style={{
+                  backgroundColor: viewScope === 'team' ? '#121e6c' : '#f7f8fb',
+                  color: viewScope === 'team' ? '#fff' : '#606060',
+                  borderColor: viewScope === 'team' ? '#121e6c' : '#d2d4e1',
+                }}
+              >
+                {viewScope === 'team' ? 'Agenda del equipo' : 'Mi agenda'}
+                <ChevronDown size={11} color={viewScope === 'team' ? '#fff' : '#606060'} strokeWidth={2.5} />
+              </button>
+            )}
+            {/* Block availability — admin only */}
+            {isAdmin && (
+              <button
+                onClick={() => onOpenAvailability(viewScope === 'team')}
+                className="w-9 h-9 flex items-center justify-center rounded-full transition-opacity active:opacity-60"
+                style={{ backgroundColor: '#f7f8fb' }}
+                title="Bloquear disponibilidad"
+              >
+                <CalendarOff size={18} color="#121e6c" strokeWidth={1.8} />
+              </button>
+            )}
             <button className="w-9 h-9 flex items-center justify-center transition-opacity active:opacity-60">
               <Bell size={20} color="#121e6c" strokeWidth={1.8} />
             </button>
@@ -259,8 +296,8 @@ export function AgendaPage({
           ))}
         </div>
 
-        {/* Pro filter (admin only) */}
-        {role === 'admin' && (
+        {/* Pro filter — admin team scope only */}
+        {isAdmin && viewScope === 'team' && (
           <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
             <button
               onClick={() => setProfFilter('all')}
@@ -332,17 +369,19 @@ export function AgendaPage({
             const apt = item.apt;
             const prof = PROFESSIONALS.find(p => p.id === apt.professionalId)!;
             const svc = SERVICES.find(s => s.id === apt.serviceId)!;
-            const conflicted = hasConflict(apt, availabilityBlocks, SERVICES);
+            const conflictInfo = getConflictInfo(apt, availabilityBlocks, SERVICES);
             return (
               <div key={apt.id + String(idx)}>
-                {conflicted && (
+                {conflictInfo && (
                   <button
                     onClick={() => onOpenEdit(apt)}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl mb-1 text-left"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl mb-1 text-left active:opacity-70"
                     style={{ backgroundColor: '#FFFBEB' }}
                   >
-                    <AlertTriangle size={12} color="#B45309" strokeWidth={2} />
-                    <span className="text-[11px] text-[#B45309] font-semibold">Conflicto con bloqueo — toca para reprogramar</span>
+                    <AlertTriangle size={12} color="#B45309" strokeWidth={2} className="shrink-0" />
+                    <span className="text-[11px] text-[#B45309] font-semibold">
+                      Esta cita se cruza con un bloqueo de {conflictInfo.profName}, {conflictInfo.startTime}–{conflictInfo.endTime}
+                    </span>
                   </button>
                 )}
                 <AppointmentCard

@@ -26,9 +26,7 @@ export function Drawer({ title, onClose, children, height = '90%' }: Props) {
       {/* Backdrop */}
       <div
         className="absolute inset-0 transition-opacity duration-300"
-        style={{
-          backgroundColor: visible ? 'rgba(18, 30, 108, 0.35)' : 'rgba(18, 30, 108, 0)',
-        }}
+        style={{ backgroundColor: visible ? 'rgba(18, 30, 108, 0.35)' : 'rgba(18, 30, 108, 0)' }}
         onClick={handleClose}
       />
 
@@ -40,12 +38,12 @@ export function Drawer({ title, onClose, children, height = '90%' }: Props) {
           transform: visible ? 'translateY(0)' : 'translateY(100%)',
         }}
       >
-        {/* Handle */}
+        {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
           <div className="w-9 h-1 bg-gray-200 rounded-full" />
         </div>
 
-        {/* Header */}
+        {/* Header — stable, never scrolls */}
         {title && (
           <div className="flex items-center justify-between px-5 pb-4 flex-shrink-0">
             <h2 className="text-base font-bold text-[#121e6c]">{title}</h2>
@@ -58,8 +56,8 @@ export function Drawer({ title, onClose, children, height = '90%' }: Props) {
           </div>
         )}
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable body — children manage their own scroll and sticky footer */}
+        <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
           {children}
         </div>
       </div>

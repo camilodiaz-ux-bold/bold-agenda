@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { CalendarPlus, CalendarOff } from 'lucide-react';
+import { CalendarPlus } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 import { FAB } from '../components/FAB';
 import { Drawer } from '../components/Drawer';
@@ -70,7 +70,7 @@ export function OperatorShell() {
     });
   }
 
-  function openAvailabilityDrawer() {
+  function openAvailabilityDrawer(showProfSelector: boolean) {
     openDrawer(
       <AvailabilityDrawer
         professionals={professionals}
@@ -78,6 +78,7 @@ export function OperatorShell() {
         existingBlocks={availabilityBlocks}
         role={role}
         currentProfId={STAFF_PROF_ID}
+        showProfSelector={showProfSelector}
         onSave={(block) => {
           addAvailabilityBlock(block);
         }}
@@ -128,7 +129,7 @@ export function OperatorShell() {
             onOpenDrawer={openDrawer}
             onCloseDrawer={closeDrawer}
             onOpenEdit={openEditDrawer}
-            onOpenAvailability={openAvailabilityDrawer}
+            onOpenAvailability={(showProfSelector) => openAvailabilityDrawer(showProfSelector)}
           />
         )}
         {section === 'ventas' && (
@@ -190,38 +191,27 @@ export function OperatorShell() {
         )}
       </div>
 
-      {/* FAB — Agenda: two actions */}
+      {/* FAB — Agenda: new appointment */}
       {section === 'agenda' && (
-        <>
-          <FAB
-            onPress={() =>
-              openDrawer(
-                <div className="px-5 py-8 flex flex-col items-center gap-4 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-[#FFF1F2] flex items-center justify-center">
-                    <CalendarPlus size={26} color="#E8194B" strokeWidth={1.8} />
-                  </div>
-                  <div>
-                    <p className="text-base font-bold text-[#121e6c]">Agendar nueva cita</p>
-                    <p className="text-xs text-[#969696] mt-1.5 max-w-[220px] leading-relaxed">
-                      Disponible en la próxima versión.
-                    </p>
-                  </div>
-                </div>,
-                'Nueva cita',
-                '44%'
-              )
-            }
-          />
-          {/* Secondary action — block availability */}
-          <button
-            onClick={openAvailabilityDrawer}
-            className="absolute right-4 flex items-center gap-2 rounded-full px-4 h-10 text-xs font-semibold shadow-md transition-all active:opacity-70"
-            style={{ bottom: '90px', backgroundColor: '#fff', color: '#121e6c', boxShadow: '0 2px 8px rgba(18,30,108,0.12)', border: '1.5px solid #e8eaf0' }}
-          >
-            <CalendarOff size={14} color="#121e6c" strokeWidth={2} />
-            Bloquear disponibilidad
-          </button>
-        </>
+        <FAB
+          onPress={() =>
+            openDrawer(
+              <div className="px-5 py-8 flex flex-col items-center gap-4 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#FFF1F2] flex items-center justify-center">
+                  <CalendarPlus size={26} color="#E8194B" strokeWidth={1.8} />
+                </div>
+                <div>
+                  <p className="text-base font-bold text-[#121e6c]">Agendar nueva cita</p>
+                  <p className="text-xs text-[#969696] mt-1.5 max-w-[220px] leading-relaxed">
+                    Disponible en la próxima versión.
+                  </p>
+                </div>
+              </div>,
+              'Nueva cita',
+              '44%'
+            )
+          }
+        />
       )}
 
       <BottomNav active={section} onChange={(s) => { setSection(s); closeDrawer(); }} />

@@ -47,7 +47,8 @@ export function AppointmentDetailDrawer({
   const isEditable = appointment.status === 'confirmada' || appointment.status === 'reprogramada';
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex-1 overflow-y-auto">
 
       {/* ── Professional bar ───────────────────────── */}
       <div
@@ -186,6 +187,7 @@ export function AppointmentDetailDrawer({
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 }
