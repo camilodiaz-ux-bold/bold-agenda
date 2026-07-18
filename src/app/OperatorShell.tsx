@@ -7,7 +7,8 @@ import { AgendaPage } from '../pages/AgendaPage';
 import { VentasPage } from '../pages/VentasPage';
 import { ClientesPage } from '../pages/ClientesPage';
 import { AjustesPage } from '../pages/AjustesPage';
-import type { OperatorSection } from '../types';
+import type { OperatorSection, Role, SaleRecord } from '../types';
+import { INITIAL_SALE_RECORDS } from '../data/appointments';
 
 interface DrawerState {
   title?: string;
@@ -18,6 +19,8 @@ interface DrawerState {
 export function OperatorShell() {
   const [section, setSection] = useState<OperatorSection>('agenda');
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
+  const [role, setRole] = useState<Role>('admin');
+  const [salesRecords, setSalesRecords] = useState<SaleRecord[]>(INITIAL_SALE_RECORDS);
 
   const openDrawer = (content: ReactNode, title?: string, height?: string) => {
     setDrawer({ content, title, height });
@@ -33,9 +36,22 @@ export function OperatorShell() {
       {/* Scrollable main content */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {section === 'agenda' && (
-          <AgendaPage onOpenDrawer={openDrawer} onCloseDrawer={closeDrawer} />
+          <AgendaPage
+            role={role}
+            onRoleChange={setRole}
+            onAddSaleRecord={(sale) => setSalesRecords(prev => [...prev, sale])}
+            onOpenDrawer={openDrawer}
+            onCloseDrawer={closeDrawer}
+          />
         )}
-        {section === 'ventas' && <VentasPage />}
+        {section === 'ventas' && (
+          <VentasPage
+            role={role}
+            salesRecords={salesRecords}
+            onOpenDrawer={openDrawer}
+            onCloseDrawer={closeDrawer}
+          />
+        )}
         {section === 'clientes' && <ClientesPage />}
         {section === 'ajustes' && <AjustesPage />}
       </div>

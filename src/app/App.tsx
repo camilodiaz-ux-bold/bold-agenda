@@ -14,8 +14,9 @@ import { MediosDePagoPage } from "../pages/MediosDePagoPage";
 import { AcercaInsertaPage } from "../pages/AcercaInsertaPage";
 import { CobroExitosoPage } from "../pages/CobroExitosoPage";
 import { OperatorShell } from "./OperatorShell";
+import { BookingSite } from "../pages/BookingSite";
 
-export default function App() {
+function OperatorApp() {
   const [appMode] = useState<'agenda' | 'pos'>('agenda');
   const [screen, setScreen] = useState<AppScreen>("home-payments");
   const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
@@ -217,4 +218,16 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+export default function App() {
+  const surface = new URLSearchParams(window.location.search).get('surface') ?? 'operator';
+  if (surface === 'booking') {
+    return (
+      <div className="absolute inset-0 overflow-hidden">
+        <BookingSite />
+      </div>
+    );
+  }
+  return <OperatorApp />;
 }

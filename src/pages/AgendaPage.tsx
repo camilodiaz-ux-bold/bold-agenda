@@ -4,21 +4,21 @@ import {
   APPOINTMENTS,
   PROFESSIONALS,
   SERVICES,
-  INITIAL_SALE_RECORDS,
   formatCOP,
   formatDuration,
 } from '../data/appointments';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
-import type { Appointment, Professional, Service, SaleRecord } from '../types';
+import type { Appointment, Professional, Service, SaleRecord, Role } from '../types';
 
 interface Props {
+  role: Role;
+  onRoleChange: (r: Role) => void;
+  onAddSaleRecord: (sale: SaleRecord) => void;
   onOpenDrawer: (content: ReactNode, title?: string, height?: string) => void;
   onCloseDrawer: () => void;
 }
-
-type Role = 'admin' | 'staff';
 
 // Fixed at midday so "Ahora" falls between morning and afternoon appointments.
 const DEMO_NOW = '13:30';
@@ -59,13 +59,10 @@ function minToTime(min: number): string {
   return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 }
 
-export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
+export function AgendaPage({ role, onRoleChange, onAddSaleRecord, onOpenDrawer, onCloseDrawer }: Props) {
   const [appointments, setAppointments] = useState<Appointment[]>(APPOINTMENTS);
-  // Slice 4 (Ventas) will read _salesRecords; declared here so closures populate it now
-  const [_salesRecords, setSalesRecords] = useState<SaleRecord[]>(INITIAL_SALE_RECORDS);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [profFilter, setProfFilter] = useState<string>('all');
-  const [role, setRole] = useState<Role>('admin');
 
   const STAFF_PROF_ID = 'p1'; // Camila Vargas for prototype
 
@@ -130,7 +127,7 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
         commission: Math.round(svc.price * prof.commissionRate),
         completedAt: new Date().toISOString(),
       };
-      setSalesRecords(prev => [...prev, newSale]);
+      onAddSaleRecord(newSale);
     }
   }
 
@@ -260,7 +257,7 @@ export function AgendaPage({ onOpenDrawer, onCloseDrawer }: Props) {
           <div className="flex items-center gap-2">
             {/* Prototype role toggle */}
             <button
-              onClick={() => { setRole(r => r === 'admin' ? 'staff' : 'admin'); setProfFilter('all'); }}
+              onClick={() => { onRoleChange(role === 'admin' ? 'staff' : 'admin'); setProfFilter('all'); }}
               className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold border transition-all active:opacity-70"
               style={{
                 backgroundColor: role === 'admin' ? '#121e6c' : '#f7f8fb',

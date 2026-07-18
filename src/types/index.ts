@@ -32,6 +32,7 @@ export type AppScreen =
 // ── Bold Agenda types ──────────────────────────────────────────────────────
 
 export type OperatorSection = 'agenda' | 'ventas' | 'clientes' | 'ajustes';
+export type Role = 'admin' | 'staff';
 
 export type AppointmentStatus = 'confirmada' | 'completada' | 'no-show' | 'reprogramada';
 export type PaymentStatus = 'pendiente' | 'pagado' | 'pagado-anticipado';
@@ -85,7 +86,7 @@ export interface Client {
 
 export interface SaleRecord {
   id: string;
-  appointmentId: string;
+  appointmentId: string | null;
   clientName: string;
   serviceId: string;
   professionalId: string;
