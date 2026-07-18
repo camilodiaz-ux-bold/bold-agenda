@@ -34,8 +34,8 @@ export type AppScreen =
 export type OperatorSection = 'agenda' | 'ventas' | 'clientes' | 'ajustes';
 export type Role = 'admin' | 'staff';
 
-export type AppointmentStatus = 'confirmada' | 'completada' | 'no-show' | 'reprogramada';
-export type PaymentStatus = 'pendiente' | 'pagado' | 'pagado-anticipado';
+export type AppointmentStatus = 'confirmada' | 'completada' | 'no-show' | 'reprogramada' | 'cancelada' | 'cancelada-tarde';
+export type PaymentStatus = 'pendiente' | 'pagado' | 'pagado-anticipado' | 'reembolsado';
 export type PaymentMethod = 'datafono' | 'qr' | 'link' | 'anticipado';
 
 export interface Professional {
@@ -53,6 +53,7 @@ export interface Service {
   duration: number;
   price: number;
   requiresDeposit: boolean;
+  active?: boolean;
 }
 
 export interface Appointment {
@@ -69,6 +70,31 @@ export interface Appointment {
   paymentMethod?: PaymentMethod;
   tip?: number;
   notes?: string;
+  policySnapshot?: { cancellationWindowHours: number };
+  originalPrice?: number;
+}
+
+export interface AvailabilityBlock {
+  id: string;
+  professionalId: string;
+  date: string;
+  type: 'full-day' | 'range';
+  startTime?: string;
+  endTime?: string;
+  reason?: string;
+}
+
+export interface BookingPolicy {
+  cancellationWindowHours: number;
+  publicBookingEnabled: boolean;
+}
+
+export interface BusinessProfile {
+  name: string;
+  address: string;
+  phone: string;
+  schedule: string;
+  description: string;
 }
 
 export interface Client {

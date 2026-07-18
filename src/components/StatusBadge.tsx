@@ -5,6 +5,8 @@ import {
   CalendarClock,
   Clock,
   CreditCard,
+  XCircle,
+  RotateCcw,
 } from 'lucide-react';
 import type { AppointmentStatus, PaymentStatus } from '../types';
 
@@ -65,10 +67,30 @@ const CONFIGS: Record<string, Config> = {
   'pagado-anticipado': {
     label: 'Prepagado',
     Icon: CreditCard,
-    // Calm teal — positive, not error-like
     bg: '#F0FDFA',
     color: '#0D9488',
     subtleColor: '#0D9488',
+  },
+  cancelada: {
+    label: 'Cancelada',
+    Icon: XCircle,
+    bg: '#F3F4F6',
+    color: '#6B7280',
+    subtleColor: '#6B7280',
+  },
+  'cancelada-tarde': {
+    label: 'Cancelación tardía',
+    Icon: XCircle,
+    bg: '#FFF1F2',
+    color: '#BE123C',
+    subtleColor: '#BE123C',
+  },
+  reembolsado: {
+    label: 'Reembolsado',
+    Icon: RotateCcw,
+    bg: '#F0FDF4',
+    color: '#15803D',
+    subtleColor: '#15803D',
   },
 };
 

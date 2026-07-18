@@ -1,4 +1,4 @@
-import type { Professional, Service, Appointment, Client, SaleRecord } from '../types';
+import type { Professional, Service, Appointment, Client, SaleRecord, AvailabilityBlock, BookingPolicy, BusinessProfile } from '../types';
 
 export const SALON = {
   name: 'Salón Camila',
@@ -190,6 +190,23 @@ export const APPOINTMENTS: Appointment[] = [
     tip: 5000,
   },
 
+  // Demo appointment for Manage surface — future, prepaid Balayage
+  {
+    id: 'a_demo',
+    professionalId: 'p2',
+    serviceId: 's3',
+    clientName: 'Natalia Ruiz',
+    clientPhone: '3167890123',
+    clientCedula: '52654321',
+    date: '2026-07-20',
+    startTime: '10:00',
+    status: 'confirmada' as const,
+    paymentStatus: 'pagado-anticipado' as const,
+    paymentMethod: 'anticipado' as const,
+    policySnapshot: { cancellationWindowHours: 24 },
+    originalPrice: 220000,
+  },
+
   // Friday 2026-07-17 (tomorrow)
   {
     id: 'a12',
@@ -217,6 +234,26 @@ export const APPOINTMENTS: Appointment[] = [
     notes: 'Prefiere corte clásico, poco de los lados',
   },
 ];
+
+export const SEED_AVAILABILITY_BLOCKS: AvailabilityBlock[] = [
+  // p3 has a full day off on 7/17 — affects public booking
+  { id: 'b1', professionalId: 'p3', date: '2026-07-17', type: 'full-day', reason: 'Cita médica' },
+  // p2 has a midday block on 7/16 — conflicts with a2 (Balayage 09:30–12:30)
+  { id: 'b2', professionalId: 'p2', date: '2026-07-16', type: 'range', startTime: '11:00', endTime: '13:30', reason: 'Descanso' },
+];
+
+export const SEED_BUSINESS_PROFILE: BusinessProfile = {
+  name: SALON.name,
+  address: SALON.address,
+  phone: SALON.phone,
+  schedule: SALON.schedule,
+  description: 'Salón especializado en colorimetría, cortes y cuidado del cabello. Atención personalizada con los mejores productos.',
+};
+
+export const SEED_BOOKING_POLICY: BookingPolicy = {
+  cancellationWindowHours: 24,
+  publicBookingEnabled: true,
+};
 
 export const CLIENTS: Client[] = [
   {
@@ -279,6 +316,16 @@ export const CLIENTS: Client[] = [
     totalSpent: 135000,
     visitCount: 3,
     lastVisit: '2026-06-25',
+  },
+  {
+    id: 'c_natalia',
+    name: 'Natalia Ruiz',
+    phone: '3167890123',
+    cedula: '52654321',
+    totalSpent: 220000,
+    visitCount: 1,
+    lastVisit: '2026-07-20',
+    notes: 'Primera visita. Interesada en balayage rubio caramelo.',
   },
 ];
 

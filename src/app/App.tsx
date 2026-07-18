@@ -15,6 +15,7 @@ import { AcercaInsertaPage } from "../pages/AcercaInsertaPage";
 import { CobroExitosoPage } from "../pages/CobroExitosoPage";
 import { OperatorShell } from "./OperatorShell";
 import { BookingSite } from "../pages/BookingSite";
+import { ManageSite } from "../pages/ManageSite";
 
 function OperatorApp() {
   const [appMode] = useState<'agenda' | 'pos'>('agenda');
@@ -226,6 +227,13 @@ export default function App() {
     return (
       <div className="absolute inset-0 overflow-hidden">
         <BookingSite />
+      </div>
+    );
+  }
+  if (surface === 'manage') {
+    return (
+      <div className="absolute inset-0 overflow-hidden">
+        <ManageSite />
       </div>
     );
   }
