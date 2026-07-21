@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   ArrowLeft, CheckCircle2, MapPin, Clock, CreditCard, Link2,
   ChevronRight, Smartphone, CalendarOff, Star, Search, Plus,
@@ -13,7 +13,7 @@ import {
 } from '../store/prototypeStore';
 import type { Service, Appointment, Client } from '../types';
 
-type BookingStep = 'branch-select' | 'landing' | 'professional' | 'datetime' | 'clientinfo' | 'otp' | 'payment' | 'confirmed';
+type BookingStep = 'branch-select' | 'landing' | 'professional' | 'datetime' | 'clientinfo' | 'payment' | 'confirmed';
 
 type SelectedItems = Record<string, { service: BookingService; qty: number }>;
 
@@ -133,19 +133,10 @@ export function BookingSite() {
   const [clientCedula, setClientCedula] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
-  const [otpValue, setOtpValue] = useState('');
-  const [otpError, setOtpError] = useState('');
-  const [otpCountdown, setOtpCountdown] = useState(30);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'link' | null>(null);
   const [avismeMsgVisible, setAvismeMsgVisible] = useState(false);
 
   const days = getNextDays(14);
-
-  useEffect(() => {
-    if (step !== 'otp' || otpCountdown <= 0) return;
-    const id = setInterval(() => setOtpCountdown(c => c - 1), 1000);
-    return () => clearInterval(id);
-  }, [step, otpCountdown]);
 
   // Derived
   const totalItems = Object.values(selectedItems).reduce((s, { qty }) => s + qty, 0);
@@ -204,8 +195,7 @@ export function BookingSite() {
       case 'professional': return setStep('landing');
       case 'datetime': return setStep('professional');
       case 'clientinfo': return setStep('datetime');
-      case 'otp': return setStep('clientinfo');
-      case 'payment': return setStep('otp');
+      case 'payment': return setStep('clientinfo');
       default: return;
     }
   }
@@ -245,11 +235,11 @@ export function BookingSite() {
   }
 
   function submitClientInfo() {
-    if (validateClientInfo()) {
-      setOtpValue('');
-      setOtpError('');
-      setOtpCountdown(30);
-      setStep('otp');
+    if (!validateClientInfo()) return;
+    if (selectedServiceForFlow?.requiresDeposit) {
+      setStep('payment');
+    } else {
+      finalizeBooking(null);
     }
   }
 
@@ -303,15 +293,6 @@ export function BookingSite() {
     setStep('confirmed');
   }
 
-  function submitOtp() {
-    if (otpValue === '123456') {
-      if (selectedServiceForFlow?.requiresDeposit) setStep('payment');
-      else finalizeBooking(null);
-    } else {
-      setOtpError('Código incorrecto. Intenta de nuevo.');
-    }
-  }
-
   function showAviseme() {
     setAvismeMsgVisible(true);
     setTimeout(() => setAvismeMsgVisible(false), 2500);
@@ -341,7 +322,6 @@ export function BookingSite() {
     professional: 'Elige tu profesional',
     datetime: 'Fecha y hora',
     clientinfo: 'Tus datos',
-    otp: 'Verificación',
     payment: 'Pago anticipado',
     confirmed: '¡Reservado!',
   };
@@ -901,7 +881,7 @@ export function BookingSite() {
             )}
             {([
               { key: 'name', label: 'Nombre completo', value: clientName, onChange: setClientName, type: 'text', placeholder: 'Tu nombre completo', required: true },
-              { key: 'phone', label: 'Celular WhatsApp', value: clientPhone, onChange: setClientPhone, type: 'tel', placeholder: '3001234567', required: true },
+              { key: 'phone', label: 'Teléfono de contacto', value: clientPhone, onChange: setClientPhone, type: 'tel', placeholder: '3001234567', required: true },
               { key: 'cedula', label: 'Número de cédula', value: clientCedula, onChange: setClientCedula, type: 'number', placeholder: '12345678', required: true },
               { key: 'email', label: 'Email (opcional)', value: clientEmail, onChange: setClientEmail, type: 'email', placeholder: 'tucorreo@gmail.com', required: false },
             ] as const).map(({ key, label, value, onChange, type, placeholder, required }) => (
@@ -928,45 +908,6 @@ export function BookingSite() {
             <p className="text-[11px] text-[#b0b5c8] text-center leading-relaxed">
               Al continuar aceptas los términos del servicio y la política de privacidad del salón.
             </p>
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════
-            OTP
-        ══════════════════════════════════════════════════ */}
-        {step === 'otp' && (
-          <div className="px-4 pt-6 pb-20 flex flex-col items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#EEF0FB' }}>
-              <Smartphone size={26} color="#121e6c" strokeWidth={1.8} />
-            </div>
-            <div className="text-center">
-              <p className="text-base font-bold text-[#1e1e1e]">Código de verificación</p>
-              <p className="text-sm text-[#969696] mt-1 leading-relaxed">
-                Enviamos un código a<br /><span className="font-semibold text-[#1e1e1e]">{formatPhone(clientPhone)}</span>
-              </p>
-            </div>
-            <input
-              type="text" inputMode="numeric" maxLength={6}
-              value={otpValue}
-              onChange={e => { setOtpValue(e.target.value.replace(/\D/g, '')); setOtpError(''); }}
-              placeholder="_ _ _ _ _ _"
-              className="w-48 h-14 rounded-2xl border-2 text-2xl font-bold text-center tracking-[0.4em] outline-none transition-colors"
-              style={{ borderColor: otpError ? '#E8194B' : '#d2d4e1', backgroundColor: '#fff', color: '#121e6c' }}
-            />
-            {otpError && <p className="text-xs text-center" style={{ color: '#E8194B' }}>{otpError}</p>}
-            <button onClick={submitOtp} disabled={otpValue.length < 6}
-              className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
-              style={{ backgroundColor: '#E8194B' }}>
-              Verificar código
-            </button>
-            <p className="text-xs text-[#969696]">
-              {otpCountdown > 0 ? `Reenviar en ${otpCountdown}s` : (
-                <button onClick={() => setOtpCountdown(30)} className="text-[#121e6c] font-semibold">Reenviar código</button>
-              )}
-            </p>
-            <div className="w-full rounded-xl px-4 py-3 text-center" style={{ backgroundColor: '#FFFBEB' }}>
-              <p className="text-xs text-[#B45309]">Para prueba usa: <strong>123456</strong></p>
-            </div>
           </div>
         )}
 
@@ -1011,8 +952,10 @@ export function BookingSite() {
               <CheckCircle2 size={32} color="#15803D" strokeWidth={2} />
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold text-[#1e1e1e]">¡Cita confirmada!</p>
-              <p className="text-sm text-[#969696] mt-1.5 leading-relaxed">Te enviaremos recordatorios por WhatsApp.</p>
+              <p className="text-xl font-bold text-[#1e1e1e]">¡Reserva confirmada!</p>
+              <p className="text-sm text-[#969696] mt-1.5 leading-relaxed max-w-[280px]">
+                Enviamos una confirmación a tu WhatsApp. Desde ese mensaje puedes consultar, reprogramar o cancelar tu cita.
+              </p>
             </div>
             <div className="w-full bg-white rounded-2xl px-4 py-4 flex flex-col gap-3 border border-gray-100" style={{ boxShadow: '0px 2px 8px rgba(18,30,108,0.06)' }}>
               <div className="flex items-center gap-3">
@@ -1043,6 +986,14 @@ export function BookingSite() {
                     <span className="text-xs font-semibold text-[#1e1e1e]">{selectedBranch.address}, {selectedBranch.neighborhood}</span>
                   </div>
                 )}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#b0b5c8] w-16 shrink-0">Cliente</span>
+                  <span className="text-xs font-semibold text-[#1e1e1e]">{clientName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#b0b5c8] w-16 shrink-0">WhatsApp</span>
+                  <span className="text-xs font-semibold text-[#1e1e1e]">{formatPhone(clientPhone)}</span>
+                </div>
                 {paymentMethod && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-[#b0b5c8] w-16 shrink-0">Pago</span>
@@ -1059,7 +1010,7 @@ export function BookingSite() {
                 setSelectedDate('');
                 setSelectedTime('');
                 setClientName(''); setClientPhone(''); setClientCedula(''); setClientEmail('');
-                setOtpValue(''); setPaymentMethod(null);
+                setPaymentMethod(null);
               }}
               className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
               style={{ backgroundColor: '#121e6c' }}
