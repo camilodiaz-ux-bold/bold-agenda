@@ -1,6 +1,7 @@
 import { useState, useMemo, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader';
-import { formatCOP, PROFESSIONALS, SERVICES } from '../data/appointments';
+import { formatCOP, PROFESSIONALS, SERVICES, HISTORICAL_SALE_RECORDS } from '../data/appointments';
 import { SaleDetailDrawer } from '../components/SaleDetailDrawer';
 import type { SaleRecord, Role } from '../types';
 
@@ -11,15 +12,18 @@ interface Props {
   onCloseDrawer: () => void;
 }
 
-type Period = 'hoy' | 'semana' | 'mes';
-
-const TODAY = '2026-07-16';
-const WEEK_START = '2026-07-13';
-const WEEK_END = '2026-07-19';
-const MONTH_PREFIX = '2026-07';
+const CURRENT_YEAR = 2026;
+const CURRENT_MONTH = 7;
 const STAFF_PROF_ID = 'p1';
 
-const PERIOD_LABELS: Record<Period, string> = { hoy: 'Hoy', semana: 'Semana', mes: 'Mes' };
+const MONTH_NAMES_ES = [
+  '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+// Earliest month with data
+const MIN_YEAR = 2026;
+const MIN_MONTH = 5;
 
 const PM_LABELS: Record<string, string> = {
   datafono: 'Datáfono',
@@ -28,28 +32,47 @@ const PM_LABELS: Record<string, string> = {
   anticipado: 'Prepagado',
 };
 
-function filterByPeriod(records: SaleRecord[], period: Period): SaleRecord[] {
-  const dateOf = (r: SaleRecord) => r.completedAt.slice(0, 10);
-  switch (period) {
-    case 'hoy': return records.filter(r => dateOf(r) === TODAY);
-    case 'semana': return records.filter(r => dateOf(r) >= WEEK_START && dateOf(r) <= WEEK_END);
-    case 'mes': return records.filter(r => dateOf(r).startsWith(MONTH_PREFIX));
-  }
-}
-
 function formatSaleDate(completedAt: string): string {
   const [y, m, d] = completedAt.slice(0, 10).split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
 }
 
+function monthPrefix(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
 export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: Props) {
-  const [period, setPeriod] = useState<Period>('hoy');
+  const [viewYear, setViewYear] = useState(CURRENT_YEAR);
+  const [viewMonth, setViewMonth] = useState(CURRENT_MONTH);
+
+  const isCurrentMonth = viewYear === CURRENT_YEAR && viewMonth === CURRENT_MONTH;
+  const canGoBack = !(viewYear === MIN_YEAR && viewMonth === MIN_MONTH);
+  const canGoForward = !isCurrentMonth;
+
+  function prevMonth() {
+    if (!canGoBack) return;
+    if (viewMonth === 1) { setViewYear(y => y - 1); setViewMonth(12); }
+    else setViewMonth(m => m - 1);
+  }
+
+  function nextMonth() {
+    if (!canGoForward) return;
+    if (viewMonth === 12) { setViewYear(y => y + 1); setViewMonth(1); }
+    else setViewMonth(m => m + 1);
+  }
+
+  // Merge dynamic store records with static historical records (dedup by id)
+  const allRecords = useMemo(() => {
+    const ids = new Set(salesRecords.map(r => r.id));
+    return [...salesRecords, ...HISTORICAL_SALE_RECORDS.filter(r => !ids.has(r.id))];
+  }, [salesRecords]);
 
   const filtered = useMemo(() => {
-    let records = filterByPeriod(salesRecords, period);
+    const prefix = monthPrefix(viewYear, viewMonth);
+    let records = allRecords.filter(r => r.completedAt.startsWith(prefix));
     if (role === 'staff') records = records.filter(r => r.professionalId === STAFF_PROF_ID);
     return [...records].sort((a, b) => b.completedAt.localeCompare(a.completedAt));
-  }, [salesRecords, period, role]);
+  }, [allRecords, viewYear, viewMonth, role]);
 
   const metrics = useMemo(() => ({
     ventas: filtered.reduce((s, r) => s + r.total, 0),
@@ -86,26 +109,41 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
     <div className="flex flex-col min-h-full">
       <PageHeader title="Ventas" subtitle={isAdmin ? 'Resumen del salón' : 'Tu resumen'} />
 
-      {/* Period selector */}
-      <div className="bg-white px-4 pb-3 border-b border-gray-100">
-        <div className="flex bg-[#f3f3f3] rounded-full p-1 gap-0.5">
-          {(['hoy', 'semana', 'mes'] as Period[]).map(p => {
-            const isActive = p === period;
-            return (
+      {/* Month navigator */}
+      <div className="bg-white px-4 pb-4 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={prevMonth}
+            disabled={!canGoBack}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-all active:opacity-60 disabled:opacity-25"
+            style={{ backgroundColor: '#f7f8fb' }}
+          >
+            <ChevronLeft size={18} color="#121e6c" strokeWidth={2.5} />
+          </button>
+
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-base font-bold text-[#121e6c] leading-none">
+              {MONTH_NAMES_ES[viewMonth]} {viewYear}
+            </span>
+            {!isCurrentMonth && (
               <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className="flex-1 text-center py-1.5 rounded-full text-xs font-semibold transition-all"
-                style={{
-                  backgroundColor: isActive ? '#fff' : 'transparent',
-                  color: isActive ? '#121e6c' : '#969696',
-                  boxShadow: isActive ? '0 1px 3px rgba(18,30,108,0.08)' : 'none',
-                }}
+                onClick={() => { setViewYear(CURRENT_YEAR); setViewMonth(CURRENT_MONTH); }}
+                className="text-[11px] font-semibold transition-opacity active:opacity-60"
+                style={{ color: '#E8194B' }}
               >
-                {PERIOD_LABELS[p]}
+                Ir al mes actual
               </button>
-            );
-          })}
+            )}
+          </div>
+
+          <button
+            onClick={nextMonth}
+            disabled={!canGoForward}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-all active:opacity-60 disabled:opacity-25"
+            style={{ backgroundColor: '#f7f8fb' }}
+          >
+            <ChevronRight size={18} color="#121e6c" strokeWidth={2.5} />
+          </button>
         </div>
       </div>
 
@@ -146,7 +184,6 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
                   className="w-full bg-white rounded-2xl px-3 py-3 text-left flex items-center gap-3 border border-gray-100 transition-all active:opacity-70"
                   style={{ boxShadow: '0px 1px 4px rgba(18,30,108,0.05)' }}
                 >
-                  {/* Professional avatar */}
                   <div
                     className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center"
                     style={{ backgroundColor: '#e8eaf0' }}
@@ -155,7 +192,6 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
                       {prof?.initials ?? '?'}
                     </span>
                   </div>
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-bold text-[#1e1e1e] truncate">{record.clientName}</span>

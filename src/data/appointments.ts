@@ -746,6 +746,31 @@ export const INITIAL_SALE_RECORDS: SaleRecord[] = [
   { id: 'sr19', appointmentId: null, clientName: 'Laura Jiménez', serviceId: 's1', professionalId: 'p1', serviceValue: 45000, tip: 5000, total: 50000, paymentMethod: 'datafono', paymentStatus: 'pagado', commission: 20250, completedAt: '2026-07-01T10:00:00' },
 ];
 
+// Historical records for May and June — always static, never stored in localStorage.
+// VentasPage merges these with the dynamic salesRecords from the store.
+export const HISTORICAL_SALE_RECORDS: SaleRecord[] = [
+  // ── Mayo 2026 ────────────────────────────────────────────────────────────
+  { id: 'hm1', appointmentId: null, clientName: 'Laura Jiménez',   serviceId: 's1', professionalId: 'p1', serviceValue: 45000,  tip: 0,     total: 45000,  paymentMethod: 'datafono',  paymentStatus: 'pagado',           commission: 20250, completedAt: '2026-05-05T09:30:00' },
+  { id: 'hm2', appointmentId: null, clientName: 'María Torres',    serviceId: 's3', professionalId: 'p2', serviceValue: 220000, tip: 0,     total: 220000, paymentMethod: 'anticipado', paymentStatus: 'pagado-anticipado', commission: 88000, completedAt: '2026-05-07T10:00:00' },
+  { id: 'hm3', appointmentId: null, clientName: 'Sofía Gómez',    serviceId: 's5', professionalId: 'p3', serviceValue: 38000,  tip: 3000,  total: 41000,  paymentMethod: 'qr',         paymentStatus: 'pagado',           commission: 13300, completedAt: '2026-05-10T11:00:00' },
+  { id: 'hm4', appointmentId: null, clientName: 'Carlos Martínez', serviceId: 's2', professionalId: 'p1', serviceValue: 30000,  tip: 0,     total: 30000,  paymentMethod: 'datafono',  paymentStatus: 'pagado',           commission: 13500, completedAt: '2026-05-14T14:00:00' },
+  { id: 'hm5', appointmentId: null, clientName: 'Catalina Vega',  serviceId: 's4', professionalId: 'p2', serviceValue: 95000,  tip: 5000,  total: 100000, paymentMethod: 'link',       paymentStatus: 'pagado',           commission: 38000, completedAt: '2026-05-20T10:00:00' },
+  { id: 'hm6', appointmentId: null, clientName: 'Andrea López',   serviceId: 's1', professionalId: 'p1', serviceValue: 45000,  tip: 0,     total: 45000,  paymentMethod: 'datafono',  paymentStatus: 'pagado',           commission: 20250, completedAt: '2026-05-21T09:00:00' },
+  { id: 'hm7', appointmentId: null, clientName: 'Paula Herrera',  serviceId: 's5', professionalId: 'p3', serviceValue: 38000,  tip: 0,     total: 38000,  paymentMethod: 'qr',         paymentStatus: 'pagado',           commission: 13300, completedAt: '2026-05-27T15:00:00' },
+  { id: 'hm8', appointmentId: null, clientName: 'Valentina Ospina', serviceId: 's3', professionalId: 'p2', serviceValue: 220000, tip: 10000, total: 230000, paymentMethod: 'anticipado', paymentStatus: 'pagado-anticipado', commission: 88000, completedAt: '2026-05-28T09:30:00' },
+  // ── Junio 2026 ────────────────────────────────────────────────────────────
+  { id: 'hj1',  appointmentId: null, clientName: 'Laura Jiménez',   serviceId: 's1', professionalId: 'p1', serviceValue: 45000,  tip: 5000,  total: 50000,  paymentMethod: 'datafono',  paymentStatus: 'pagado',           commission: 20250, completedAt: '2026-06-02T09:00:00' },
+  { id: 'hj2',  appointmentId: null, clientName: 'Sofía Gómez',    serviceId: 's5', professionalId: 'p3', serviceValue: 38000,  tip: 0,     total: 38000,  paymentMethod: 'qr',         paymentStatus: 'pagado',           commission: 13300, completedAt: '2026-06-05T11:00:00' },
+  { id: 'hj3',  appointmentId: null, clientName: 'Daniela Reyes',  serviceId: 's3', professionalId: 'p2', serviceValue: 220000, tip: 0,     total: 220000, paymentMethod: 'anticipado', paymentStatus: 'pagado-anticipado', commission: 88000, completedAt: '2026-06-09T10:00:00' },
+  { id: 'hj4',  appointmentId: null, clientName: 'Andrea López',   serviceId: 's4', professionalId: 'p1', serviceValue: 95000,  tip: 10000, total: 105000, paymentMethod: 'datafono',  paymentStatus: 'pagado',           commission: 42750, completedAt: '2026-06-12T11:00:00' },
+  { id: 'hj5',  appointmentId: null, clientName: 'Paula Herrera',  serviceId: 's5', professionalId: 'p3', serviceValue: 38000,  tip: 3000,  total: 41000,  paymentMethod: 'qr',         paymentStatus: 'pagado',           commission: 13300, completedAt: '2026-06-14T15:00:00' },
+  { id: 'hj6',  appointmentId: null, clientName: 'María Torres',   serviceId: 's4', professionalId: 'p2', serviceValue: 95000,  tip: 0,     total: 95000,  paymentMethod: 'link',       paymentStatus: 'pagado',           commission: 38000, completedAt: '2026-06-17T10:30:00' },
+  { id: 'hj7',  appointmentId: null, clientName: 'Valentina Ospina', serviceId: 's3', professionalId: 'p1', serviceValue: 220000, tip: 20000, total: 240000, paymentMethod: 'anticipado', paymentStatus: 'pagado-anticipado', commission: 99000, completedAt: '2026-06-19T09:00:00' },
+  { id: 'hj8',  appointmentId: null, clientName: 'Laura Jiménez',  serviceId: 's1', professionalId: 'p1', serviceValue: 45000,  tip: 5000,  total: 50000,  paymentMethod: 'datafono',  paymentStatus: 'pagado',           commission: 20250, completedAt: '2026-06-23T09:30:00' },
+  { id: 'hj9',  appointmentId: null, clientName: 'Sofía Gómez',   serviceId: 's5', professionalId: 'p3', serviceValue: 38000,  tip: 0,     total: 38000,  paymentMethod: 'qr',         paymentStatus: 'pagado',           commission: 13300, completedAt: '2026-06-25T14:00:00' },
+  { id: 'hj10', appointmentId: null, clientName: 'Catalina Vega',  serviceId: 's3', professionalId: 'p2', serviceValue: 220000, tip: 0,     total: 220000, paymentMethod: 'anticipado', paymentStatus: 'pagado-anticipado', commission: 88000, completedAt: '2026-06-28T09:00:00' },
+];
+
 export function getProfessional(id: string) {
   return PROFESSIONALS.find(p => p.id === id);
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
-import { Bell, ChevronDown, AlertTriangle, CalendarOff, Users, User } from 'lucide-react';
+import { Bell, ChevronDown, AlertTriangle, CalendarOff, Users } from 'lucide-react';
 import { PROFESSIONALS, SERVICES, formatDuration } from '../data/appointments';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
@@ -109,6 +109,7 @@ export function AgendaPage({
   const [profFilter, setProfFilter] = useState<string>('all');
   const [showScopeSheet, setShowScopeSheet] = useState(false);
   const [showBranchSheet, setShowBranchSheet] = useState(false);
+  const [viewProfId, setViewProfId] = useState(STAFF_PROF_ID);
 
   const isAdmin = role === 'admin';
   const isTeam = isAdmin && viewScope === 'team';
@@ -179,18 +180,21 @@ export function AgendaPage({
 
   const dayAppointments = useMemo<Appointment[]>(() => {
     let apts = branchApts.filter(a => a.date === selectedDate);
-    if (role === 'staff' || viewScope === 'mine') {
+    if (role === 'staff') {
       apts = apts.filter(a => a.professionalId === STAFF_PROF_ID);
+    } else if (viewScope === 'mine') {
+      apts = apts.filter(a => a.professionalId === viewProfId);
     } else if (profFilter !== 'all') {
       apts = apts.filter(a => a.professionalId === profFilter);
     }
     return [...apts].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [branchApts, selectedDate, profFilter, role, viewScope]);
+  }, [branchApts, selectedDate, profFilter, role, viewScope, viewProfId]);
 
   const metrics = useMemo(() => {
     const base = branchApts.filter(a => {
       if (a.date !== selectedDate) return false;
-      if (role === 'staff' || viewScope === 'mine') return a.professionalId === STAFF_PROF_ID;
+      if (role === 'staff') return a.professionalId === STAFF_PROF_ID;
+      if (viewScope === 'mine') return a.professionalId === viewProfId;
       if (profFilter !== 'all') return a.professionalId === profFilter;
       return true;
     });
@@ -314,10 +318,25 @@ export function AgendaPage({
           </button>
         </div>
 
-        {/* Row 2: Selected date as natural text */}
-        <p className="text-sm font-medium text-[#606060] px-1 mb-2 leading-none">
-          {formatDateHeader(selectedDate)}
-        </p>
+        {/* Row 2: Date (left) + scope selector (right) */}
+        <div className="flex items-center justify-between px-1 mb-3">
+          <p className="text-sm font-medium text-[#606060] leading-none">
+            {formatDateHeader(selectedDate)}
+          </p>
+          {isAdmin && (
+            <button
+              onClick={() => setShowScopeSheet(true)}
+              className="flex items-center gap-1 active:opacity-60 transition-opacity ml-3 shrink-0"
+            >
+              <span className="text-[13px] font-semibold text-[#121e6c] leading-none">
+                {viewScope === 'team'
+                  ? 'Agenda del equipo'
+                  : (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')}
+              </span>
+              <ChevronDown size={13} color="#121e6c" strokeWidth={2.5} className="shrink-0" />
+            </button>
+          )}
+        </div>
 
         {/* Row 3: Horizontal swipeable day strip (5 weeks, 7 visible at a time) */}
         <div
@@ -370,57 +389,34 @@ export function AgendaPage({
           ))}
         </div>
 
-        {/* Filter row: scope chip (first) + pro chips (team only) */}
-        <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
-          {/* Scope icon chip */}
-          {isAdmin ? (
+        {/* Filter row: pro chips visible only in team view */}
+        {isTeam && (
+          <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
             <button
-              onClick={() => setShowScopeSheet(true)}
-              className="flex items-center justify-center w-9 h-8 shrink-0 rounded-full border transition-all active:opacity-70"
-              style={{ borderColor: '#d2d4e1', backgroundColor: '#fff' }}
-              aria-label={viewScope === 'team' ? 'Vista del equipo' : 'Mi agenda'}
+              onClick={() => setProfFilter('all')}
+              className="rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
+              style={{ backgroundColor: profFilter === 'all' ? '#121e6c' : '#fff', color: profFilter === 'all' ? '#fff' : '#606060', borderColor: profFilter === 'all' ? '#121e6c' : '#d2d4e1' }}
             >
-              {viewScope === 'team'
-                ? <Users size={14} color="#121e6c" strokeWidth={2} />
-                : <User size={14} color="#E8194B" strokeWidth={2} />}
+              Todos
             </button>
-          ) : (
-            <div
-              className="flex items-center justify-center w-9 h-8 shrink-0 rounded-full border"
-              style={{ borderColor: '#d2d4e1', backgroundColor: '#f7f8fb' }}
-            >
-              <User size={14} color="#969696" strokeWidth={2} />
-            </div>
-          )}
-
-          {/* Pro chips — team admin only */}
-          {isTeam && (
-            <>
-              <button
-                onClick={() => setProfFilter('all')}
-                className="rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
-                style={{ backgroundColor: profFilter === 'all' ? '#121e6c' : '#fff', color: profFilter === 'all' ? '#fff' : '#606060', borderColor: profFilter === 'all' ? '#121e6c' : '#d2d4e1' }}
-              >
-                Todos
-              </button>
-              {PROFESSIONALS.map(prof => {
-                const isActive = profFilter === prof.id;
-                return (
-                  <button
-                    key={prof.id}
-                    onClick={() => setProfFilter(isActive ? 'all' : prof.id)}
-                    className="flex items-center gap-1.5 rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
-                    style={{ backgroundColor: isActive ? '#121e6c' : '#fff', color: isActive ? '#fff' : '#606060', borderColor: isActive ? '#121e6c' : '#d2d4e1' }}
-                  >
-                    <span className="text-[8px] font-bold">{prof.initials}</span>
-                    {prof.name.split(' ')[0]}
-                  </button>
-                );
-              })}
-            </>
-          )}
-          <div className="w-2 shrink-0" />
-        </div>
+            {PROFESSIONALS.map(prof => {
+              const isActive = profFilter === prof.id;
+              return (
+                <button
+                  key={prof.id}
+                  onClick={() => setProfFilter(isActive ? 'all' : prof.id)}
+                  className="flex items-center gap-1.5 rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
+                  style={{ backgroundColor: isActive ? '#121e6c' : '#fff', color: isActive ? '#fff' : '#606060', borderColor: isActive ? '#121e6c' : '#d2d4e1' }}
+                >
+                  <span className="text-[8px] font-bold">{prof.initials}</span>
+                  {prof.name.split(' ')[0]}
+                </button>
+              );
+            })}
+            <div className="w-2 shrink-0" />
+          </div>
+        )}
+        {!isTeam && <div className="pb-3" />}
 
         <div className="h-px bg-gray-100 -mx-4" />
       </div>
@@ -520,29 +516,61 @@ export function AgendaPage({
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowScopeSheet(false)} />
           <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl px-5 pt-4 pb-10">
             <div className="w-9 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Vista de la agenda</p>
-            {([
-              { scope: 'team' as const, label: 'Agenda del equipo', desc: 'Todas las profesionales', Icon: Users },
-              { scope: 'mine' as const, label: 'Mi agenda', desc: 'Solo mis citas', Icon: User },
-            ]).map(({ scope, label, desc, Icon }) => (
-              <button
-                key={scope}
-                onClick={() => { onViewScopeChange(scope); setProfFilter('all'); setShowScopeSheet(false); }}
-                className="w-full flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 active:opacity-70"
-              >
-                <div className="w-9 h-9 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: viewScope === scope ? '#121e6c' : '#f7f8fb' }}>
-                  <Icon size={16} color={viewScope === scope ? '#fff' : '#606060'} strokeWidth={2} />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-sm font-semibold" style={{ color: viewScope === scope ? '#121e6c' : '#1e1e1e' }}>{label}</p>
-                  <p className="text-xs text-[#969696]">{desc}</p>
-                </div>
-                {viewScope === scope && (
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#E8194B' }} />
-                )}
-              </button>
-            ))}
+            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Cambiar vista</p>
+
+            {/* Team option */}
+            <button
+              onClick={() => { onViewScopeChange('team'); setProfFilter('all'); setShowScopeSheet(false); }}
+              className="w-full flex items-center gap-3 py-3.5 border-b border-gray-100 active:opacity-70"
+            >
+              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: viewScope === 'team' ? '#121e6c' : '#f7f8fb' }}>
+                <Users size={16} color={viewScope === 'team' ? '#fff' : '#606060'} strokeWidth={2} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold" style={{ color: viewScope === 'team' ? '#121e6c' : '#1e1e1e' }}>
+                  Agenda del equipo
+                </p>
+                <p className="text-xs text-[#969696]">Todas las profesionales</p>
+              </div>
+              {viewScope === 'team' && (
+                <span className="text-xs font-bold shrink-0" style={{ color: '#E8194B' }}>✓</span>
+              )}
+            </button>
+
+            {/* Individual professional options */}
+            {PROFESSIONALS.map((prof, i) => {
+              const isActive = viewScope === 'mine' && viewProfId === prof.id;
+              return (
+                <button
+                  key={prof.id}
+                  onClick={() => {
+                    onViewScopeChange('mine');
+                    setViewProfId(prof.id);
+                    setProfFilter('all');
+                    setShowScopeSheet(false);
+                  }}
+                  className="w-full flex items-center gap-3 py-3.5 active:opacity-70"
+                  style={{ borderBottom: i < PROFESSIONALS.length - 1 ? '1px solid #f3f3f3' : 'none' }}
+                >
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                    style={{ backgroundColor: isActive ? prof.color : '#f7f8fb', color: isActive ? '#fff' : '#606060' }}
+                  >
+                    {prof.initials}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-semibold" style={{ color: isActive ? '#121e6c' : '#1e1e1e' }}>
+                      {prof.name}
+                    </p>
+                    <p className="text-xs text-[#969696]">{prof.role}</p>
+                  </div>
+                  {isActive && (
+                    <span className="text-xs font-bold shrink-0" style={{ color: '#E8194B' }}>✓</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
