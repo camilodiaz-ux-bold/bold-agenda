@@ -56,6 +56,13 @@ export interface Service {
   active?: boolean;
 }
 
+export interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  neighborhood: string;
+}
+
 export interface Appointment {
   id: string;
   professionalId: string;
@@ -72,6 +79,7 @@ export interface Appointment {
   notes?: string;
   policySnapshot?: { cancellationWindowHours: number };
   originalPrice?: number;
+  branchId?: string;
 }
 
 export interface AvailabilityBlock {

@@ -16,6 +16,7 @@ export interface PrototypeState {
   services: Service[];
   businessProfile: BusinessProfile;
   bookingPolicy: BookingPolicy;
+  activeBranchId: string;
 }
 
 const STORAGE_KEY = 'bold_agenda_v4';
@@ -30,6 +31,7 @@ function seedState(): PrototypeState {
     services: JSON.parse(JSON.stringify(SERVICES)),
     businessProfile: { ...SEED_BUSINESS_PROFILE },
     bookingPolicy: { ...SEED_BOOKING_POLICY },
+    activeBranchId: 'norte',
   };
 }
 
@@ -38,7 +40,11 @@ let _cache: PrototypeState | null = null;
 function load(): PrototypeState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as PrototypeState;
+    if (raw) {
+      const data = JSON.parse(raw) as PrototypeState;
+      if (!data.activeBranchId) data.activeBranchId = 'norte';
+      return data;
+    }
   } catch { /* storage unavailable */ }
   return seedState();
 }

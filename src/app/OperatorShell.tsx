@@ -11,6 +11,7 @@ import { AvailabilityDrawer } from '../components/AvailabilityDrawer';
 import { EditAppointmentDrawer } from '../components/EditAppointmentDrawer';
 import type { OperatorSection, Role, SaleRecord, Appointment, AvailabilityBlock, Client } from '../types';
 import { store } from '../store/prototypeStore';
+import { BRANCHES } from '../data/appointments';
 
 interface DrawerState {
   title?: string;
@@ -29,6 +30,7 @@ export function OperatorShell() {
   const [viewScope, setViewScope] = useState<'team' | 'mine'>('team');
   const [showNewAppt, setShowNewAppt] = useState(false);
   const [agendaJumpDate, setAgendaJumpDate] = useState<string | undefined>(undefined);
+  const [activeBranchId, setActiveBranchId] = useState(initial.activeBranchId ?? 'norte');
 
   const [appointments, setAppointments] = useState<Appointment[]>(initial.appointments);
   const [salesRecords, setSalesRecords] = useState<SaleRecord[]>(initial.saleRecords);
@@ -41,6 +43,11 @@ export function OperatorShell() {
 
   function persist(updates: Partial<ReturnType<typeof store.get>>) {
     store.set(s => ({ ...s, ...updates }));
+  }
+
+  function handleBranchChange(id: string) {
+    setActiveBranchId(id);
+    persist({ activeBranchId: id });
   }
 
   const openDrawer = (content: ReactNode, title?: string, height?: string) => setDrawer({ content, title, height });
@@ -138,8 +145,10 @@ export function OperatorShell() {
             viewScope={viewScope}
             onViewScopeChange={setViewScope}
             appointments={appointments}
-            clients={clients}
             availabilityBlocks={availabilityBlocks}
+            activeBranchId={activeBranchId}
+            branches={BRANCHES}
+            onBranchChange={handleBranchChange}
             onUpdateAppointment={updateAppointment}
             onAddSaleRecord={addSaleRecord}
             onOpenDrawer={openDrawer}
@@ -201,6 +210,7 @@ export function OperatorShell() {
               setClients(fresh.clients);
               setBusinessProfile(fresh.businessProfile);
               setBookingPolicy(fresh.bookingPolicy);
+              setActiveBranchId(fresh.activeBranchId ?? 'norte');
             }}
           />
         )}

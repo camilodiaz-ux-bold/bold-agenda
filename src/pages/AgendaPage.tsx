@@ -1,19 +1,21 @@
-import { useState, useMemo, useEffect, type ReactNode } from 'react';
-import { Bell, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, CalendarOff, Users, User } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
+import { Bell, ChevronDown, AlertTriangle, CalendarOff, Users, User } from 'lucide-react';
 import { PROFESSIONALS, SERVICES, formatDuration } from '../data/appointments';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
 import { timeToMin, minToTime, PROTOTYPE_TODAY } from '../store/prototypeStore';
-import type { Appointment, Professional, Service, SaleRecord, Role, AvailabilityBlock, Client } from '../types';
+import type { Appointment, Professional, Service, SaleRecord, Role, AvailabilityBlock, Branch } from '../types';
 
 interface Props {
   role: Role;
   viewScope: 'team' | 'mine';
   onViewScopeChange: (scope: 'team' | 'mine') => void;
   appointments: Appointment[];
-  clients: Client[];
   availabilityBlocks: AvailabilityBlock[];
+  activeBranchId: string;
+  branches: Branch[];
+  onBranchChange: (id: string) => void;
   onUpdateAppointment: (updated: Appointment) => void;
   onAddSaleRecord: (sale: SaleRecord) => void;
   onOpenDrawer: (content: ReactNode, title?: string, height?: string) => void;
@@ -26,8 +28,9 @@ interface Props {
 
 const DEMO_NOW = '13:30';
 const WEEK_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const STAFF_PROF_ID = 'p1';
+const TOTAL_WEEKS = 5;
+const CENTER_WEEK_IDX = 2;
 
 function shiftDate(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -44,30 +47,25 @@ function getMondayOf(dateStr: string): Date {
   return new Date(y, m - 1, d + offset);
 }
 
+function getMondayStr(dateStr: string): string {
+  const mon = getMondayOf(dateStr);
+  return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`;
+}
+
 function isSameWeek(a: string, b: string): boolean {
-  const monA = getMondayOf(a);
-  const monB = getMondayOf(b);
-  return monA.getTime() === monB.getTime();
+  return getMondayStr(a) === getMondayStr(b);
 }
 
-function getWeekRange(dateStr: string): string {
-  const monday = getMondayOf(dateStr);
-  const saturday = new Date(monday);
-  saturday.setDate(monday.getDate() + 5);
-  if (monday.getMonth() === saturday.getMonth()) {
-    return `${monday.getDate()}–${saturday.getDate()} ${MONTHS_SHORT[monday.getMonth()]}`;
-  }
-  return `${monday.getDate()} ${MONTHS_SHORT[monday.getMonth()]}–${saturday.getDate()} ${MONTHS_SHORT[saturday.getMonth()]}`;
-}
-
-function getWeekDates(dateStr: string) {
-  const monday = getMondayOf(dateStr);
-  return WEEK_LABELS.map((label, i) => {
-    const nd = new Date(monday);
-    nd.setDate(monday.getDate() + i);
-    const ds = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`;
-    return { label, dateNum: nd.getDate(), dateStr: ds };
-  });
+function formatDateHeader(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dayNum = date.getDate();
+  const monthName = date.toLocaleDateString('es-CO', { month: 'long' });
+  const dayAndMonth = `${dayNum} de ${monthName}`;
+  if (dateStr === PROTOTYPE_TODAY) return `Hoy, ${dayAndMonth}`;
+  if (dateStr === shiftDate(PROTOTYPE_TODAY, 1)) return `Mañana, ${dayAndMonth}`;
+  const weekday = date.toLocaleDateString('es-CO', { weekday: 'long' });
+  return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${dayAndMonth}`;
 }
 
 interface ConflictInfo { profName: string; startTime: string; endTime: string }
@@ -91,18 +89,33 @@ function getConflictInfo(apt: Appointment, blocks: AvailabilityBlock[], services
   return null;
 }
 
+// Generate 5 weeks (2 before + current + 2 after) relative to PROTOTYPE_TODAY
+function buildAllWeeks(): string[][] {
+  return Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+    const weekMon = getMondayStr(shiftDate(PROTOTYPE_TODAY, (i - CENTER_WEEK_IDX) * 7));
+    return Array.from({ length: 7 }, (_, j) => shiftDate(weekMon, j));
+  });
+}
+
+const ALL_WEEKS = buildAllWeeks();
+
 export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
+  activeBranchId, branches, onBranchChange,
   onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
   onOpenAvailability, jumpToDate, onJumpHandled,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
   const [profFilter, setProfFilter] = useState<string>('all');
   const [showScopeSheet, setShowScopeSheet] = useState(false);
+  const [showBranchSheet, setShowBranchSheet] = useState(false);
 
   const isAdmin = role === 'admin';
   const isTeam = isAdmin && viewScope === 'team';
 
+  const activeBranch = branches.find(b => b.id === activeBranchId);
+
+  // Jump to date from external (e.g. after creating appointment)
   useEffect(() => {
     if (jumpToDate) {
       setSelectedDate(jumpToDate);
@@ -110,25 +123,72 @@ export function AgendaPage({
     }
   }, [jumpToDate]);
 
-  const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
-  const isCurrentWeek = isSameWeek(selectedDate, PROTOTYPE_TODAY);
+  // Which week index contains selectedDate
+  const selectedWeekIdx = useMemo(
+    () => ALL_WEEKS.findIndex(week => isSameWeek(week[0], selectedDate)),
+    [selectedDate]
+  );
 
-  function prevWeek() { setSelectedDate(d => shiftDate(d, -7)); }
-  function nextWeek() { setSelectedDate(d => shiftDate(d, 7)); }
-  function goToToday() { setSelectedDate(PROTOTYPE_TODAY); }
+  // Day strip scroll logic
+  const stripRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
+  const ignoreScrollRef = useRef(false);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const targetLeft = selectedWeekIdx * el.offsetWidth;
+
+    if (!initializedRef.current) {
+      const frame = requestAnimationFrame(() => {
+        el.scrollLeft = selectedWeekIdx * el.offsetWidth;
+        initializedRef.current = true;
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+
+    if (Math.abs(el.scrollLeft - targetLeft) < 5) return;
+    ignoreScrollRef.current = true;
+    el.scrollTo({ left: targetLeft, behavior: 'smooth' });
+    const t = setTimeout(() => { ignoreScrollRef.current = false; }, 500);
+    return () => clearTimeout(t);
+  }, [selectedWeekIdx]);
+
+  function handleStripScroll() {
+    if (ignoreScrollRef.current) return;
+    clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      const el = stripRef.current;
+      if (!el) return;
+      const weekIdx = Math.round(el.scrollLeft / el.offsetWidth);
+      if (weekIdx === selectedWeekIdx) return;
+      const week = ALL_WEEKS[weekIdx];
+      if (!week) return;
+      const dow = new Date(selectedDate + 'T12:00:00').getDay();
+      const sameDay = week.find(d => new Date(d + 'T12:00:00').getDay() === dow) ?? week[1];
+      setSelectedDate(sameDay);
+    }, 150);
+  }
+
+  // Filter appointments to active branch then apply scope/prof filters
+  const branchApts = useMemo(
+    () => appointments.filter(a => (a.branchId ?? 'norte') === activeBranchId),
+    [appointments, activeBranchId]
+  );
 
   const dayAppointments = useMemo<Appointment[]>(() => {
-    let apts = appointments.filter(a => a.date === selectedDate);
+    let apts = branchApts.filter(a => a.date === selectedDate);
     if (role === 'staff' || viewScope === 'mine') {
       apts = apts.filter(a => a.professionalId === STAFF_PROF_ID);
     } else if (profFilter !== 'all') {
       apts = apts.filter(a => a.professionalId === profFilter);
     }
     return [...apts].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [appointments, selectedDate, profFilter, role, viewScope]);
+  }, [branchApts, selectedDate, profFilter, role, viewScope]);
 
   const metrics = useMemo(() => {
-    const base = appointments.filter(a => {
+    const base = branchApts.filter(a => {
       if (a.date !== selectedDate) return false;
       if (role === 'staff' || viewScope === 'mine') return a.professionalId === STAFF_PROF_ID;
       if (profFilter !== 'all') return a.professionalId === profFilter;
@@ -137,7 +197,7 @@ export function AgendaPage({
     const total = base.filter(a => !['cancelada', 'cancelada-tarde'].includes(a.status)).length;
     const confirmadas = base.filter(a => a.status === 'confirmada').length;
     return { total, confirmadas };
-  }, [appointments, selectedDate, role, viewScope, profFilter]);
+  }, [branchApts, selectedDate, role, viewScope, profFilter]);
 
   function handleClosure(result: ClosureResult) {
     const apt = appointments.find(a => a.id === result.appointmentId);
@@ -224,67 +284,77 @@ export function AgendaPage({
   return (
     <div className="flex flex-col min-h-full">
       {/* ── Header ────────────────────────────────────────────────────── */}
-      <div className="bg-white px-4 pt-4 pb-0">
+      <div className="bg-white px-4 pt-3 pb-0">
 
-        {/* Row 1: Business name + bell */}
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-lg font-bold text-[#121e6c] leading-tight">Salón Camila</h1>
-          <button className="w-9 h-9 flex items-center justify-center transition-opacity active:opacity-60">
+        {/* Row 1: Branch selector + action icons */}
+        <div className="flex items-center -mx-1 mb-1">
+          <button
+            onClick={() => setShowBranchSheet(true)}
+            className="flex items-center gap-1 flex-1 min-w-0 px-1 h-11 active:opacity-70 transition-opacity"
+          >
+            <span className="text-base font-bold text-[#121e6c] leading-tight truncate">
+              {activeBranch?.name ?? 'Salón Camila Norte'}
+            </span>
+            <ChevronDown size={14} color="#121e6c" strokeWidth={2.5} className="shrink-0" />
+          </button>
+          {isAdmin && (
+            <button
+              onClick={() => onOpenAvailability(viewScope === 'team')}
+              className="w-11 h-11 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
+              aria-label="Bloquear disponibilidad"
+            >
+              <CalendarOff size={20} color="#121e6c" strokeWidth={1.8} />
+            </button>
+          )}
+          <button
+            className="w-11 h-11 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
+            aria-label="Notificaciones"
+          >
             <Bell size={20} color="#121e6c" strokeWidth={1.8} />
           </button>
         </div>
 
-        {/* Row 2: Week navigation */}
-        <div className="flex items-center gap-2 mb-3">
-          <button
-            onClick={prevWeek}
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-all active:opacity-60"
-            style={{ backgroundColor: '#f7f8fb' }}
-          >
-            <ChevronLeft size={18} color="#121e6c" strokeWidth={2.5} />
-          </button>
-          <div className="flex-1 flex items-center justify-center gap-2">
-            <span className="text-sm font-bold text-[#121e6c] tabular-nums">{getWeekRange(selectedDate)}</span>
-            {!isCurrentWeek && (
-              <button
-                onClick={goToToday}
-                className="text-[11px] font-bold rounded-full px-2.5 py-0.5 transition-all active:opacity-70"
-                style={{ backgroundColor: '#E8194B', color: '#fff' }}
-              >
-                Hoy
-              </button>
-            )}
-          </div>
-          <button
-            onClick={nextWeek}
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-all active:opacity-60"
-            style={{ backgroundColor: '#f7f8fb' }}
-          >
-            <ChevronRight size={18} color="#121e6c" strokeWidth={2.5} />
-          </button>
-        </div>
+        {/* Row 2: Selected date as natural text */}
+        <p className="text-sm font-medium text-[#606060] px-1 mb-2 leading-none">
+          {formatDateHeader(selectedDate)}
+        </p>
 
-        {/* Row 3: 7-day strip */}
-        <div className="flex gap-1 -mx-1 mb-3">
-          {weekDates.map(({ label, dateNum, dateStr }) => {
-            const isSelected = dateStr === selectedDate;
-            const hasDot = appointments.some(a => a.date === dateStr && !['cancelada', 'cancelada-tarde'].includes(a.status));
-            return (
-              <button
-                key={dateStr}
-                onClick={() => { setSelectedDate(dateStr); setProfFilter('all'); }}
-                className="flex-1 flex flex-col items-center gap-1 py-1.5 rounded-xl transition-all active:opacity-70"
-                style={{ backgroundColor: isSelected ? '#E8194B' : 'transparent' }}
-              >
-                <span className="text-[10px] font-semibold leading-none"
-                  style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : '#969696' }}>{label}</span>
-                <span className="text-[13px] font-bold leading-none"
-                  style={{ color: isSelected ? '#fff' : '#121e6c' }}>{dateNum}</span>
-                <div className="w-1 h-1 rounded-full"
-                  style={{ backgroundColor: hasDot ? (isSelected ? 'rgba(255,255,255,0.6)' : '#E8194B') : 'transparent' }} />
-              </button>
-            );
-          })}
+        {/* Row 3: Horizontal swipeable day strip (5 weeks, 7 visible at a time) */}
+        <div
+          ref={stripRef}
+          onScroll={handleStripScroll}
+          className="flex overflow-x-auto -mx-4 mb-3"
+          style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}
+        >
+          {ALL_WEEKS.map((week, wi) => (
+            <div
+              key={wi}
+              className="flex shrink-0"
+              style={{ minWidth: '100%', scrollSnapAlign: 'start', padding: '0 16px' }}
+            >
+              {week.map((dateStr, di) => {
+                const isSelected = dateStr === selectedDate;
+                const hasDot = branchApts.some(a => a.date === dateStr && !['cancelada', 'cancelada-tarde'].includes(a.status));
+                  const label = WEEK_LABELS[di];
+                const dayNum = parseInt(dateStr.split('-')[2], 10);
+                return (
+                  <button
+                    key={dateStr}
+                    onClick={() => { setSelectedDate(dateStr); setProfFilter('all'); }}
+                    className="flex-1 flex flex-col items-center gap-1 py-1.5 rounded-xl transition-all active:opacity-70"
+                    style={{ backgroundColor: isSelected ? '#E8194B' : 'transparent' }}
+                  >
+                    <span className="text-[10px] font-semibold leading-none"
+                      style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : '#969696' }}>{label}</span>
+                    <span className="text-[13px] font-bold leading-none"
+                      style={{ color: isSelected ? '#fff' : '#121e6c' }}>{dayNum}</span>
+                    <div className="w-1 h-1 rounded-full"
+                      style={{ backgroundColor: hasDot ? (isSelected ? 'rgba(255,255,255,0.6)' : '#E8194B') : 'transparent' }} />
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         {/* Metrics */}
@@ -300,67 +370,57 @@ export function AgendaPage({
           ))}
         </div>
 
-        {/* Action row: scope selector + block availability */}
-        <div className="flex items-center gap-2 mb-2">
+        {/* Filter row: scope chip (first) + pro chips (team only) */}
+        <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
+          {/* Scope icon chip */}
           {isAdmin ? (
             <button
               onClick={() => setShowScopeSheet(true)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-semibold transition-all active:opacity-70"
-              style={{ borderColor: '#d2d4e1', color: '#121e6c', backgroundColor: '#fff' }}
+              className="flex items-center justify-center w-9 h-8 shrink-0 rounded-full border transition-all active:opacity-70"
+              style={{ borderColor: '#d2d4e1', backgroundColor: '#fff' }}
+              aria-label={viewScope === 'team' ? 'Vista del equipo' : 'Mi agenda'}
             >
               {viewScope === 'team'
-                ? <Users size={13} color="#121e6c" strokeWidth={2} />
-                : <User size={13} color="#121e6c" strokeWidth={2} />}
-              {viewScope === 'team' ? 'Equipo' : 'Mi agenda'}
-              <ChevronDown size={12} color="#969696" strokeWidth={2.5} />
+                ? <Users size={14} color="#121e6c" strokeWidth={2} />
+                : <User size={14} color="#E8194B" strokeWidth={2} />}
             </button>
           ) : (
-            <div className="flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-semibold"
-              style={{ borderColor: '#d2d4e1', color: '#606060', backgroundColor: '#f7f8fb' }}>
-              <User size={13} color="#606060" strokeWidth={2} />
-              Mi agenda
+            <div
+              className="flex items-center justify-center w-9 h-8 shrink-0 rounded-full border"
+              style={{ borderColor: '#d2d4e1', backgroundColor: '#f7f8fb' }}
+            >
+              <User size={14} color="#969696" strokeWidth={2} />
             </div>
           )}
-          <div className="flex-1" />
-          {isAdmin && (
-            <button
-              onClick={() => onOpenAvailability(viewScope === 'team')}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-semibold transition-all active:opacity-70"
-              style={{ borderColor: '#d2d4e1', color: '#121e6c', backgroundColor: '#fff' }}
-            >
-              <CalendarOff size={13} color="#121e6c" strokeWidth={2} />
-              Bloquear
-            </button>
-          )}
-        </div>
 
-        {/* Pro filter chips — team scope only */}
-        {isTeam && (
-          <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
-            <button
-              onClick={() => setProfFilter('all')}
-              className="rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
-              style={{ backgroundColor: profFilter === 'all' ? '#121e6c' : '#fff', color: profFilter === 'all' ? '#fff' : '#606060', borderColor: profFilter === 'all' ? '#121e6c' : '#d2d4e1' }}
-            >
-              Todos
-            </button>
-            {PROFESSIONALS.map(prof => {
-              const isActive = profFilter === prof.id;
-              return (
-                <button
-                  key={prof.id}
-                  onClick={() => setProfFilter(isActive ? 'all' : prof.id)}
-                  className="flex items-center gap-1.5 rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
-                  style={{ backgroundColor: isActive ? '#121e6c' : '#fff', color: isActive ? '#fff' : '#606060', borderColor: isActive ? '#121e6c' : '#d2d4e1' }}
-                >
-                  <span className="text-[8px] font-bold">{prof.initials}</span>
-                  {prof.name.split(' ')[0]}
-                </button>
-              );
-            })}
-            <div className="w-2 shrink-0" />
-          </div>
-        )}
+          {/* Pro chips — team admin only */}
+          {isTeam && (
+            <>
+              <button
+                onClick={() => setProfFilter('all')}
+                className="rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
+                style={{ backgroundColor: profFilter === 'all' ? '#121e6c' : '#fff', color: profFilter === 'all' ? '#fff' : '#606060', borderColor: profFilter === 'all' ? '#121e6c' : '#d2d4e1' }}
+              >
+                Todos
+              </button>
+              {PROFESSIONALS.map(prof => {
+                const isActive = profFilter === prof.id;
+                return (
+                  <button
+                    key={prof.id}
+                    onClick={() => setProfFilter(isActive ? 'all' : prof.id)}
+                    className="flex items-center gap-1.5 rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
+                    style={{ backgroundColor: isActive ? '#121e6c' : '#fff', color: isActive ? '#fff' : '#606060', borderColor: isActive ? '#121e6c' : '#d2d4e1' }}
+                  >
+                    <span className="text-[8px] font-bold">{prof.initials}</span>
+                    {prof.name.split(' ')[0]}
+                  </button>
+                );
+              })}
+            </>
+          )}
+          <div className="w-2 shrink-0" />
+        </div>
 
         <div className="h-px bg-gray-100 -mx-4" />
       </div>
@@ -426,13 +486,41 @@ export function AgendaPage({
         <div className="h-36" />
       </div>
 
+      {/* Branch selector sheet */}
+      {showBranchSheet && (
+        <div className="absolute inset-0" style={{ zIndex: 50 }}>
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowBranchSheet(false)} />
+          <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl px-5 pt-4 pb-10">
+            <div className="w-9 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Cambiar sucursal</p>
+            {branches.map(branch => (
+              <button
+                key={branch.id}
+                onClick={() => { onBranchChange(branch.id); setShowBranchSheet(false); }}
+                className="w-full flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 active:opacity-70"
+              >
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-semibold" style={{ color: activeBranchId === branch.id ? '#121e6c' : '#1e1e1e' }}>
+                    {branch.name}
+                  </p>
+                  <p className="text-xs text-[#969696]">{branch.address} · {branch.neighborhood}</p>
+                </div>
+                {activeBranchId === branch.id && (
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#E8194B' }} />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Scope sheet */}
       {showScopeSheet && (
         <div className="absolute inset-0" style={{ zIndex: 50 }}>
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowScopeSheet(false)} />
           <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl px-5 pt-4 pb-10">
             <div className="w-9 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Vista de agenda</p>
+            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Vista de la agenda</p>
             {([
               { scope: 'team' as const, label: 'Agenda del equipo', desc: 'Todas las profesionales', Icon: Users },
               { scope: 'mine' as const, label: 'Mi agenda', desc: 'Solo mis citas', Icon: User },

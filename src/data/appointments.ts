@@ -1,4 +1,4 @@
-import type { Professional, Service, Appointment, Client, SaleRecord, AvailabilityBlock, BookingPolicy, BusinessProfile } from '../types';
+import type { Professional, Service, Appointment, Client, SaleRecord, AvailabilityBlock, BookingPolicy, BusinessProfile, Branch } from '../types';
 
 export const SALON = {
   name: 'Salón Camila',
@@ -6,6 +6,11 @@ export const SALON = {
   phone: '3101234567',
   schedule: 'Lun – Sáb, 8:00 am – 7:00 pm',
 };
+
+export const BRANCHES: Branch[] = [
+  { id: 'norte', name: 'Salón Camila Norte', address: 'Calle 127 #13-42', neighborhood: 'Bogotá Norte' },
+  { id: 'centro', name: 'Salón Camila Centro', address: 'Carrera 13 #85-24', neighborhood: 'Chapinero · Bogotá' },
+];
 
 export const PROFESSIONALS: Professional[] = [
   {
@@ -566,6 +571,40 @@ export const APPOINTMENTS: Appointment[] = [
     status: 'confirmada',
     paymentStatus: 'pendiente',
     notes: 'Prefiere corte clásico, poco de los lados',
+  },
+
+  // ── Salón Camila Centro ───────────────────────────────────────────────────
+  {
+    id: 'c1', professionalId: 'p1', serviceId: 's1', branchId: 'centro',
+    clientName: 'Isabel Mora', clientPhone: '3142345678', clientCedula: '52345001',
+    date: '2026-07-16', startTime: '09:00',
+    status: 'confirmada', paymentStatus: 'pendiente',
+  },
+  {
+    id: 'c2', professionalId: 'p2', serviceId: 's4', branchId: 'centro',
+    clientName: 'Carolina Silva', clientPhone: '3153456789', clientCedula: '43456002',
+    date: '2026-07-16', startTime: '11:00',
+    status: 'confirmada', paymentStatus: 'pendiente',
+  },
+  {
+    id: 'c3', professionalId: 'p3', serviceId: 's5', branchId: 'centro',
+    clientName: 'Mónica Pérez', clientPhone: '3164567890', clientCedula: '34567003',
+    date: '2026-07-16', startTime: '14:30',
+    status: 'confirmada', paymentStatus: 'pendiente',
+  },
+  {
+    id: 'c4', professionalId: 'p1', serviceId: 's2', branchId: 'centro',
+    clientName: 'Rodrigo Cano', clientPhone: '3175678901', clientCedula: '25678004',
+    date: '2026-07-17', startTime: '10:00',
+    status: 'confirmada', paymentStatus: 'pendiente',
+  },
+  {
+    id: 'c5', professionalId: 'p2', serviceId: 's3', branchId: 'centro',
+    clientName: 'Patricia Luna', clientPhone: '3186789012', clientCedula: '16789005',
+    date: '2026-07-22', startTime: '09:30',
+    status: 'confirmada', paymentStatus: 'pagado-anticipado',
+    paymentMethod: 'anticipado' as const,
+    originalPrice: 220000,
   },
 ];
 
