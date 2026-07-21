@@ -326,14 +326,15 @@ export function AgendaPage({
           {isAdmin && (
             <button
               onClick={() => setShowScopeSheet(true)}
-              className="flex items-center gap-1 active:opacity-60 transition-opacity ml-3 shrink-0"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-full border shrink-0 active:opacity-70 transition-opacity ml-3"
+              style={{ borderColor: '#d2d4e1', backgroundColor: '#fff' }}
             >
-              <span className="text-[13px] font-semibold text-[#121e6c] leading-none">
+              <span className="text-xs font-semibold text-[#121e6c] leading-none">
                 {viewScope === 'team'
                   ? 'Agenda del equipo'
                   : (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')}
               </span>
-              <ChevronDown size={13} color="#121e6c" strokeWidth={2.5} className="shrink-0" />
+              <ChevronDown size={12} color="#121e6c" strokeWidth={2.5} className="shrink-0" />
             </button>
           )}
         </div>
@@ -531,7 +532,7 @@ export function AgendaPage({
                 <p className="text-sm font-semibold" style={{ color: viewScope === 'team' ? '#121e6c' : '#1e1e1e' }}>
                   Agenda del equipo
                 </p>
-                <p className="text-xs text-[#969696]">Todas las profesionales</p>
+                <p className="text-xs text-[#969696]">Todas las agendas</p>
               </div>
               {viewScope === 'team' && (
                 <span className="text-xs font-bold shrink-0" style={{ color: '#E8194B' }}>✓</span>
@@ -563,7 +564,6 @@ export function AgendaPage({
                     <p className="text-sm font-semibold" style={{ color: isActive ? '#121e6c' : '#1e1e1e' }}>
                       {prof.name}
                     </p>
-                    <p className="text-xs text-[#969696]">{prof.role}</p>
                   </div>
                   {isActive && (
                     <span className="text-xs font-bold shrink-0" style={{ color: '#E8194B' }}>✓</span>
