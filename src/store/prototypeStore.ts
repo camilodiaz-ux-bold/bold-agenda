@@ -18,7 +18,7 @@ export interface PrototypeState {
   bookingPolicy: BookingPolicy;
 }
 
-const STORAGE_KEY = 'bold_agenda_v3';
+const STORAGE_KEY = 'bold_agenda_v4';
 
 function seedState(): PrototypeState {
   return {

@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from 'react';
-import { CalendarPlus } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 import { FAB } from '../components/FAB';
 import { Drawer } from '../components/Drawer';
@@ -7,9 +6,10 @@ import { AgendaPage } from '../pages/AgendaPage';
 import { VentasPage } from '../pages/VentasPage';
 import { ClientesPage } from '../pages/ClientesPage';
 import { AjustesPage } from '../pages/AjustesPage';
+import { NewAppointmentScreen } from '../pages/NewAppointmentScreen';
 import { AvailabilityDrawer } from '../components/AvailabilityDrawer';
 import { EditAppointmentDrawer } from '../components/EditAppointmentDrawer';
-import type { OperatorSection, Role, SaleRecord, Appointment, AvailabilityBlock } from '../types';
+import type { OperatorSection, Role, SaleRecord, Appointment, AvailabilityBlock, Client } from '../types';
 import { store } from '../store/prototypeStore';
 
 interface DrawerState {
@@ -25,15 +25,17 @@ export function OperatorShell() {
 
   const [section, setSection] = useState<OperatorSection>('agenda');
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
-  const [role, setRole] = useState<Role>('admin');
+  const [role] = useState<Role>('admin');
+  const [viewScope, setViewScope] = useState<'team' | 'mine'>('team');
+  const [showNewAppt, setShowNewAppt] = useState(false);
+  const [agendaJumpDate, setAgendaJumpDate] = useState<string | undefined>(undefined);
 
-  // All shared state initialised from store
   const [appointments, setAppointments] = useState<Appointment[]>(initial.appointments);
   const [salesRecords, setSalesRecords] = useState<SaleRecord[]>(initial.saleRecords);
   const [availabilityBlocks, setAvailabilityBlocks] = useState<AvailabilityBlock[]>(initial.availabilityBlocks);
   const [professionals, setProfessionals] = useState(initial.professionals);
   const [services, setServices] = useState(initial.services);
-  const [clients, setClients] = useState(initial.clients);
+  const [clients, setClients] = useState<Client[]>(initial.clients);
   const [businessProfile, setBusinessProfile] = useState(initial.businessProfile);
   const [bookingPolicy, setBookingPolicy] = useState(initial.bookingPolicy);
 
@@ -41,9 +43,7 @@ export function OperatorShell() {
     store.set(s => ({ ...s, ...updates }));
   }
 
-  const openDrawer = (content: ReactNode, title?: string, height?: string) => {
-    setDrawer({ content, title, height });
-  };
+  const openDrawer = (content: ReactNode, title?: string, height?: string) => setDrawer({ content, title, height });
   const closeDrawer = () => setDrawer(null);
 
   function updateAppointment(updated: Appointment) {
@@ -70,6 +70,24 @@ export function OperatorShell() {
     });
   }
 
+  function handleNewApptCreated(apt: Appointment, newClient?: Client) {
+    setAppointments(prev => {
+      const next = [...prev, apt];
+      persist({ appointments: next });
+      return next;
+    });
+    if (newClient) {
+      setClients(prev => {
+        const next = [...prev, newClient];
+        persist({ clients: next });
+        return next;
+      });
+    }
+    setSection('agenda');
+    setAgendaJumpDate(apt.date);
+    setShowNewAppt(false);
+  }
+
   function openAvailabilityDrawer(showProfSelector: boolean) {
     openDrawer(
       <AvailabilityDrawer
@@ -79,9 +97,7 @@ export function OperatorShell() {
         role={role}
         currentProfId={STAFF_PROF_ID}
         showProfSelector={showProfSelector}
-        onSave={(block) => {
-          addAvailabilityBlock(block);
-        }}
+        onSave={(block) => addAvailabilityBlock(block)}
         onClose={closeDrawer}
         onEditConflict={(apt) => {
           closeDrawer();
@@ -102,9 +118,7 @@ export function OperatorShell() {
         services={services}
         availabilityBlocks={availabilityBlocks}
         role={role}
-        onSave={(updated) => {
-          updateAppointment(updated);
-        }}
+        onSave={updateAppointment}
         onClose={closeDrawer}
       />,
       'Editar cita',
@@ -121,8 +135,10 @@ export function OperatorShell() {
         {section === 'agenda' && (
           <AgendaPage
             role={role}
-            onRoleChange={setRole}
+            viewScope={viewScope}
+            onViewScopeChange={setViewScope}
             appointments={appointments}
+            clients={clients}
             availabilityBlocks={availabilityBlocks}
             onUpdateAppointment={updateAppointment}
             onAddSaleRecord={addSaleRecord}
@@ -130,6 +146,8 @@ export function OperatorShell() {
             onCloseDrawer={closeDrawer}
             onOpenEdit={openEditDrawer}
             onOpenAvailability={(showProfSelector) => openAvailabilityDrawer(showProfSelector)}
+            jumpToDate={agendaJumpDate}
+            onJumpHandled={() => setAgendaJumpDate(undefined)}
           />
         )}
         {section === 'ventas' && (
@@ -184,34 +202,13 @@ export function OperatorShell() {
               setBusinessProfile(fresh.businessProfile);
               setBookingPolicy(fresh.bookingPolicy);
             }}
-            onOpenEdit={openEditDrawer}
-            onOpenDrawer={openDrawer}
-            onCloseDrawer={closeDrawer}
           />
         )}
       </div>
 
-      {/* FAB — Agenda: new appointment */}
+      {/* FAB — Nueva cita */}
       {section === 'agenda' && (
-        <FAB
-          onPress={() =>
-            openDrawer(
-              <div className="px-5 py-8 flex flex-col items-center gap-4 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-[#FFF1F2] flex items-center justify-center">
-                  <CalendarPlus size={26} color="#E8194B" strokeWidth={1.8} />
-                </div>
-                <div>
-                  <p className="text-base font-bold text-[#121e6c]">Agendar nueva cita</p>
-                  <p className="text-xs text-[#969696] mt-1.5 max-w-[220px] leading-relaxed">
-                    Disponible en la próxima versión.
-                  </p>
-                </div>
-              </div>,
-              'Nueva cita',
-              '44%'
-            )
-          }
-        />
+        <FAB onPress={() => setShowNewAppt(true)} />
       )}
 
       <BottomNav active={section} onChange={(s) => { setSection(s); closeDrawer(); }} />
@@ -220,6 +217,25 @@ export function OperatorShell() {
         <Drawer title={drawer.title} onClose={closeDrawer} height={drawer.height}>
           {drawer.content}
         </Drawer>
+      )}
+
+      {/* New Appointment full-screen overlay */}
+      {showNewAppt && (
+        <div className="absolute inset-0 bg-white" style={{ zIndex: 40 }}>
+          <NewAppointmentScreen
+            role={role}
+            viewScope={viewScope}
+            currentProfId={STAFF_PROF_ID}
+            professionals={professionals}
+            services={services}
+            clients={clients}
+            appointments={appointments}
+            availabilityBlocks={availabilityBlocks}
+            bookingPolicy={bookingPolicy}
+            onBack={() => setShowNewAppt(false)}
+            onCreated={handleNewApptCreated}
+          />
+        </div>
       )}
     </div>
   );
