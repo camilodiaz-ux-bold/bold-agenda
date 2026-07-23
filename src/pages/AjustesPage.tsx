@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import {
-  Store, Users, Scissors, Shield, ChevronRight,
-  Check, AlertTriangle, Sparkles, RotateCcw, ToggleLeft, ToggleRight,
+  Bell, ChevronDown, Briefcase, Users, ShoppingBag, Shield, ChevronRight,
+  Check, AlertTriangle, RotateCcw, ToggleLeft, ToggleRight,
   ArrowLeft,
 } from 'lucide-react';
 import { formatCOP, formatDuration } from '../data/appointments';
@@ -93,9 +93,11 @@ export function AjustesPage({
                   onClick={() => setDetail({ screen: 'equipo-prof', profId: prof.id })}
                   className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3 active:bg-gray-50 transition-all"
                 >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: '#121e6c', opacity: active ? 1 : 0.4 }}>
-                    <span className="text-sm font-bold text-white">{prof.initials}</span>
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: '#F7F8FB', opacity: active ? 1 : 0.4 }}
+                  >
+                    <span className="text-[14px] font-normal leading-[20px]" style={{ color: '#3E4983' }}>{prof.initials}</span>
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <p className="text-sm font-semibold text-[#1e1e1e]">{prof.name}</p>
@@ -192,69 +194,114 @@ export function AjustesPage({
   const NAV_ITEMS = [
     {
       key: 'perfil' as const,
-      Icon: Store,
+      Icon: Briefcase,
       title: 'Perfil del negocio',
-      desc: 'Nombre, dirección, horario y descripción',
+      counter: null as string | null,
       detail: { screen: 'perfil' } as DetailView,
     },
     {
       key: 'equipo' as const,
       Icon: Users,
       title: 'Equipo',
-      desc: `${activeProfs} profesional${activeProfs !== 1 ? 'es' : ''} activa${activeProfs !== 1 ? 's' : ''}`,
+      counter: `${activeProfs} Disponible${activeProfs !== 1 ? 's' : ''}`,
       detail: { screen: 'equipo' } as DetailView,
     },
     {
       key: 'servicios' as const,
-      Icon: Scissors,
+      Icon: ShoppingBag,
       title: 'Servicios',
-      desc: `${activeSvcs} servicio${activeSvcs !== 1 ? 's' : ''} activo${activeSvcs !== 1 ? 's' : ''}`,
+      counter: `${activeSvcs} Disponible${activeSvcs !== 1 ? 's' : ''}`,
       detail: { screen: 'servicios' } as DetailView,
     },
     {
       key: 'politica' as const,
       Icon: Shield,
       title: 'Política de reservas',
-      desc: `Cancelación ${bookingPolicy.cancellationWindowHours}h · ${bookingPolicy.publicBookingEnabled ? 'Reservas abiertas' : 'Reservas cerradas'}`,
+      counter: null as string | null,
       detail: { screen: 'politica' } as DetailView,
     },
   ];
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="bg-white px-4 pt-5 pb-4 border-b border-gray-100">
-        <h1 className="text-lg font-bold text-[#121e6c]">Ajustes</h1>
-        <p className="text-xs text-[#969696] mt-0.5">Salón Camila</p>
+    <div className="flex flex-col min-h-full">
+
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <div className="px-4 pt-10 pb-4">
+        <div className="relative flex items-center" style={{ height: '36px' }}>
+          <span className="text-[16px] font-bold text-[#121e6c] leading-[20px]">Ajustes</span>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="flex items-center gap-[2px]" style={{ maxWidth: '180px' }}>
+              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate">
+                Salón Camila Norte
+              </span>
+              <ChevronDown size={16} color="#1e1e1e" strokeWidth={2.5} className="shrink-0" />
+            </div>
+          </div>
+          <button
+            className="absolute right-0 w-6 h-6 flex items-center justify-center transition-opacity active:opacity-60"
+            aria-label="Notificaciones"
+          >
+            <Bell size={24} color="#121e6c" strokeWidth={1.8} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-        <div className="bg-[#FFF1F2] rounded-2xl p-4 flex gap-3">
-          <Sparkles size={18} color="#FF2947" strokeWidth={1.8} className="shrink-0 mt-0.5" />
-          <p className="text-xs text-[#606060] leading-snug">
-            {isAdmin ? 'Puedes editar cualquier ajuste en cualquier momento.' : 'Solo el administrador puede editar estos ajustes.'}
-          </p>
-        </div>
+      {/* ── Body ────────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-8 px-4 pb-32">
 
-        <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 divide-y divide-gray-100">
-          {NAV_ITEMS.map(({ key, Icon, title, desc, detail: target }) => (
+        {/* Setting group — gap-[32px] between card and buttons */}
+        <div className="flex flex-col gap-8 w-full">
+
+          {/* APP Setting card */}
+          <div className="bg-white rounded-[16px] px-3">
+            {NAV_ITEMS.map(({ key, Icon, title, counter, detail: target }, i) => (
+              <Fragment key={key}>
+                <button
+                  onClick={() => (isAdmin || key !== 'politica') ? setDetail(target) : undefined}
+                  disabled={!isAdmin && key === 'politica'}
+                  className="w-full flex items-center gap-3 py-3 text-left transition-opacity active:opacity-70 disabled:opacity-40"
+                >
+                  <Icon size={20} color="#121e6c" strokeWidth={1.5} className="shrink-0" />
+                  <span className="flex-1 text-[14px] font-normal text-[#1e1e1e] leading-[20px]">{title}</span>
+                  {counter && (
+                    <span
+                      className="text-[14px] font-normal leading-[20px] whitespace-nowrap shrink-0"
+                      style={{ color: '#babdd3' }}
+                    >
+                      {counter}
+                    </span>
+                  )}
+                  <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                    <ChevronRight size={14} color="#babdd3" strokeWidth={2} />
+                  </div>
+                </button>
+                {i < NAV_ITEMS.length - 1 && (
+                  <div className="h-px w-full" style={{ backgroundColor: 'rgba(210,212,225,0.4)' }} />
+                )}
+              </Fragment>
+            ))}
+          </div>
+
+          {/* Action buttons — gap-[8px] */}
+          <div className="flex flex-col gap-2 items-center w-full">
+            {/* Cerrar sesión — card style */}
             <button
-              key={key}
-              onClick={() => (isAdmin || key === 'perfil' || key === 'equipo' || key === 'servicios') ? setDetail(target) : null}
-              disabled={!isAdmin && key === 'politica'}
-              className="w-full flex items-center gap-3 px-4 py-4 active:bg-gray-50 transition-colors text-left"
+              className="w-full bg-white rounded-[16px] px-3 flex items-center justify-center active:opacity-70 transition-opacity"
+              style={{ height: '44px' }}
             >
-              <div className="w-9 h-9 rounded-xl bg-[#f3f3f3] flex items-center justify-center shrink-0">
-                <Icon size={18} color="#121e6c" strokeWidth={1.8} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#121e6c]">{title}</p>
-                <p className="text-xs text-[#969696] mt-0.5 truncate">{desc}</p>
-              </div>
-              <ChevronRight size={16} color="#b0b5c8" strokeWidth={2} />
+              <span className="text-[14px] font-bold text-[#121e6c] leading-[20px]">Cerrar sesión</span>
             </button>
-          ))}
+
+            {/* Desactivar cuenta — link style */}
+            <button className="flex items-center justify-center py-3 active:opacity-70 transition-opacity">
+              <span className="text-[12px] font-semibold text-[#121e6c] underline leading-[16px]">
+                Desactivar cuenta
+              </span>
+            </button>
+          </div>
         </div>
 
+        {/* Prototype reset — admin only, retained for prototype utility */}
         {isAdmin && (
           <div className="bg-white rounded-2xl px-4 py-4 border border-gray-100">
             <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Datos del prototipo</p>
@@ -293,7 +340,6 @@ export function AjustesPage({
             )}
           </div>
         )}
-        <div className="h-16" />
       </div>
     </div>
   );
@@ -400,9 +446,11 @@ function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
         {/* Avatar + name */}
         <div className="flex items-center gap-3 bg-[#f7f8fb] rounded-2xl px-4 py-3">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
-            style={{ backgroundColor: '#121e6c', opacity: active ? 1 : 0.4 }}>
-            <span className="text-sm font-bold text-white">{prof.initials}</span>
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+            style={{ backgroundColor: '#F7F8FB', opacity: active ? 1 : 0.4 }}
+          >
+            <span className="text-[14px] font-normal leading-[20px]" style={{ color: '#3E4983' }}>{prof.initials}</span>
           </div>
           <div>
             <p className="text-sm font-bold text-[#1e1e1e]">{prof.name}</p>
