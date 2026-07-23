@@ -17,16 +17,16 @@ export function BottomNav({ active, onChange }: Props) {
   return (
     <div
       className="shrink-0 px-5 pt-5 pb-6"
-      style={{ background: 'linear-gradient(to top, rgba(247,248,251,0.85) 35%, rgba(247,248,251,0) 100%)' }}
+      style={{ background: 'linear-gradient(to top, #f7f8fb 50%, rgba(247,248,251,0) 100%)' }}
     >
       <nav
         className="flex items-center px-[10px] rounded-[100px] border relative"
         style={{
           height: '62px',
-          borderColor: 'rgba(210,212,225,0.4)',
-          backgroundColor: 'rgba(255,255,255,0.18)',
-          backdropFilter: 'blur(20px)',
-          boxShadow: '0px 10px 18.7px 0px rgba(18,30,108,0.07), inset 0px -2px 4px 0px rgba(255,255,255,0.5), inset 0px 3px 7.5px 0px rgba(18,30,108,0.08)',
+          borderColor: 'rgba(210,212,225,0.5)',
+          backgroundColor: 'rgba(255,255,255,0.6)',
+          backdropFilter: 'blur(6px)',
+          boxShadow: '0px 10px 18.7px 0px rgba(18,30,108,0.09), inset 0px -2px 4px 0px #ffffff, inset 0px 3px 7.5px 0px rgba(18,30,108,0.13)',
         }}
       >
         {TABS.map(({ key, label, Icon }) => {
