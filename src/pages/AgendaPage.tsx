@@ -296,22 +296,25 @@ export function AgendaPage({
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="bg-white px-4 pt-3 pb-3 rounded-b-[24px]">
 
-        {/* Row 1: Branch selector + notification bell */}
-        <div className="flex items-center -mx-1">
+        {/* Row 1: Title | Branch (center) | Bell */}
+        <div className="flex items-center gap-6">
+          <span className="text-[16px] font-bold text-[#121e6c] leading-[20px] shrink-0">Agenda</span>
+          <div className="flex-1 flex items-center justify-center min-w-0">
+            <button
+              onClick={() => setShowBranchSheet(true)}
+              className="flex items-center gap-[2px] active:opacity-70 transition-opacity"
+            >
+              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate max-w-[160px]">
+                {activeBranch?.name ?? 'Salón Camila Norte'}
+              </span>
+              <ChevronDown size={16} color="#1e1e1e" strokeWidth={2.5} className="shrink-0" />
+            </button>
+          </div>
           <button
-            onClick={() => setShowBranchSheet(true)}
-            className="flex items-center gap-1 flex-1 min-w-0 px-1 h-11 active:opacity-70 transition-opacity"
-          >
-            <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate">
-              {activeBranch?.name ?? 'Salón Camila Norte'}
-            </span>
-            <ChevronDown size={14} color="#1e1e1e" strokeWidth={2.5} className="shrink-0" />
-          </button>
-          <button
-            className="w-11 h-11 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
+            className="w-6 h-6 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
             aria-label="Notificaciones"
           >
-            <Bell size={22} color="#121e6c" strokeWidth={1.8} />
+            <Bell size={24} color="#121e6c" strokeWidth={1.8} />
           </button>
         </div>
 

@@ -24,8 +24,8 @@ export function BottomNav({ active, onChange }: Props) {
         style={{
           height: '62px',
           borderColor: 'rgba(210,212,225,0.5)',
-          backgroundColor: 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(6px)',
+          backgroundColor: 'rgba(255,255,255,0.55)',
+          backdropFilter: 'blur(12px)',
           boxShadow: '0px 10px 18.7px 0px rgba(18,30,108,0.09), inset 0px -2px 4px 0px white, inset 0px 3px 7.5px 0px rgba(18,30,108,0.13)',
         }}
       >

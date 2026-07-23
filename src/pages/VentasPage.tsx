@@ -1,14 +1,15 @@
 import { useState, useMemo, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { PageHeader } from '../components/PageHeader';
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, X, Calendar, CreditCard, Link, Clock, QrCode, EyeOff } from 'lucide-react';
 import { formatCOP, PROFESSIONALS, SERVICES, HISTORICAL_SALE_RECORDS } from '../data/appointments';
 import { SaleDetailDrawer } from '../components/SaleDetailDrawer';
 import { PROTOTYPE_TODAY } from '../store/prototypeStore';
-import type { SaleRecord, Role } from '../types';
+import type { SaleRecord, Role, Branch } from '../types';
 
 interface Props {
   role: Role;
   salesRecords: SaleRecord[];
+  activeBranchId?: string;
+  branches?: Branch[];
   onOpenDrawer: (content: ReactNode, title?: string, height?: string) => void;
   onCloseDrawer: () => void;
 }
@@ -27,18 +28,18 @@ const MONTH_NAMES_ES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ];
 
-const PERIOD_LABELS: Record<Period, string> = {
-  hoy: 'Hoy',
-  semana: 'Semana',
-  mes: 'Mes',
-  personalizado: 'Personalizado',
-};
-
 const PM_LABELS: Record<string, string> = {
   datafono: 'Datáfono',
   qr: 'QR',
-  link: 'Link',
+  link: 'Link de pago',
   anticipado: 'Prepagado',
+};
+
+const PM_ICON: Record<string, React.ComponentType<{ size: number; color: string; strokeWidth: number }>> = {
+  datafono: CreditCard,
+  qr: QrCode,
+  link: Link,
+  anticipado: Clock,
 };
 
 function fmtDate(date: Date): string {
@@ -91,7 +92,7 @@ function formatDisplayDate(dateStr: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' });
 }
 
-export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: Props) {
+export function VentasPage({ role, salesRecords, activeBranchId, branches, onOpenDrawer, onCloseDrawer }: Props) {
   const [period, setPeriod] = useState<Period>('hoy');
   const [viewYear, setViewYear] = useState(CURRENT_YEAR);
   const [viewMonth, setViewMonth] = useState(CURRENT_MONTH);
@@ -109,6 +110,9 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
   const canGoForwardMonth = !isCurrentMonth;
   const canGoBackWeek = viewWeekStart > MIN_WEEK_START;
   const canGoForwardWeek = !isCurrentWeek;
+
+  const activeBranch = branches?.find(b => b.id === activeBranchId);
+  const branchName = activeBranch?.name ?? 'Salón Camila Norte';
 
   function prevMonth() {
     if (!canGoBackMonth) return;
@@ -132,7 +136,6 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
     setViewWeekStart(w => addDays(w, 7));
   }
 
-  // Merge dynamic store records with static historical records (dedup by id)
   const allRecords = useMemo(() => {
     const ids = new Set(salesRecords.map(r => r.id));
     return [...salesRecords, ...HISTORICAL_SALE_RECORDS.filter(r => !ids.has(r.id))];
@@ -182,20 +185,6 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
 
   const isAdmin = role === 'admin';
 
-  const metricCards = isAdmin
-    ? [
-        { label: 'Ventas totales', value: formatCOP(metrics.ventas) },
-        { label: 'Servicios', value: String(metrics.servicios) },
-        { label: 'Propinas', value: formatCOP(metrics.propinas) },
-        { label: 'Comisiones equipo', value: formatCOP(metrics.comisiones) },
-      ]
-    : [
-        { label: 'Mis ventas', value: formatCOP(metrics.ventas) },
-        { label: 'Servicios', value: String(metrics.servicios) },
-        { label: 'Mis propinas', value: formatCOP(metrics.propinas) },
-        { label: 'Mi comisión', value: formatCOP(metrics.comisiones) },
-      ];
-
   function openSaleDetail(record: SaleRecord) {
     onOpenDrawer(
       <SaleDetailDrawer record={record} onClose={onCloseDrawer} />,
@@ -218,35 +207,76 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
       : `${formatDisplayDate(customStart)} – ${formatDisplayDate(resolvedEnd)}`
     : 'Seleccionar rango…';
 
+  const showDashboard = period !== 'personalizado' || !!customStart;
+
   return (
     <div className="flex flex-col min-h-full relative">
-      <PageHeader title="Ventas" subtitle={isAdmin ? 'Resumen del salón' : 'Tu resumen'} />
 
-      {/* Period tab selector */}
-      <div className="bg-white px-4 pb-0 border-b border-gray-100">
-        <div className="flex bg-[#f3f3f3] rounded-full p-1 gap-0.5 mb-3">
-          {(['hoy', 'semana', 'mes', 'personalizado'] as Period[]).map(p => {
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <div className="bg-white px-4 pt-3 pb-3 rounded-b-[24px]">
+        <div className="flex items-center gap-6">
+          <span className="text-[16px] font-bold text-[#121e6c] leading-[20px] shrink-0">Ventas</span>
+          <div className="flex-1 flex items-center justify-center min-w-0">
+            <div className="flex items-center gap-[2px]">
+              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate max-w-[160px]">
+                {branchName}
+              </span>
+              <ChevronDown size={16} color="#1e1e1e" strokeWidth={2.5} className="shrink-0" />
+            </div>
+          </div>
+          <button
+            className="w-6 h-6 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
+            aria-label="Notificaciones"
+          >
+            <Bell size={24} color="#121e6c" strokeWidth={1.8} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Content ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-6 px-4 pt-6">
+
+        {/* APP Tabs */}
+        <div className="flex gap-2" style={{ height: '37px' }}>
+          {(['hoy', 'semana', 'mes'] as Period[]).map(p => {
             const isActive = p === period;
+            const label = p === 'hoy' ? 'Hoy' : p === 'semana' ? 'Esta semana' : 'Este mes';
             return (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className="flex-1 text-center py-1.5 rounded-full text-[11px] font-semibold transition-all leading-none"
+                className="flex items-center justify-center rounded-[100px] shrink-0 whitespace-nowrap transition-all active:opacity-80"
                 style={{
-                  backgroundColor: isActive ? '#fff' : 'transparent',
-                  color: isActive ? '#121e6c' : '#969696',
-                  boxShadow: isActive ? '0 1px 3px rgba(18,30,108,0.08)' : 'none',
+                  height: '37px',
+                  paddingLeft: isActive ? '20px' : '16px',
+                  paddingRight: isActive ? '20px' : '16px',
+                  backgroundColor: isActive ? '#121e6c' : 'white',
+                  color: isActive ? 'white' : '#121e6c',
+                  fontWeight: isActive ? 600 : 400,
+                  fontSize: '14px',
+                  lineHeight: '20px',
                 }}
               >
-                {PERIOD_LABELS[p]}
+                {label}
               </button>
             );
           })}
+          <button
+            onClick={() => setPeriod('personalizado')}
+            className="flex items-center justify-center rounded-[100px] shrink-0 transition-all active:opacity-80"
+            style={{
+              width: '52px',
+              height: '37px',
+              backgroundColor: period === 'personalizado' ? '#121e6c' : 'white',
+            }}
+          >
+            <Calendar size={20} color={period === 'personalizado' ? 'white' : '#121e6c'} strokeWidth={1.8} />
+          </button>
         </div>
 
         {/* Sub-navigation — Semana */}
         {period === 'semana' && (
-          <div className="flex items-center justify-between pb-3">
+          <div className="flex items-center justify-between">
             <button
               onClick={prevWeek}
               disabled={!canGoBackWeek}
@@ -280,7 +310,7 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
 
         {/* Sub-navigation — Mes */}
         {period === 'mes' && (
-          <div className="flex items-center justify-between pb-3">
+          <div className="flex items-center justify-between">
             <button
               onClick={prevMonth}
               disabled={!canGoBackMonth}
@@ -314,42 +344,76 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
 
         {/* Sub-navigation — Personalizado */}
         {period === 'personalizado' && (
-          <div className="pb-3">
-            <button
-              onClick={() => { setDraftStart(customStart); setDraftEnd(customEnd); setShowCustomSheet(true); }}
-              className="w-full h-9 rounded-xl border text-sm font-semibold px-3 flex items-center justify-between active:opacity-70 transition-opacity"
-              style={{
-                borderColor: customStart ? '#121e6c' : '#d2d4e1',
-                backgroundColor: '#fff',
-                color: customStart ? '#121e6c' : '#b0b5c8',
-              }}
-            >
-              <span>{customRangeLabel}</span>
-              <ChevronRight size={14} color={customStart ? '#121e6c' : '#b0b5c8'} strokeWidth={2} />
-            </button>
+          <button
+            onClick={() => { setDraftStart(customStart); setDraftEnd(customEnd); setShowCustomSheet(true); }}
+            className="w-full h-9 rounded-xl border text-sm font-semibold px-3 flex items-center justify-between active:opacity-70 transition-opacity"
+            style={{
+              borderColor: customStart ? '#121e6c' : '#d2d4e1',
+              backgroundColor: '#fff',
+              color: customStart ? '#121e6c' : '#b0b5c8',
+            }}
+          >
+            <span>{customRangeLabel}</span>
+            <ChevronRight size={14} color={customStart ? '#121e6c' : '#b0b5c8'} strokeWidth={2} />
+          </button>
+        )}
+
+        {/* APP Card / Dashboard */}
+        {showDashboard && (
+          <div
+            className="bg-white rounded-[16px] p-[16px] flex flex-col gap-4"
+            style={{ boxShadow: '0px 4px 6px rgba(18,30,108,0.08)' }}
+          >
+            {/* Primary info */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[12px] font-medium text-[#1e1e1e] leading-[16px]">
+                {isAdmin ? 'Ventas totales' : 'Mis ventas'}
+              </span>
+              <div className="flex items-center gap-5">
+                <span className="text-[24px] font-normal text-[#1e1e1e] leading-[28px] tabular-nums">
+                  {formatCOP(metrics.ventas)}
+                </span>
+                <EyeOff size={24} color="#1e1e1e" strokeWidth={1.5} />
+              </div>
+            </div>
+            {/* Secondary info */}
+            <div className="flex gap-5">
+              <div className="flex-1 flex flex-col gap-1">
+                <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">Servicios</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[14px] font-medium text-[#1e1e1e] leading-[20px] tabular-nums">
+                    {metrics.servicios}
+                  </span>
+                  <EyeOff size={17} color="#1e1e1e" strokeWidth={1.5} />
+                </div>
+              </div>
+              <div className="flex-1 flex flex-col gap-1">
+                <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">
+                  {isAdmin ? 'Propinas' : 'Mis propinas'}
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[14px] font-medium text-[#1e1e1e] leading-[20px] tabular-nums">
+                    {formatCOP(metrics.propinas)}
+                  </span>
+                  <EyeOff size={17} color="#1e1e1e" strokeWidth={1.5} />
+                </div>
+              </div>
+              <div className="flex-1 flex flex-col gap-1">
+                <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">
+                  {isAdmin ? 'Comisiones' : 'Mi comisión'}
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[14px] font-medium text-[#1e1e1e] leading-[20px] tabular-nums">
+                    {formatCOP(metrics.comisiones)}
+                  </span>
+                  <EyeOff size={17} color="#1e1e1e" strokeWidth={1.5} />
+                </div>
+              </div>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Metrics + list */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3">
-          {metricCards.map(({ label, value }) => (
-            <div
-              key={label}
-              className="bg-white rounded-2xl px-3 py-3 flex flex-col gap-1"
-              style={{ boxShadow: '0px 1px 4px rgba(18,30,108,0.05)' }}
-            >
-              <span className="text-[10px] font-semibold text-[#b0b5c8] uppercase tracking-widest leading-none">
-                {label}
-              </span>
-              <span className="text-base font-bold text-[#121e6c] tabular-nums leading-tight">
-                {value}
-              </span>
-            </div>
-          ))}
-        </div>
-
+        {/* Sale list / Empty state */}
         {period === 'personalizado' && !customStart ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16">
             <p className="text-sm font-semibold text-[#121e6c]">Selecciona un rango de fechas</p>
@@ -361,42 +425,58 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
             <p className="text-xs text-[#969696]">Los cierres de servicio aparecerán aquí</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2 pb-20">
+          <div className="flex flex-col gap-3 pb-28">
             {filtered.map(record => {
               const svc = SERVICES.find(s => s.id === record.serviceId);
               const prof = PROFESSIONALS.find(p => p.id === record.professionalId);
+              const Icon = PM_ICON[record.paymentMethod] ?? CreditCard;
               return (
                 <button
                   key={record.id}
                   onClick={() => openSaleDetail(record)}
-                  className="w-full bg-white rounded-2xl px-3 py-3 text-left flex items-center gap-3 border border-gray-100 transition-all active:opacity-70"
-                  style={{ boxShadow: '0px 1px 4px rgba(18,30,108,0.05)' }}
+                  className="w-full bg-white rounded-[16px] text-left flex items-start gap-3 transition-all active:opacity-70"
+                  style={{
+                    padding: '12px 16px',
+                    boxShadow: '0px 4px 6px rgba(18,30,108,0.08)',
+                  }}
                 >
+                  {/* Icon container */}
                   <div
-                    className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center"
-                    style={{ backgroundColor: '#e8eaf0' }}
+                    className="flex items-center justify-center rounded-full shrink-0"
+                    style={{ width: '40px', height: '40px', backgroundColor: '#f7f8fb', padding: '8px' }}
                   >
-                    <span className="text-xs font-bold" style={{ color: '#606060' }}>
-                      {prof?.initials ?? '?'}
-                    </span>
+                    <Icon size={24} color="#121e6c" strokeWidth={1.8} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-[#1e1e1e] truncate">{record.clientName}</span>
-                      <span className="text-sm font-bold text-[#121e6c] tabular-nums shrink-0">
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    {/* Level 1: name + amount */}
+                    <div className="flex items-center" style={{ height: '40px' }}>
+                      <span className="flex-1 min-w-0 text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate">
+                        {record.clientName ?? 'Sin cliente'}
+                      </span>
+                      <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] tabular-nums whitespace-nowrap ml-2 shrink-0">
                         {formatCOP(record.total)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-2 mt-0.5">
-                      <span className="text-xs text-[#969696] truncate">{svc?.name ?? '—'}</span>
-                      <span className="text-xs text-[#b0b5c8] shrink-0">
-                        {PM_LABELS[record.paymentMethod] ?? record.paymentMethod}
-                      </span>
-                    </div>
-                    <div className="mt-0.5">
-                      <span className="text-[11px] text-[#b0b5c8]">
-                        {prof?.name.split(' ')[0] ?? '—'} · {formatSaleDate(record.completedAt)} · {record.completedAt.slice(11, 16)}
-                      </span>
+
+                    {/* Level 2-5: key-value rows */}
+                    <div className="flex flex-col gap-1">
+                      {([
+                        ['Servicio', svc?.name ?? '—'],
+                        ['Método de cobro', PM_LABELS[record.paymentMethod] ?? record.paymentMethod],
+                        ['Fecha y hora', `${formatSaleDate(record.completedAt)} · ${record.completedAt.slice(11, 16)}`],
+                        ['Profesional', prof?.name.split(' ')[0] ?? '—'],
+                      ] as [string, string][]).map(([label, value]) => (
+                        <div key={label} className="flex items-start w-full">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">{label}</span>
+                          </div>
+                          <div className="shrink-0 ml-2">
+                            <span className="text-[12px] font-medium text-[#1e1e1e] leading-[16px] whitespace-nowrap">{value}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </button>

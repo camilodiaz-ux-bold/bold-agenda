@@ -164,6 +164,8 @@ export function OperatorShell() {
           <VentasPage
             role={role}
             salesRecords={salesRecords}
+            activeBranchId={activeBranchId}
+            branches={BRANCHES}
             onOpenDrawer={openDrawer}
             onCloseDrawer={closeDrawer}
           />
