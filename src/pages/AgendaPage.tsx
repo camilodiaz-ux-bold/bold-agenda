@@ -294,24 +294,25 @@ export function AgendaPage({
   return (
     <div className="flex flex-col min-h-full">
       {/* ── Header ────────────────────────────────────────────────────── */}
-      <div className="bg-white px-4 pt-3 pb-3 rounded-b-[24px]">
+      <div className="px-4 pt-10 pb-4">
 
-        {/* Row 1: Title | Branch (center) | Bell */}
-        <div className="flex items-center gap-6">
-          <span className="text-[16px] font-bold text-[#121e6c] leading-[20px] shrink-0">Agenda</span>
-          <div className="flex-1 flex items-center justify-center min-w-0">
+        {/* Row 1: Title | Branch (truly centered) | Bell */}
+        <div className="relative flex items-center" style={{ height: '36px' }}>
+          <span className="text-[16px] font-bold text-[#121e6c] leading-[20px]">Agenda</span>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <button
               onClick={() => setShowBranchSheet(true)}
-              className="flex items-center gap-[2px] active:opacity-70 transition-opacity"
+              className="pointer-events-auto flex items-center gap-[2px] active:opacity-70 transition-opacity"
+              style={{ maxWidth: '180px' }}
             >
-              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate max-w-[160px]">
+              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate">
                 {activeBranch?.name ?? 'Salón Camila Norte'}
               </span>
               <ChevronDown size={16} color="#1e1e1e" strokeWidth={2.5} className="shrink-0" />
             </button>
           </div>
           <button
-            className="w-6 h-6 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
+            className="absolute right-0 w-6 h-6 flex items-center justify-center transition-opacity active:opacity-60"
             aria-label="Notificaciones"
           >
             <Bell size={24} color="#121e6c" strokeWidth={1.8} />
@@ -322,7 +323,7 @@ export function AgendaPage({
         <div
           ref={stripRef}
           onScroll={handleStripScroll}
-          className="flex overflow-x-auto -mx-4 mt-1"
+          className="flex overflow-x-auto -mx-4 mt-3"
           style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}
         >
           {ALL_WEEKS.map((week, wi) => (
