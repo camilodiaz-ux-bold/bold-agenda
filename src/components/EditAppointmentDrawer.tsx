@@ -158,8 +158,8 @@ export function EditAppointmentDrawer({
                     style={{ borderColor: isActive ? '#121e6c' : '#e8eaf0', backgroundColor: isActive ? '#f7f8fb' : '#fff' }}
                   >
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: isActive ? '#121e6c' : '#e8eaf0' }}>
-                      <span className="text-xs font-bold" style={{ color: isActive ? '#fff' : '#606060' }}>{prof.initials}</span>
+                      style={{ backgroundColor: '#F7F8FB' }}>
+                      <span className="text-[14px] font-normal leading-[20px]" style={{ color: '#3E4983' }}>{prof.initials}</span>
                     </div>
                     <div className="flex-1 text-left">
                       <p className="text-sm font-semibold" style={{ color: isActive ? '#121e6c' : '#1e1e1e' }}>{prof.name}</p>

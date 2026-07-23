@@ -167,19 +167,14 @@ function ClientRow({ client, onTap }: { client: Client; onTap: () => void }) {
       className="w-full bg-white rounded-[16px] text-left flex items-center gap-3 transition-all active:opacity-70"
       style={{ paddingLeft: '12px', paddingRight: '8px', paddingTop: '12px', paddingBottom: '12px' }}
     >
-      {/* Avatar: gradient pill */}
+      {/* Avatar */}
       <div
         className="flex items-center justify-center rounded-full shrink-0"
-        style={{
-          width: '40px',
-          height: '40px',
-          padding: '2px',
-          background: 'linear-gradient(-89.96deg, rgb(199,60,83) 0%, rgb(62,37,102) 99.97%)',
-        }}
+        style={{ width: '40px', height: '40px', backgroundColor: '#F7F8FB' }}
       >
         <span
           className="text-[14px] font-normal leading-[20px]"
-          style={{ color: '#3e4983' }}
+          style={{ color: '#3E4983' }}
         >
           {initials}
         </span>

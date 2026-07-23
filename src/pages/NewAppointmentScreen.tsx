@@ -276,8 +276,8 @@ export function NewAppointmentScreen({
                 style={{ borderColor: isActive ? '#121e6c' : '#e8eaf0', backgroundColor: isActive ? '#f7f8fb' : '#fff' }}
               >
                 <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: '#121e6c' }}>
-                  <span className="text-sm font-bold text-white">{prof.initials}</span>
+                  style={{ backgroundColor: '#F7F8FB' }}>
+                  <span className="text-[14px] font-normal leading-[20px]" style={{ color: '#3E4983' }}>{prof.initials}</span>
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-semibold" style={{ color: isActive ? '#121e6c' : '#1e1e1e' }}>{prof.name}</p>
@@ -358,8 +358,8 @@ export function NewAppointmentScreen({
                   onClick={() => selectExistingClient(client)}
                   className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 active:opacity-70 text-left w-full"
                 >
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#f0f1f5' }}>
-                    <span className="text-xs font-bold text-[#121e6c]">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#F7F8FB' }}>
+                    <span className="text-[14px] font-normal leading-[20px]" style={{ color: '#3E4983' }}>
                       {client.name.split(' ').map(n => n[0]).slice(0, 2).join('')}
                     </span>
                   </div>

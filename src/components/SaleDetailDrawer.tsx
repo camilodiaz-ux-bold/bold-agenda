@@ -39,9 +39,9 @@ export function SaleDetailDrawer({ record }: Props) {
       >
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-          style={{ backgroundColor: '#121e6c' }}
+          style={{ backgroundColor: '#F7F8FB' }}
         >
-          <span className="text-sm font-bold text-white">{prof?.initials ?? '?'}</span>
+          <span className="text-[14px] font-normal leading-[20px]" style={{ color: '#3E4983' }}>{prof?.initials ?? '?'}</span>
         </div>
         <div className="min-w-0">
           <p className="text-sm font-bold text-[#121e6c] leading-tight">{prof?.name ?? '—'}</p>

@@ -593,10 +593,10 @@ export function AgendaPage({
                   style={{ borderBottom: i < PROFESSIONALS.length - 1 ? '1px solid #f3f3f3' : 'none' }}
                 >
                   <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
-                    style={{ backgroundColor: isActive ? prof.color : '#f7f8fb', color: isActive ? '#fff' : '#606060' }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: '#F7F8FB' }}
                   >
-                    {prof.initials}
+                    <span className="text-[14px] font-normal leading-[20px]" style={{ color: '#3E4983' }}>{prof.initials}</span>
                   </div>
                   <div className="flex-1 text-left">
                     <p className="text-sm font-semibold" style={{ color: isActive ? '#121e6c' : '#1e1e1e' }}>
