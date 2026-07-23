@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, UserX, CalendarClock, CreditCard, Smartphone, Link2, Check } from 'lucide-react';
+import { CheckCircle2, UserX, CalendarClock, CreditCard, Smartphone, Link2, Check, UserPlus } from 'lucide-react';
 import type { Appointment, Professional, Service, PaymentMethod } from '../types';
 import { formatCOP, formatDuration } from '../data/appointments';
 
@@ -19,7 +19,7 @@ export interface ClosureResult {
   paymentMethod?: PaymentMethod;
 }
 
-type Step = 'outcome' | 'payment' | 'noshow-confirm' | 'done';
+type Step = 'outcome' | 'add-client' | 'payment' | 'noshow-confirm' | 'done';
 type Outcome = 'completada' | 'no-show' | 'reprogramar';
 type TipPreset = 0 | 5 | 10 | 'custom';
 
@@ -46,12 +46,16 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
   const tipAmount = calcTip(service.price, tipPreset, customTip);
   const total = service.price + tipAmount;
 
+  const hasClient = Boolean(appointment.clientName);
+
   function handleOutcomeSelect(o: Outcome) {
     setOutcome(o);
     if (o === 'no-show') {
       setStep('noshow-confirm');
     } else if (o === 'reprogramar') {
       onReschedule();
+    } else if (!hasClient) {
+      setStep('add-client');
     } else {
       setStep('payment');
     }
@@ -75,7 +79,9 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         {/* Service context */}
         <div className="bg-[#f7f8fb] rounded-xl px-3 py-2.5 flex items-center justify-between">
           <div>
-            <p className="text-sm font-bold text-[#1e1e1e]">{appointment.clientName}</p>
+            <p className={`text-sm font-bold ${appointment.clientName ? 'text-[#1e1e1e]' : 'text-[#b0b5c8] italic'}`}>
+              {appointment.clientName ?? 'Sin cliente asociado'}
+            </p>
             <p className="text-xs text-[#969696] mt-0.5">{service.name} · {formatDuration(service.duration)}</p>
           </div>
           <div className="text-right">
@@ -127,6 +133,42 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
     );
   }
 
+  // ── Step: Add client (non-blocking, walk-in only) ─────────────────────
+  if (step === 'add-client') {
+    return (
+      <div className="flex-1 overflow-y-auto">
+      <div className="px-5 pb-6 flex flex-col gap-4">
+        <div className="flex flex-col items-center text-center gap-3 pt-2">
+          <div className="w-12 h-12 rounded-full bg-[#f0f1f5] flex items-center justify-center">
+            <UserPlus size={22} color="#121e6c" strokeWidth={1.8} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-[#1e1e1e]">¿Deseas agregar un cliente?</p>
+            <p className="text-xs text-[#969696] mt-1 leading-relaxed">
+              Puedes asociarlo ahora o hacerlo después desde el detalle de la cita.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setStep('payment')}
+          className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
+          style={{ backgroundColor: '#E8194B' }}
+        >
+          Continuar sin cliente
+        </button>
+
+        <button
+          onClick={() => setStep('outcome')}
+          className="w-full h-10 flex items-center justify-center text-sm text-[#969696] transition-opacity active:opacity-60"
+        >
+          Volver
+        </button>
+      </div>
+      </div>
+    );
+  }
+
   // ── Step: No-show confirm ──────────────────────────────────────────────
   if (step === 'noshow-confirm') {
     return (
@@ -134,7 +176,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
       <div className="px-5 pb-6 flex flex-col gap-3">
         <div className="rounded-2xl px-4 py-3 bg-[#f7f8fb]">
           <p className="text-sm font-bold text-[#1e1e1e] mb-1">
-            {appointment.clientName} no se presentó
+            {appointment.clientName ? `${appointment.clientName} no se presentó` : 'El cliente no se presentó'}
           </p>
           <p className="text-xs text-[#969696] leading-relaxed">
             {isPrepaid
@@ -308,12 +350,15 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
           </p>
           <p className="text-sm text-[#969696] mt-1 leading-relaxed">
             {isNoShow
-              ? `${appointment.clientName} no se presentó a su cita.`
+              ? (appointment.clientName ? `${appointment.clientName} no se presentó a su cita.` : 'El cliente no se presentó a su cita.')
               : isPrepaid
-                ? `Servicio de ${appointment.clientName} confirmado.`
-                : `${formatCOP(total)} cobrado a ${appointment.clientName}.`
+                ? (appointment.clientName ? `Servicio de ${appointment.clientName} confirmado.` : 'Servicio confirmado.')
+                : (appointment.clientName ? `${formatCOP(total)} cobrado a ${appointment.clientName}.` : `${formatCOP(total)} cobrado.`)
             }
           </p>
+          {!isNoShow && !hasClient && (
+            <p className="text-xs text-[#b0b5c8] mt-1">El servicio quedó registrado sin cliente.</p>
+          )}
         </div>
 
         {/* Confirmation bullets */}

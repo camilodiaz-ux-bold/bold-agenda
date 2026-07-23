@@ -165,6 +165,17 @@ export const APPOINTMENTS: Appointment[] = [
     paymentMethod: 'anticipado',
   },
 
+  // Walk-in: no client associated (Decision #62)
+  {
+    id: 'a-walkin-1',
+    professionalId: 'p1',
+    serviceId: 's2',
+    date: '2026-07-16',
+    startTime: '13:00',
+    status: 'confirmada',
+    paymentStatus: 'pendiente',
+  },
+
   // Wednesday 2026-07-15 (yesterday)
   {
     id: 'a10',

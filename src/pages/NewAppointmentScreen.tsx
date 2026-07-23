@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Check, CheckCircle2, ChevronRight, Search, UserPlus, Smartphone, X } from 'lucide-react';
+import { Check, CheckCircle2, ChevronRight, Search, UserPlus, Smartphone, X, UserX } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader';
 import { formatCOP, formatDuration } from '../data/appointments';
 import { getAvailableSlots, addMinutes, PROTOTYPE_TODAY } from '../store/prototypeStore';
@@ -143,44 +143,53 @@ export function NewAppointmentScreen({
     goToStep('datetime');
   }
 
+  function continueWithoutClient() {
+    setSelClient(null);
+    setIsNewClient(false);
+    goToStep('datetime');
+  }
+
   function confirmDateTime() {
     if (selDate && selTime) goToStep('summary');
   }
 
   function createAppointment() {
-    if (!selSvc || !selClient || !selDate || !selTime) return;
+    if (!selSvc || !selDate || !selTime) return;
     const apt: Appointment = {
       id: `apt_${Date.now()}`,
       professionalId: selProfId,
       serviceId: selSvc.id,
-      clientName: selClient.name,
-      clientPhone: selClient.phone,
-      clientCedula: selClient.cedula,
+      ...(selClient ? { clientName: selClient.name, clientPhone: selClient.phone, clientCedula: selClient.cedula } : {}),
       date: selDate,
       startTime: selTime,
       status: 'confirmada',
-      paymentStatus: selSvc.requiresDeposit ? 'pendiente' : 'pendiente',
+      paymentStatus: 'pendiente',
       notes: note.trim() || undefined,
       policySnapshot: { cancellationWindowHours: bookingPolicy.cancellationWindowHours },
       originalPrice: selSvc.price,
     };
     setStep('done');
-    onCreated(apt, isNewClient ? selClient : undefined);
+    onCreated(apt, isNewClient ? selClient ?? undefined : undefined);
   }
 
   const selProf = professionals.find(p => p.id === selProfId);
 
   // ── Done ──────────────────────────────────────────────────────────────
   if (step === 'done') {
+    const isWalkIn = !selClient;
     return (
       <div className="flex flex-col h-full bg-white">
         <PageHeader title="Cita creada" onBack={onBack} border />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-5 text-center">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F0FDF4' }}>
-            <CheckCircle2 size={30} color="#15803D" strokeWidth={2} />
+          <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: isWalkIn ? '#f0f1f5' : '#F0FDF4' }}>
+            {isWalkIn
+              ? <UserX size={30} color="#606060" strokeWidth={1.8} />
+              : <CheckCircle2 size={30} color="#15803D" strokeWidth={2} />}
           </div>
           <div>
-            <p className="text-base font-bold text-[#1e1e1e]">{selClient?.name}</p>
+            {isWalkIn
+              ? <p className="text-base font-bold text-[#b0b5c8] italic">Sin cliente asociado</p>
+              : <p className="text-base font-bold text-[#1e1e1e]">{selClient?.name}</p>}
             <p className="text-sm text-[#969696] mt-1">{selSvc?.name} · {formatFullDate(selDate)}</p>
             <p className="text-sm text-[#969696]">{selTime} – {selSvc && addMinutes(selTime, selSvc.duration)}</p>
           </div>
@@ -189,10 +198,18 @@ export function NewAppointmentScreen({
               <CheckCircle2 size={13} color="#15803D" strokeWidth={2.5} />
               <span className="text-xs text-[#606060]">Cita confirmada en la agenda</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Smartphone size={13} color="#15803D" strokeWidth={2.5} />
-              <span className="text-xs text-[#606060]">Recordatorio enviado por WhatsApp</span>
-            </div>
+            {!isWalkIn && (
+              <div className="flex items-center gap-2">
+                <Smartphone size={13} color="#15803D" strokeWidth={2.5} />
+                <span className="text-xs text-[#606060]">Recordatorio enviado por WhatsApp</span>
+              </div>
+            )}
+            {isWalkIn && (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={13} color="#b0b5c8" strokeWidth={2.5} />
+                <span className="text-xs text-[#969696]">Puedes agregar el cliente desde el detalle de la cita</span>
+              </div>
+            )}
             {selSvc?.requiresDeposit && (
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={13} color="#B45309" strokeWidth={2.5} />
@@ -363,6 +380,14 @@ export function NewAppointmentScreen({
                 <UserPlus size={16} color="#121e6c" strokeWidth={2} />
                 Crear nuevo cliente
               </button>
+              <div className="h-px bg-gray-100 my-1" />
+              <button
+                onClick={continueWithoutClient}
+                className="flex items-center gap-2 py-3 text-sm font-semibold text-[#969696] active:opacity-70"
+              >
+                <UserX size={16} color="#969696" strokeWidth={2} />
+                Continuar sin cliente
+              </button>
             </div>
           )}
         </div>
@@ -457,11 +482,11 @@ export function NewAppointmentScreen({
       )}
 
       {/* ── Summary step ─────────────────────────────────────────────── */}
-      {step === 'summary' && selSvc && selClient && (
+      {step === 'summary' && selSvc && (
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
             <div className="bg-[#f7f8fb] rounded-2xl px-4 py-4 flex flex-col gap-3">
-              <SummaryRow label="Cliente" value={selClient.name} />
+              <SummaryRow label="Cliente" value={selClient?.name ?? 'Sin cliente asociado'} muted={!selClient} />
               <SummaryRow label="Servicio" value={selSvc.name} />
               <SummaryRow label="Profesional" value={selProf?.name ?? '—'} />
               <SummaryRow label="Fecha" value={formatFullDate(selDate)} />
@@ -495,11 +520,11 @@ export function NewAppointmentScreen({
   );
 }
 
-function SummaryRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function SummaryRow({ label, value, bold, muted }: { label: string; value: string; bold?: boolean; muted?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <span className="text-xs text-[#969696] shrink-0 pt-0.5">{label}</span>
-      <span className={`text-sm text-right ${bold ? 'font-bold text-[#121e6c]' : 'font-medium text-[#1e1e1e]'}`}>{value}</span>
+      <span className={`text-sm text-right ${bold ? 'font-bold text-[#121e6c]' : muted ? 'font-normal text-[#b0b5c8] italic' : 'font-medium text-[#1e1e1e]'}`}>{value}</span>
     </div>
   );
 }

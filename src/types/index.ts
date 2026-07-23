@@ -67,9 +67,9 @@ export interface Appointment {
   id: string;
   professionalId: string;
   serviceId: string;
-  clientName: string;
-  clientPhone: string;
-  clientCedula: string;
+  clientName?: string;
+  clientPhone?: string;
+  clientCedula?: string;
   date: string;
   startTime: string;
   status: AppointmentStatus;
@@ -121,7 +121,7 @@ export interface Client {
 export interface SaleRecord {
   id: string;
   appointmentId: string | null;
-  clientName: string;
+  clientName?: string;
   serviceId: string;
   professionalId: string;
   serviceValue: number;

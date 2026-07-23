@@ -5,7 +5,7 @@ import { AppointmentCard } from '../components/AppointmentCard';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
 import { timeToMin, minToTime, PROTOTYPE_TODAY } from '../store/prototypeStore';
-import type { Appointment, Professional, Service, SaleRecord, Role, AvailabilityBlock, Branch } from '../types';
+import type { Appointment, Professional, Service, SaleRecord, Role, AvailabilityBlock, Branch, Client } from '../types';
 
 interface Props {
   role: Role;
@@ -15,6 +15,7 @@ interface Props {
   availabilityBlocks: AvailabilityBlock[];
   activeBranchId: string;
   branches: Branch[];
+  clients?: Client[];
   onBranchChange: (id: string) => void;
   onUpdateAppointment: (updated: Appointment) => void;
   onAddSaleRecord: (sale: SaleRecord) => void;
@@ -101,8 +102,8 @@ const ALL_WEEKS = buildAllWeeks();
 
 export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
-  activeBranchId, branches, onBranchChange,
-  onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
+  activeBranchId, branches, clients = [],
+  onBranchChange, onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
   onOpenAvailability, jumpToDate, onJumpHandled,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
@@ -248,9 +249,14 @@ export function AgendaPage({
     const svc = SERVICES.find(s => s.id === apt.serviceId)!;
     onOpenDrawer(
       <AppointmentDetailDrawer appointment={apt} professional={prof} service={svc}
+        clients={clients}
         onClosure={() => openClosure(apt, prof, svc)}
         onEdit={() => { onCloseDrawer(); setTimeout(() => onOpenEdit(apt), 320); }}
         onViewClient={onCloseDrawer}
+        onAssignClient={(client) => {
+          onUpdateAppointment({ ...apt, clientName: client.name, clientPhone: client.phone, clientCedula: client.cedula });
+          onCloseDrawer();
+        }}
       />, undefined, '88%'
     );
   }

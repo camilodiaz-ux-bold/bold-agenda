@@ -148,6 +148,7 @@ export function OperatorShell() {
             availabilityBlocks={availabilityBlocks}
             activeBranchId={activeBranchId}
             branches={BRANCHES}
+            clients={clients}
             onBranchChange={handleBranchChange}
             onUpdateAppointment={updateAppointment}
             onAddSaleRecord={addSaleRecord}

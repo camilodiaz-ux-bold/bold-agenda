@@ -39,8 +39,8 @@ export function AppointmentCard({ appointment, professional, service, onTap }: P
         <div className="flex-1 min-w-0 py-3 px-3">
           {/* Row 1: client name (primary) + appointment status */}
           <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-bold text-[#1e1e1e] leading-tight">
-              {appointment.clientName}
+            <span className={`text-sm font-bold leading-tight ${appointment.clientName ? 'text-[#1e1e1e]' : 'text-[#b0b5c8] italic'}`}>
+              {appointment.clientName ?? 'Sin cliente asociado'}
             </span>
             <div className="shrink-0 mt-0.5">
               <StatusBadge status={appointment.status} />
