@@ -112,7 +112,7 @@ export function EditAppointmentDrawer({
           <button
             onClick={onClose}
             className="w-full h-12 rounded-full font-bold text-sm text-white"
-            style={{ backgroundColor: '#E8194B' }}
+            style={{ backgroundColor: '#FF2947' }}
           >
             Listo
           </button>
@@ -276,7 +276,7 @@ export function EditAppointmentDrawer({
           onClick={handleSave}
           disabled={!canSave}
           className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
-          style={{ backgroundColor: '#E8194B' }}
+          style={{ backgroundColor: '#FF2947' }}
         >
           Guardar cambios
         </button>

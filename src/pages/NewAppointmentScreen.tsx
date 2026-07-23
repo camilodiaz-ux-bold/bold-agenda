@@ -220,7 +220,7 @@ export function NewAppointmentScreen({
           <button
             onClick={onBack}
             className="w-full h-12 rounded-full font-bold text-sm text-white"
-            style={{ backgroundColor: '#E8194B' }}
+            style={{ backgroundColor: '#FF2947' }}
           >
             Volver a la agenda
           </button>
@@ -246,7 +246,7 @@ export function NewAppointmentScreen({
             <button
               key={svc.id}
               onClick={() => selectService(svc)}
-              className="w-full flex items-center justify-between bg-white border-2 border-gray-100 rounded-2xl px-4 py-3 text-left active:border-[#E8194B] active:bg-[#FFF1F2] transition-all"
+              className="w-full flex items-center justify-between bg-white border-2 border-gray-100 rounded-2xl px-4 py-3 text-left active:border-[#FF2947] active:bg-[#FFF1F2] transition-all"
             >
               <div>
                 <p className="text-sm font-semibold text-[#1e1e1e]">{svc.name}</p>
@@ -344,7 +344,7 @@ export function NewAppointmentScreen({
                 <button
                   onClick={confirmNewClient}
                   className="flex-1 h-10 rounded-full text-xs font-bold text-white"
-                  style={{ backgroundColor: '#E8194B' }}
+                  style={{ backgroundColor: '#FF2947' }}
                 >
                   Continuar
                 </button>
@@ -473,7 +473,7 @@ export function NewAppointmentScreen({
               onClick={confirmDateTime}
               disabled={!selDate || !selTime}
               className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
-              style={{ backgroundColor: '#E8194B' }}
+              style={{ backgroundColor: '#FF2947' }}
             >
               Continuar
             </button>
@@ -509,7 +509,7 @@ export function NewAppointmentScreen({
             <button
               onClick={createAppointment}
               className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-              style={{ backgroundColor: '#E8194B' }}
+              style={{ backgroundColor: '#FF2947' }}
             >
               Crear cita
             </button>

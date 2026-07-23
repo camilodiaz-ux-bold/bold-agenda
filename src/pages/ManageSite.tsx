@@ -189,8 +189,8 @@ export function ManageSite() {
               </button>
               <button
                 onClick={() => setStep('cancel-confirm')}
-                className="w-full h-12 rounded-full font-bold text-sm border-2 text-[#E8194B] transition-all active:scale-[0.98]"
-                style={{ borderColor: '#E8194B', backgroundColor: '#fff' }}
+                className="w-full h-12 rounded-full font-bold text-sm border-2 text-[#FF2947] transition-all active:scale-[0.98]"
+                style={{ borderColor: '#FF2947', backgroundColor: '#fff' }}
               >
                 Cancelar cita
               </button>
@@ -296,7 +296,7 @@ export function ManageSite() {
             onClick={() => setStep('reschedule-confirm')}
             disabled={!selTime || (selDate === apt_.date && selTime === apt_.startTime)}
             className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
-            style={{ backgroundColor: '#E8194B' }}
+            style={{ backgroundColor: '#FF2947' }}
           >
             Confirmar reprogramación
           </button>
@@ -404,7 +404,7 @@ export function ManageSite() {
             <p className="text-sm font-bold text-[#1e1e1e]">{displayService?.name}</p>
             <p className="text-xs text-[#969696] mt-0.5">{formatDate(apt_.date)} · {apt_.startTime}</p>
             {apt_.paymentStatus === 'pagado-anticipado' && (
-              <p className="text-xs font-semibold mt-2" style={{ color: isEarly ? '#0D9488' : '#E8194B' }}>
+              <p className="text-xs font-semibold mt-2" style={{ color: isEarly ? '#0D9488' : '#FF2947' }}>
                 {isEarly ? `Reembolso: ${formatCOP(apt_.originalPrice ?? displayService?.price ?? 0)}` : `Retenido: ${formatCOP(apt_.originalPrice ?? displayService?.price ?? 0)}`}
               </p>
             )}
@@ -413,7 +413,7 @@ export function ManageSite() {
           <button
             onClick={doCancel}
             className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-            style={{ backgroundColor: '#E8194B' }}
+            style={{ backgroundColor: '#FF2947' }}
           >
             Confirmar cancelación
           </button>

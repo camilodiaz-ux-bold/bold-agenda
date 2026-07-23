@@ -69,7 +69,7 @@ export function SaleDetailDrawer({ record }: Props) {
               <span className="text-xs text-[#606060]">
                 Comisión ({prof ? Math.round(prof.commissionRate * 100) : '—'}%)
               </span>
-              <span className="text-sm font-bold tabular-nums" style={{ color: '#E8194B' }}>
+              <span className="text-sm font-bold tabular-nums" style={{ color: '#FF2947' }}>
                 {formatCOP(record.commission)}
               </span>
             </div>

@@ -111,7 +111,7 @@ export function AvailabilityDrawer({
                   <button key={apt.id} onClick={() => onEditConflict(apt)}
                     className="w-full flex items-center justify-between py-1.5 text-left active:opacity-70">
                     <span className="text-xs text-[#606060]">{apt.clientName} · {svc?.name} · {apt.startTime}</span>
-                    <span className="text-xs font-semibold text-[#E8194B]">Editar</span>
+                    <span className="text-xs font-semibold text-[#FF2947]">Editar</span>
                   </button>
                 );
               })}
@@ -120,7 +120,7 @@ export function AvailabilityDrawer({
           <button
             onClick={onClose}
             className="w-full h-12 rounded-full font-bold text-sm text-white"
-            style={{ backgroundColor: '#E8194B' }}
+            style={{ backgroundColor: '#FF2947' }}
           >
             Listo
           </button>
@@ -159,7 +159,7 @@ export function AvailabilityDrawer({
           <button
             onClick={handleConfirmWithConflict}
             className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-            style={{ backgroundColor: '#E8194B' }}
+            style={{ backgroundColor: '#FF2947' }}
           >
             Guardar bloqueo con conflicto conocido
           </button>
@@ -306,7 +306,7 @@ export function AvailabilityDrawer({
           onClick={handleSubmit}
           disabled={!selDate || !selProfId}
           className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
-          style={{ backgroundColor: '#E8194B' }}
+          style={{ backgroundColor: '#FF2947' }}
         >
           Guardar bloqueo
         </button>

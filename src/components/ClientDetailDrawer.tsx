@@ -159,7 +159,7 @@ export function ClientDetailDrawer({
                         {isActive && (
                           <button
                             onClick={() => { onClose(); setTimeout(() => onOpenEdit(apt), 320); }}
-                            className="text-[10px] font-semibold text-[#E8194B] active:opacity-70"
+                            className="text-[10px] font-semibold text-[#FF2947] active:opacity-70"
                           >
                             Editar
                           </button>

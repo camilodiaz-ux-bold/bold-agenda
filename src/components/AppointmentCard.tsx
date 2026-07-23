@@ -1,5 +1,4 @@
 import type { Appointment, Professional, Service } from '../types';
-import { StatusBadge } from './StatusBadge';
 import { formatCOP, formatDuration } from '../data/appointments';
 
 interface Props {
@@ -9,69 +8,104 @@ interface Props {
   onTap: () => void;
 }
 
+const STATUS_DOT: Record<string, string> = {
+  confirmada: '#121e6c',
+  completada: '#22c55e',
+  'no-show': '#BE123C',
+  reprogramada: '#9ca3af',
+  cancelada: '#9ca3af',
+  'cancelada-tarde': '#BE123C',
+  pendiente: '#d97706',
+  pagado: '#22c55e',
+  'pagado-anticipado': '#0D9488',
+  reembolsado: '#22c55e',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  confirmada: 'Confirmada',
+  completada: 'Completado',
+  'no-show': 'No llegó',
+  reprogramada: 'Reprogramada',
+  cancelada: 'Cancelada',
+  'cancelada-tarde': 'Cancelación tardía',
+  pendiente: 'Por cobrar',
+  pagado: 'Pagado',
+  'pagado-anticipado': 'Prepagado',
+  reembolsado: 'Reembolsado',
+};
+
+function StatusDot({ status }: { status: string }) {
+  const color = STATUS_DOT[status] ?? '#9ca3af';
+  const label = STATUS_LABEL[status] ?? status;
+  return (
+    <span className="inline-flex items-center gap-1 shrink-0">
+      <span className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: color }} />
+      <span className="text-[12px] font-medium text-[#1e1e1e] whitespace-nowrap leading-[16px]">{label}</span>
+    </span>
+  );
+}
+
 export function AppointmentCard({ appointment, professional, service, onTap }: Props) {
   const isDimmed = appointment.status === 'completada' || appointment.status === 'no-show';
 
   return (
     <button
       onClick={onTap}
-      className="w-full text-left bg-white rounded-2xl overflow-hidden transition-all active:scale-[0.98] active:shadow-none border border-gray-100"
+      className="w-full text-left bg-white rounded-[16px] transition-all active:scale-[0.98] active:shadow-none"
       style={{
-        boxShadow: '0px 1px 4px rgba(18, 30, 108, 0.05)',
+        boxShadow: '0px 4px 6px rgba(18, 30, 108, 0.08)',
         opacity: isDimmed ? 0.72 : 1,
       }}
     >
-      <div className="flex">
-        {/* Time column */}
-        <div className="pl-3 pr-2 py-3 w-[58px] shrink-0 flex flex-col items-end justify-start">
-          <span className="text-sm font-bold text-[#121e6c] leading-tight tabular-nums">
+      <div className="flex gap-[10px] items-start px-4 py-3">
+
+        {/* Time column — 41px, semibold 14px navy */}
+        <div className="w-[41px] h-[40px] flex items-center justify-start shrink-0">
+          <span className="text-[14px] font-semibold text-[#121e6c] tabular-nums leading-[20px]">
             {appointment.startTime}
-          </span>
-          <span className="text-[11px] text-[#b0b5c8] leading-tight mt-0.5">
-            {formatDuration(service.duration)}
           </span>
         </div>
 
-        {/* Divider */}
-        <div className="w-px bg-gray-100 my-3 shrink-0" />
+        {/* Vertical divider */}
+        <div className="w-px bg-gray-200 self-stretch shrink-0" />
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 py-3 px-3">
-          {/* Row 1: client name (primary) + appointment status */}
-          <div className="flex items-start justify-between gap-2">
-            <span className={`text-sm font-bold leading-tight ${appointment.clientName ? 'text-[#1e1e1e]' : 'text-[#b0b5c8] italic'}`}>
+        {/* Info column */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+
+          {/* Level 1 — client name + duration */}
+          <div className="flex items-center justify-between gap-2 min-h-[40px]">
+            <span className={`text-[14px] font-semibold leading-[20px] truncate ${appointment.clientName ? 'text-[#1e1e1e]' : 'text-[#b0b5c8] italic'}`}>
               {appointment.clientName ?? 'Sin cliente asociado'}
             </span>
-            <div className="shrink-0 mt-0.5">
-              <StatusBadge status={appointment.status} />
-            </div>
-          </div>
-
-          {/* Row 2: service name + price */}
-          <div className="flex items-center justify-between gap-2 mt-0.5">
-            <span className="text-xs text-[#969696] truncate">{service.name}</span>
-            <span className="text-xs font-semibold text-[#121e6c] shrink-0 tabular-nums">
-              {formatCOP(service.price)}
+            <span className="text-[14px] font-semibold text-[#1e1e1e] shrink-0 whitespace-nowrap leading-[20px]">
+              {formatDuration(service.duration)}
             </span>
           </div>
 
-          {/* Row 3: professional (secondary) + payment status (subtle) */}
-          <div className="flex items-center justify-between gap-2 mt-2">
-            <div className="flex items-center gap-1.5">
-              <div
-                className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: '#e8eaf0' }}
-              >
-                <span className="text-[8px] font-bold leading-none" style={{ color: '#606060' }}>
-                  {professional.initials.slice(0, 1)}
-                </span>
-              </div>
-              <span className="text-[11px] text-[#969696]">
-                {professional.name.split(' ')[0]}
-              </span>
-            </div>
-            <StatusBadge status={appointment.paymentStatus} subtle />
+          {/* Level 2 — service + price */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px] truncate">{service.name}</span>
+            <span className="text-[12px] font-medium text-[#1e1e1e] shrink-0 tabular-nums leading-[16px]">{formatCOP(service.price)}</span>
           </div>
+
+          {/* Level 3 — professional */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">Profesional</span>
+            <span className="text-[12px] font-medium text-[#1e1e1e] shrink-0 leading-[16px]">{professional.name.split(' ')[0]}</span>
+          </div>
+
+          {/* Level 4 — appointment status */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">Estado del servicio</span>
+            <StatusDot status={appointment.status} />
+          </div>
+
+          {/* Level 5 — payment status */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">Estado del pago</span>
+            <StatusDot status={appointment.paymentStatus} />
+          </div>
+
         </div>
       </div>
     </button>

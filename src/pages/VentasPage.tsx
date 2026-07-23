@@ -261,7 +261,7 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
                 <button
                   onClick={() => setViewWeekStart(currentWeekStart)}
                   className="text-[11px] font-semibold active:opacity-60"
-                  style={{ color: '#E8194B' }}
+                  style={{ color: '#FF2947' }}
                 >
                   Semana actual
                 </button>
@@ -295,7 +295,7 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
                 <button
                   onClick={() => { setViewYear(CURRENT_YEAR); setViewMonth(CURRENT_MONTH); }}
                   className="text-[11px] font-semibold active:opacity-60"
-                  style={{ color: '#E8194B' }}
+                  style={{ color: '#FF2947' }}
                 >
                   Mes actual
                 </button>
@@ -447,7 +447,7 @@ export function VentasPage({ role, salesRecords, onOpenDrawer, onCloseDrawer }: 
                 onClick={applyCustomRange}
                 disabled={!draftStart}
                 className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
-                style={{ backgroundColor: '#E8194B' }}
+                style={{ backgroundColor: '#FF2947' }}
               >
                 Aplicar rango
               </button>

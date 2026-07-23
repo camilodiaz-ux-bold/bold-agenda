@@ -294,62 +294,32 @@ export function AgendaPage({
   return (
     <div className="flex flex-col min-h-full">
       {/* ── Header ────────────────────────────────────────────────────── */}
-      <div className="bg-white px-4 pt-3 pb-0">
+      <div className="bg-white px-4 pt-3 pb-3 rounded-b-[24px]">
 
-        {/* Row 1: Branch selector + action icons */}
-        <div className="flex items-center -mx-1 mb-1">
+        {/* Row 1: Branch selector + notification bell */}
+        <div className="flex items-center -mx-1">
           <button
             onClick={() => setShowBranchSheet(true)}
             className="flex items-center gap-1 flex-1 min-w-0 px-1 h-11 active:opacity-70 transition-opacity"
           >
-            <span className="text-base font-bold text-[#121e6c] leading-tight truncate">
+            <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate">
               {activeBranch?.name ?? 'Salón Camila Norte'}
             </span>
-            <ChevronDown size={14} color="#121e6c" strokeWidth={2.5} className="shrink-0" />
+            <ChevronDown size={14} color="#1e1e1e" strokeWidth={2.5} className="shrink-0" />
           </button>
-          {isAdmin && (
-            <button
-              onClick={() => onOpenAvailability(viewScope === 'team')}
-              className="w-11 h-11 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
-              aria-label="Bloquear disponibilidad"
-            >
-              <CalendarOff size={20} color="#121e6c" strokeWidth={1.8} />
-            </button>
-          )}
           <button
             className="w-11 h-11 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
             aria-label="Notificaciones"
           >
-            <Bell size={20} color="#121e6c" strokeWidth={1.8} />
+            <Bell size={22} color="#121e6c" strokeWidth={1.8} />
           </button>
         </div>
 
-        {/* Row 2: Date (left) + scope selector (right) */}
-        <div className="flex items-center justify-between px-1 mb-3">
-          <p className="text-sm font-medium text-[#606060] leading-none">
-            {formatDateHeader(selectedDate)}
-          </p>
-          {isAdmin && (
-            <button
-              onClick={() => setShowScopeSheet(true)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full border shrink-0 active:opacity-70 transition-opacity ml-3"
-              style={{ borderColor: '#d2d4e1', backgroundColor: '#fff' }}
-            >
-              <span className="text-xs font-semibold text-[#121e6c] leading-none">
-                {viewScope === 'team'
-                  ? 'Agenda del equipo'
-                  : (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')}
-              </span>
-              <ChevronDown size={12} color="#121e6c" strokeWidth={2.5} className="shrink-0" />
-            </button>
-          )}
-        </div>
-
-        {/* Row 3: Horizontal swipeable day strip (5 weeks, 7 visible at a time) */}
+        {/* Day strip: swipeable 5 weeks, navy active pill */}
         <div
           ref={stripRef}
           onScroll={handleStripScroll}
-          className="flex overflow-x-auto -mx-4 mb-3"
+          className="flex overflow-x-auto -mx-4 mt-1"
           style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}
         >
           {ALL_WEEKS.map((week, wi) => (
@@ -361,50 +331,104 @@ export function AgendaPage({
               {week.map((dateStr, di) => {
                 const isSelected = dateStr === selectedDate;
                 const hasDot = branchApts.some(a => a.date === dateStr && !['cancelada', 'cancelada-tarde'].includes(a.status));
-                  const label = WEEK_LABELS[di];
+                const label = WEEK_LABELS[di];
                 const dayNum = parseInt(dateStr.split('-')[2], 10);
                 return (
                   <button
                     key={dateStr}
                     onClick={() => { setSelectedDate(dateStr); setProfFilter('all'); }}
-                    className="flex-1 flex flex-col items-center gap-1 py-1.5 rounded-xl transition-all active:opacity-70"
-                    style={{ backgroundColor: isSelected ? '#E8194B' : 'transparent' }}
+                    className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-full transition-all active:opacity-70"
+                    style={{ backgroundColor: isSelected ? '#121e6c' : 'transparent' }}
                   >
-                    <span className="text-[10px] font-semibold leading-none"
-                      style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : '#969696' }}>{label}</span>
+                    <span className="text-[10px] font-normal leading-none"
+                      style={{ color: isSelected ? 'rgba(255,255,255,0.7)' : '#121e6c' }}>{label}</span>
                     <span className="text-[13px] font-bold leading-none"
                       style={{ color: isSelected ? '#fff' : '#121e6c' }}>{dayNum}</span>
                     <div className="w-1 h-1 rounded-full"
-                      style={{ backgroundColor: hasDot ? (isSelected ? 'rgba(255,255,255,0.6)' : '#E8194B') : 'transparent' }} />
+                      style={{ backgroundColor: hasDot ? (isSelected ? 'rgba(255,255,255,0.5)' : '#121e6c') : 'transparent' }} />
                   </button>
                 );
               })}
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Metrics */}
-        <div className="flex gap-2 mb-3">
-          {[
-            { label: 'Citas', value: String(metrics.total) },
-            { label: 'Confirmadas', value: String(metrics.confirmadas) },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex-1 bg-[#f7f8fb] rounded-xl px-2 py-2 flex flex-col items-center gap-0.5">
-              <span className="text-base font-bold text-[#121e6c] leading-none tabular-nums">{value}</span>
-              <span className="text-[10px] text-[#969696] leading-none">{label}</span>
+      {/* ── Content area ──────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-6 px-4 pt-4">{/* gap-[24px] per Figma */}
+
+        {/* Info card: scope + date + availability icon + metrics */}
+        <div
+          className="bg-white rounded-[12px] px-4 py-3 flex flex-col gap-5"
+          style={{ boxShadow: '0px 4px 6px rgba(18,30,108,0.08)' }}
+        >
+          {/* Card header */}
+          <div className="flex items-start gap-1">
+            <div className="flex-1 min-w-0 flex flex-col gap-2">
+              {/* Scope selector */}
+              {isAdmin ? (
+                <button
+                  onClick={() => setShowScopeSheet(true)}
+                  className="flex items-center gap-1 active:opacity-70 transition-opacity w-fit"
+                >
+                  <span className="text-[14px] font-bold text-[#121e6c] leading-[20px]">
+                    {viewScope === 'team'
+                      ? 'Agenda del equipo'
+                      : (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')}
+                  </span>
+                  <ChevronDown size={14} color="#121e6c" strokeWidth={2.5} className="shrink-0" />
+                </button>
+              ) : (
+                <span className="text-[14px] font-bold text-[#121e6c] leading-[20px]">Mi agenda</span>
+              )}
+              {/* Date subtitle */}
+              <p className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">
+                {formatDateHeader(selectedDate)}
+              </p>
             </div>
-          ))}
+            {/* CalendarOff / block availability */}
+            {isAdmin && (
+              <button
+                onClick={() => onOpenAvailability(viewScope === 'team')}
+                className="w-9 h-9 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
+                aria-label="Bloquear disponibilidad"
+              >
+                <CalendarOff size={22} color="#121e6c" strokeWidth={1.8} />
+              </button>
+            )}
+          </div>
+
+          {/* Metric cells */}
+          <div className="flex gap-2">
+            <div className="flex-1 rounded-[12px] px-3 py-[10px] flex flex-col gap-1" style={{ backgroundColor: '#f3f3f3' }}>
+              <span className="text-[10px] font-normal text-[#1e1e1e] leading-[16px]">Citas</span>
+              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] tabular-nums">{metrics.total}</span>
+            </div>
+            <div className="flex-1 rounded-[12px] px-3 py-[10px] flex flex-col gap-1" style={{ backgroundColor: '#f4fdf9' }}>
+              <span className="text-[10px] font-normal text-[#1e1e1e] leading-[16px]">Confirmadas</span>
+              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] tabular-nums">{metrics.confirmadas}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Filter row: pro chips visible only in team view */}
+        {/* Filter tabs — underline style, visible only in team view */}
         {isTeam && (
-          <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            {/* All */}
             <button
               onClick={() => setProfFilter('all')}
-              className="rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
-              style={{ backgroundColor: profFilter === 'all' ? '#121e6c' : '#fff', color: profFilter === 'all' ? '#fff' : '#606060', borderColor: profFilter === 'all' ? '#121e6c' : '#d2d4e1' }}
+              className="flex flex-col items-center gap-1 shrink-0 pb-0.5 active:opacity-70"
             >
-              Todos
+              <span
+                className="text-[14px] leading-[20px] whitespace-nowrap"
+                style={{ fontWeight: profFilter === 'all' ? 600 : 400, color: '#121e6c' }}
+              >
+                Todos
+              </span>
+              <div
+                className="h-0.5 w-full rounded-full transition-all"
+                style={{ backgroundColor: profFilter === 'all' ? '#121e6c' : 'transparent' }}
+              />
             </button>
             {PROFESSIONALS.map(prof => {
               const isActive = profFilter === prof.id;
@@ -412,24 +436,28 @@ export function AgendaPage({
                 <button
                   key={prof.id}
                   onClick={() => setProfFilter(isActive ? 'all' : prof.id)}
-                  className="flex items-center gap-1.5 rounded-full px-3 h-8 shrink-0 text-xs font-semibold border transition-all active:opacity-70"
-                  style={{ backgroundColor: isActive ? '#121e6c' : '#fff', color: isActive ? '#fff' : '#606060', borderColor: isActive ? '#121e6c' : '#d2d4e1' }}
+                  className="flex flex-col items-center gap-1 shrink-0 pb-0.5 active:opacity-70"
                 >
-                  <span className="text-[8px] font-bold">{prof.initials}</span>
-                  {prof.name.split(' ')[0]}
+                  <span
+                    className="text-[14px] leading-[20px] whitespace-nowrap"
+                    style={{ fontWeight: isActive ? 600 : 400, color: '#121e6c' }}
+                  >
+                    {prof.name.split(' ')[0]}
+                  </span>
+                  <div
+                    className="h-0.5 w-full rounded-full transition-all"
+                    style={{ backgroundColor: isActive ? '#121e6c' : 'transparent' }}
+                  />
                 </button>
               );
             })}
             <div className="w-2 shrink-0" />
           </div>
         )}
-        {!isTeam && <div className="pb-3" />}
-
-        <div className="h-px bg-gray-100 -mx-4" />
       </div>
 
       {/* ── Appointment list ──────────────────────────────────────────── */}
-      <div className="flex-1 px-4 py-4 flex flex-col gap-3">
+      <div className="flex-1 px-4 pt-3 pb-4 flex flex-col gap-3">
         {dayAppointments.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16">
             <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center"
@@ -446,11 +474,11 @@ export function AgendaPage({
             if (item.type === 'now') {
               return (
                 <div key="ahora" className="flex items-center gap-2 my-1">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#E8194B' }} />
-                  <div className="flex-1 h-px" style={{ backgroundColor: '#E8194B', opacity: 0.3 }} />
-                  <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: '#E8194B' }}>{DEMO_NOW}</span>
-                  <div className="flex-1 h-px" style={{ backgroundColor: '#E8194B', opacity: 0.3 }} />
-                  <span className="text-[10px] font-bold shrink-0 tracking-wide" style={{ color: '#E8194B' }}>AHORA</span>
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#FF2947' }} />
+                  <div className="flex-1 h-px" style={{ backgroundColor: '#FF2947', opacity: 0.3 }} />
+                  <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: '#FF2947' }}>{DEMO_NOW}</span>
+                  <div className="flex-1 h-px" style={{ backgroundColor: '#FF2947', opacity: 0.3 }} />
+                  <span className="text-[10px] font-bold shrink-0 tracking-wide" style={{ color: '#FF2947' }}>AHORA</span>
                 </div>
               );
             }
@@ -509,7 +537,7 @@ export function AgendaPage({
                   <p className="text-xs text-[#969696]">{branch.address} · {branch.neighborhood}</p>
                 </div>
                 {activeBranchId === branch.id && (
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#E8194B' }} />
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#FF2947' }} />
                 )}
               </button>
             ))}
@@ -541,7 +569,7 @@ export function AgendaPage({
                 <p className="text-xs text-[#969696]">Todas las agendas</p>
               </div>
               {viewScope === 'team' && (
-                <span className="text-xs font-bold shrink-0" style={{ color: '#E8194B' }}>✓</span>
+                <span className="text-xs font-bold shrink-0" style={{ color: '#FF2947' }}>✓</span>
               )}
             </button>
 
@@ -572,7 +600,7 @@ export function AgendaPage({
                     </p>
                   </div>
                   {isActive && (
-                    <span className="text-xs font-bold shrink-0" style={{ color: '#E8194B' }}>✓</span>
+                    <span className="text-xs font-bold shrink-0" style={{ color: '#FF2947' }}>✓</span>
                   )}
                 </button>
               );

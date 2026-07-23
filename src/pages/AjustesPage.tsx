@@ -229,7 +229,7 @@ export function AjustesPage({
 
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
         <div className="bg-[#FFF1F2] rounded-2xl p-4 flex gap-3">
-          <Sparkles size={18} color="#E8194B" strokeWidth={1.8} className="shrink-0 mt-0.5" />
+          <Sparkles size={18} color="#FF2947" strokeWidth={1.8} className="shrink-0 mt-0.5" />
           <p className="text-xs text-[#606060] leading-snug">
             {isAdmin ? 'Puedes editar cualquier ajuste en cualquier momento.' : 'Solo el administrador puede editar estos ajustes.'}
           </p>
@@ -270,7 +270,7 @@ export function AjustesPage({
                   <button
                     onClick={() => { onReset(); setShowResetConfirm(false); setDetail(null); }}
                     className="flex-1 h-10 rounded-full text-xs font-bold text-white"
-                    style={{ backgroundColor: '#E8194B' }}
+                    style={{ backgroundColor: '#FF2947' }}
                   >
                     Sí, restablecer
                   </button>
@@ -374,7 +374,7 @@ function PerfilDetail({ profile, isAdmin, onSave, onBack }: {
           <button
             onClick={handleSave}
             className="w-full h-12 rounded-full font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-            style={{ backgroundColor: saved ? '#15803D' : '#E8194B' }}
+            style={{ backgroundColor: saved ? '#15803D' : '#FF2947' }}
           >
             {saved && <Check size={16} color="#fff" strokeWidth={2.5} />}
             {saved ? 'Guardado' : 'Guardar cambios'}
@@ -445,7 +445,7 @@ function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
           <button
             onClick={() => onSave({ ...prof, active } as Professional)}
             className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-            style={{ backgroundColor: '#E8194B' }}
+            style={{ backgroundColor: '#FF2947' }}
           >
             Guardar
           </button>
@@ -540,7 +540,7 @@ function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
           <button
             onClick={handleSave}
             className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-            style={{ backgroundColor: '#E8194B' }}
+            style={{ backgroundColor: '#FF2947' }}
           >
             Guardar cambios
           </button>
@@ -625,7 +625,7 @@ function PoliticaDetail({ policy, isAdmin, onSave, onBack }: {
           <button
             onClick={handleSave}
             className="w-full h-12 rounded-full font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-            style={{ backgroundColor: saved ? '#15803D' : '#E8194B' }}
+            style={{ backgroundColor: saved ? '#15803D' : '#FF2947' }}
           >
             {saved && <Check size={16} color="#fff" strokeWidth={2.5} />}
             {saved ? 'Guardado' : 'Guardar política'}

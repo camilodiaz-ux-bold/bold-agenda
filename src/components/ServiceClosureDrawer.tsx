@@ -95,7 +95,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         {/* Option: Completada */}
         <button
           onClick={() => handleOutcomeSelect('completada')}
-          className="w-full flex items-center gap-3 bg-white border-2 border-gray-100 rounded-2xl px-4 py-3 text-left transition-all active:border-[#E8194B] active:bg-[#FFF1F2]"
+          className="w-full flex items-center gap-3 bg-white border-2 border-gray-100 rounded-2xl px-4 py-3 text-left transition-all active:border-[#FF2947] active:bg-[#FFF1F2]"
         >
           <div className="w-9 h-9 rounded-full bg-[#F0FDF4] flex items-center justify-center shrink-0">
             <CheckCircle2 size={18} color="#15803D" strokeWidth={2} />
@@ -153,7 +153,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         <button
           onClick={() => setStep('payment')}
           className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-          style={{ backgroundColor: '#E8194B' }}
+          style={{ backgroundColor: '#FF2947' }}
         >
           Continuar sin cliente
         </button>
@@ -316,7 +316,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
           onClick={handleConfirmClosure}
           disabled={!isPrepaid && !paymentMethod}
           className="w-full h-13 rounded-full font-bold text-base text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
-          style={{ backgroundColor: '#E8194B', height: '52px' }}
+          style={{ backgroundColor: '#FF2947', height: '52px' }}
         >
           <CheckCircle2 size={19} color="white" strokeWidth={2.5} />
           {isPrepaid ? 'Confirmar servicio' : `Cobrar ${formatCOP(total)}`}
@@ -395,7 +395,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
         <button
           onClick={onClose}
           className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-          style={{ backgroundColor: '#E8194B' }}
+          style={{ backgroundColor: '#FF2947' }}
         >
           Volver a la agenda
         </button>

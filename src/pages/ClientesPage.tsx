@@ -165,7 +165,7 @@ function ClientRow({
       <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 relative" style={{ backgroundColor: '#121e6c' }}>
         <span className="text-sm font-bold text-white">{initials}</span>
         {hasActive && (
-          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white" style={{ backgroundColor: '#E8194B' }} />
+          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white" style={{ backgroundColor: '#FF2947' }} />
         )}
       </div>
 

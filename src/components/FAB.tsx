@@ -9,16 +9,17 @@ export function FAB({ onPress, label = 'Nueva cita' }: Props) {
   return (
     <button
       onClick={onPress}
-      className="absolute right-4 flex items-center gap-1.5 rounded-full h-12 px-4 shadow-md transition-all active:scale-95"
+      className="absolute right-5 flex items-center gap-2 rounded-full px-5 transition-all active:scale-95"
       style={{
-        backgroundColor: '#E8194B',
-        bottom: '76px',
+        backgroundColor: '#FF2947',
+        height: '46px',
+        bottom: '96px',
         zIndex: 30,
-        // Minimum 44px touch target preserved even though visual is h-12 (48px)
+        boxShadow: '0px 4px 12px rgba(255,41,71,0.35)',
       }}
     >
-      <Plus size={18} color="white" strokeWidth={2.5} />
-      <span className="text-white text-sm font-bold">{label}</span>
+      <Plus size={20} color="white" strokeWidth={2.5} />
+      <span className="text-white text-[14px] font-bold leading-[20px]">{label}</span>
     </button>
   );
 }

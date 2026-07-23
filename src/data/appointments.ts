@@ -17,7 +17,7 @@ export const PROFESSIONALS: Professional[] = [
     id: 'p1',
     name: 'Camila Vargas',
     role: 'Estilista · Dueña',
-    color: '#E8194B',
+    color: '#FF2947',
     initials: 'CV',
     commissionRate: 0.45,
   },

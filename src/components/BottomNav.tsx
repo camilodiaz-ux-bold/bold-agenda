@@ -13,37 +13,45 @@ const TABS: { key: OperatorSection; label: string; Icon: React.ComponentType<{ s
   { key: 'ajustes', label: 'Ajustes', Icon: Settings },
 ];
 
-const ACTIVE_COLOR = '#E8194B';
-const INACTIVE_COLOR = '#969696';
-
 export function BottomNav({ active, onChange }: Props) {
   return (
-    <nav
-      className="bg-white border-t border-gray-100 flex items-stretch flex-shrink-0"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    <div
+      className="shrink-0 px-5 pt-5 pb-6"
+      style={{ background: 'linear-gradient(to top, #f7f8fb 55%, rgba(247,248,251,0) 100%)' }}
     >
-      {TABS.map(({ key, label, Icon }) => {
-        const isActive = active === key;
-        return (
-          <button
-            key={key}
-            onClick={() => onChange(key)}
-            className="flex-1 flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] transition-opacity active:opacity-60"
-          >
-            <Icon
-              size={22}
-              color={isActive ? ACTIVE_COLOR : INACTIVE_COLOR}
-              strokeWidth={isActive ? 2.5 : 1.8}
-            />
-            <span
-              className="text-[11px] font-semibold leading-none"
-              style={{ color: isActive ? ACTIVE_COLOR : INACTIVE_COLOR }}
+      <nav
+        className="flex items-center px-[10px] rounded-[100px] border relative"
+        style={{
+          height: '62px',
+          borderColor: 'rgba(210,212,225,0.5)',
+          backgroundColor: 'rgba(255,255,255,0.85)',
+          backdropFilter: 'blur(6px)',
+          boxShadow: '0px 10px 18.7px 0px rgba(18,30,108,0.09), inset 0px -2px 4px 0px white, inset 0px 3px 7.5px 0px rgba(18,30,108,0.13)',
+        }}
+      >
+        {TABS.map(({ key, label, Icon }) => {
+          const isActive = active === key;
+          return (
+            <button
+              key={key}
+              onClick={() => onChange(key)}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-opacity active:opacity-60"
             >
-              {label}
-            </span>
-          </button>
-        );
-      })}
-    </nav>
+              <Icon
+                size={22}
+                color="#121e6c"
+                strokeWidth={isActive ? 2.5 : 1.8}
+              />
+              <span
+                className="text-[11px] leading-[16px] text-[#121e6c]"
+                style={{ fontWeight: isActive ? 600 : 400 }}
+              >
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

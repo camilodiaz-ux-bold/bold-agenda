@@ -61,7 +61,7 @@ export const BOOKING_BRANCHES: BookingBranch[] = [
     city: 'Bogotá',
     phone: '3101234567',
     hours: 'Lun – Sáb · 8:00 am – 7:00 pm',
-    heroFrom: '#E8194B',
+    heroFrom: '#FF2947',
     heroTo: '#7b0c25',
     rating: 4.8,
     reviewCount: 128,
@@ -119,7 +119,7 @@ export const BOOKING_BRANCHES: BookingBranch[] = [
         id: 'np1', name: 'Camila Vargas', role: 'Estilista · Dueña',
         specialty: 'Cortes y colorimetría avanzada',
         rating: 4.9, reviewCount: 89, yearsExp: 7,
-        initials: 'CV', color: '#E8194B', available: true,
+        initials: 'CV', color: '#FF2947', available: true,
       },
       {
         id: 'np2', name: 'Valentina Ruiz', role: 'Colorista Certificada',

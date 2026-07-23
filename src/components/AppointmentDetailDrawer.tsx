@@ -189,7 +189,7 @@ export function AppointmentDetailDrawer({
                     {appointment.status === 'completada' ? 'Tu comisión' : 'Comisión estimada'}
                     <span className="ml-1 text-[#b0b5c8]">({Math.round(professional.commissionRate * 100)}%)</span>
                   </span>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: '#E8194B' }}>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: '#FF2947' }}>
                     {formatCOP(Math.round(service.price * professional.commissionRate))}
                   </span>
                 </div>
@@ -244,7 +244,7 @@ export function AppointmentDetailDrawer({
             <button
               onClick={onClosure}
               className="w-full h-12 rounded-full flex items-center justify-center gap-2 font-bold text-sm text-white transition-all active:scale-[0.98]"
-              style={{ backgroundColor: '#E8194B' }}
+              style={{ backgroundColor: '#FF2947' }}
             >
               <CheckSquare size={18} color="white" strokeWidth={2.5} />
               Cerrar servicio

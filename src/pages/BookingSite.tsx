@@ -69,7 +69,7 @@ const CATEGORY_META: Record<string, { bg: string; color: string; Icon: typeof Sc
   Corte: { bg: '#EEF0FB', color: '#121e6c', Icon: Scissors },
   Color: { bg: '#F5F3FF', color: '#7C3AED', Icon: Sparkles },
   Tratamientos: { bg: '#F0FDF4', color: '#15803D', Icon: Leaf },
-  Uñas: { bg: '#FFF0F3', color: '#E8194B', Icon: Star },
+  Uñas: { bg: '#FFF0F3', color: '#FF2947', Icon: Star },
   Barbería: { bg: '#FFFBEB', color: '#B45309', Icon: Scissors },
 };
 
@@ -392,8 +392,8 @@ export function BookingSite() {
                     </div>
                     <div className="flex items-center justify-between mt-3">
                       <span className="text-xs text-[#969696]">{branch.services.length} servicios disponibles</span>
-                      <div className="flex items-center gap-1 text-[#E8194B] text-xs font-bold">
-                        Ver servicios <ChevronRight size={14} color="#E8194B" strokeWidth={2.5} />
+                      <div className="flex items-center gap-1 text-[#FF2947] text-xs font-bold">
+                        Ver servicios <ChevronRight size={14} color="#FF2947" strokeWidth={2.5} />
                       </div>
                     </div>
                   </div>
@@ -464,7 +464,7 @@ export function BookingSite() {
                     >
                       {labels[tab]}
                       {isActive && (
-                        <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full" style={{ backgroundColor: '#E8194B' }} />
+                        <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full" style={{ backgroundColor: '#FF2947' }} />
                       )}
                     </button>
                   );
@@ -535,7 +535,7 @@ export function BookingSite() {
                             key={svc.id}
                             className="bg-white rounded-2xl overflow-hidden transition-all"
                             style={{
-                              border: isSelected ? '2px solid #E8194B' : '1.5px solid #f0f0f4',
+                              border: isSelected ? '2px solid #FF2947' : '1.5px solid #f0f0f4',
                               boxShadow: '0px 1px 4px rgba(18,30,108,0.05)',
                             }}
                           >
@@ -578,7 +578,7 @@ export function BookingSite() {
                                   <button
                                     onClick={() => addService(svc)}
                                     className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:opacity-70"
-                                    style={{ backgroundColor: '#E8194B' }}
+                                    style={{ backgroundColor: '#FF2947' }}
                                   >
                                     <Plus size={14} color="#fff" strokeWidth={2.5} />
                                   </button>
@@ -587,7 +587,7 @@ export function BookingSite() {
                                 <button
                                   onClick={() => addService(svc)}
                                   className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:opacity-70"
-                                  style={{ backgroundColor: '#E8194B' }}
+                                  style={{ backgroundColor: '#FF2947' }}
                                 >
                                   <Plus size={14} color="#fff" strokeWidth={2.5} />
                                 </button>
@@ -608,7 +608,7 @@ export function BookingSite() {
                   <div className="bg-white rounded-2xl px-4 py-4 flex flex-col gap-3" style={{ border: '1.5px solid #f0f0f4' }}>
                     <p className="text-xs font-bold text-[#b0b5c8] uppercase tracking-widest">Dirección</p>
                     <div className="flex items-start gap-2">
-                      <MapPin size={16} color="#E8194B" strokeWidth={2} className="shrink-0 mt-0.5" />
+                      <MapPin size={16} color="#FF2947" strokeWidth={2} className="shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-semibold text-[#1e1e1e]">{selectedBranch.address}</p>
                         <p className="text-xs text-[#969696]">{selectedBranch.neighborhood}</p>
@@ -638,7 +638,7 @@ export function BookingSite() {
                   <div className="bg-white rounded-2xl px-4 py-4 flex flex-col gap-2" style={{ border: '1.5px solid #f0f0f4' }}>
                     <p className="text-xs font-bold text-[#b0b5c8] uppercase tracking-widest mb-1">Horario</p>
                     <div className="flex items-center gap-2">
-                      <Clock size={15} color="#E8194B" strokeWidth={2} />
+                      <Clock size={15} color="#FF2947" strokeWidth={2} />
                       <p className="text-sm font-semibold text-[#1e1e1e]">{selectedBranch.hours}</p>
                     </div>
                     <p className="text-xs text-[#969696]">Domingo: Cerrado</p>
@@ -651,7 +651,7 @@ export function BookingSite() {
                       href={`tel:${selectedBranch.phone}`}
                       className="flex items-center gap-2 h-10 active:opacity-70"
                     >
-                      <Phone size={15} color="#E8194B" strokeWidth={2} />
+                      <Phone size={15} color="#FF2947" strokeWidth={2} />
                       <span className="text-sm font-semibold text-[#121e6c]">{formatPhone(selectedBranch.phone)}</span>
                     </a>
                   </div>
@@ -727,7 +727,7 @@ export function BookingSite() {
                 <button
                   onClick={goToReservar}
                   className="flex items-center gap-2 h-12 px-6 rounded-full font-bold text-sm text-white transition-all active:scale-[0.97]"
-                  style={{ backgroundColor: '#E8194B' }}
+                  style={{ backgroundColor: '#FF2947' }}
                 >
                   Reservar <ChevronRight size={16} color="#fff" strokeWidth={2.5} />
                 </button>
@@ -749,7 +749,7 @@ export function BookingSite() {
                   <div className="flex items-center gap-2 min-w-0">
                     <ServiceCategoryIcon category={service.category} size={14} boxSize={28} />
                     <span className="text-sm font-semibold text-[#121e6c] truncate">{service.name}</span>
-                    {qty > 1 && <span className="text-xs text-[#E8194B] font-bold shrink-0">×{qty}</span>}
+                    {qty > 1 && <span className="text-xs text-[#FF2947] font-bold shrink-0">×{qty}</span>}
                   </div>
                   <span className="text-sm font-bold text-[#969696] tabular-nums shrink-0">{formatCOP(service.price * qty)}</span>
                 </div>
@@ -887,7 +887,7 @@ export function BookingSite() {
             ] as const).map(({ key, label, value, onChange, type, placeholder, required }) => (
               <div key={key} className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-[#606060]">
-                  {label}{required && <span style={{ color: '#E8194B' }}> *</span>}
+                  {label}{required && <span style={{ color: '#FF2947' }}> *</span>}
                 </label>
                 <input
                   type={type}
@@ -895,14 +895,14 @@ export function BookingSite() {
                   onChange={e => onChange(e.target.value)}
                   placeholder={placeholder}
                   className="w-full h-11 rounded-xl border px-3 text-sm text-[#1e1e1e] outline-none transition-colors"
-                  style={{ borderColor: clientErrors[key] ? '#E8194B' : '#d2d4e1', backgroundColor: '#fff' }}
+                  style={{ borderColor: clientErrors[key] ? '#FF2947' : '#d2d4e1', backgroundColor: '#fff' }}
                   onFocus={e => { e.currentTarget.style.borderColor = '#121e6c'; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = clientErrors[key] ? '#E8194B' : '#d2d4e1'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = clientErrors[key] ? '#FF2947' : '#d2d4e1'; }}
                 />
-                {clientErrors[key] && <p className="text-xs" style={{ color: '#E8194B' }}>{clientErrors[key]}</p>}
+                {clientErrors[key] && <p className="text-xs" style={{ color: '#FF2947' }}>{clientErrors[key]}</p>}
               </div>
             ))}
-            <button onClick={submitClientInfo} className="w-full h-12 rounded-full font-bold text-sm text-white mt-2 transition-all active:scale-[0.98]" style={{ backgroundColor: '#E8194B' }}>
+            <button onClick={submitClientInfo} className="w-full h-12 rounded-full font-bold text-sm text-white mt-2 transition-all active:scale-[0.98]" style={{ backgroundColor: '#FF2947' }}>
               Continuar
             </button>
             <p className="text-[11px] text-[#b0b5c8] text-center leading-relaxed">
@@ -1094,7 +1094,7 @@ export function BookingSite() {
                       <span className="flex-1 text-center text-lg font-black text-[#121e6c] tabular-nums">{qty} agregado{qty !== 1 ? 's' : ''}</span>
                       <button onClick={() => addService(serviceDetail)}
                         className="w-12 h-12 rounded-full flex items-center justify-center transition-all active:opacity-70"
-                        style={{ backgroundColor: '#E8194B' }}>
+                        style={{ backgroundColor: '#FF2947' }}>
                         <Plus size={18} color="#fff" strokeWidth={2.5} />
                       </button>
                     </div>
@@ -1104,7 +1104,7 @@ export function BookingSite() {
                   <button
                     onClick={() => { addService(serviceDetail); setServiceDetail(null); }}
                     className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-                    style={{ backgroundColor: '#E8194B' }}
+                    style={{ backgroundColor: '#FF2947' }}
                   >
                     Agregar al reserva
                   </button>
