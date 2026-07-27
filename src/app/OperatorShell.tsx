@@ -29,6 +29,7 @@ export function OperatorShell() {
   const [role] = useState<Role>('admin');
   const [viewScope, setViewScope] = useState<'team' | 'mine'>('team');
   const [showNewAppt, setShowNewAppt] = useState(false);
+  const [newApptSlot, setNewApptSlot] = useState<{ date: string; time: string } | null>(null);
   const [agendaJumpDate, setAgendaJumpDate] = useState<string | undefined>(undefined);
   const [activeBranchId, setActiveBranchId] = useState(initial.activeBranchId ?? 'norte');
 
@@ -156,6 +157,7 @@ export function OperatorShell() {
             onCloseDrawer={closeDrawer}
             onOpenEdit={openEditDrawer}
             onOpenAvailability={(showProfSelector) => openAvailabilityDrawer(showProfSelector)}
+            onNewApptAtSlot={(date, time) => { setNewApptSlot({ date, time }); setShowNewAppt(true); }}
             jumpToDate={agendaJumpDate}
             onJumpHandled={() => setAgendaJumpDate(undefined)}
           />
@@ -245,7 +247,9 @@ export function OperatorShell() {
             appointments={appointments}
             availabilityBlocks={availabilityBlocks}
             bookingPolicy={bookingPolicy}
-            onBack={() => setShowNewAppt(false)}
+            defaultDate={newApptSlot?.date}
+            defaultTime={newApptSlot?.time}
+            onBack={() => { setNewApptSlot(null); setShowNewAppt(false); }}
             onCreated={handleNewApptCreated}
           />
         </div>

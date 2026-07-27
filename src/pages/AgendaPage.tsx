@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
-import { Bell, ChevronDown, AlertTriangle, CalendarOff, Users } from 'lucide-react';
+import { Bell, ChevronDown, AlertTriangle, Users, User, ChevronRight, Plus } from 'lucide-react';
 import { PROFESSIONALS, SERVICES, formatDuration } from '../data/appointments';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
@@ -23,6 +23,7 @@ interface Props {
   onCloseDrawer: () => void;
   onOpenEdit: (apt: Appointment) => void;
   onOpenAvailability: (showProfSelector: boolean) => void;
+  onNewApptAtSlot?: (date: string, time: string) => void;
   jumpToDate?: string;
   onJumpHandled: () => void;
 }
@@ -104,7 +105,7 @@ export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
   activeBranchId, branches, clients = [],
   onBranchChange, onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
-  onOpenAvailability, jumpToDate, onJumpHandled,
+  onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
   const [profFilter, setProfFilter] = useState<string>('all');
@@ -191,18 +192,6 @@ export function AgendaPage({
     return [...apts].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [branchApts, selectedDate, profFilter, role, viewScope, viewProfId]);
 
-  const metrics = useMemo(() => {
-    const base = branchApts.filter(a => {
-      if (a.date !== selectedDate) return false;
-      if (role === 'staff') return a.professionalId === STAFF_PROF_ID;
-      if (viewScope === 'mine') return a.professionalId === viewProfId;
-      if (profFilter !== 'all') return a.professionalId === profFilter;
-      return true;
-    });
-    const total = base.filter(a => !['cancelada', 'cancelada-tarde'].includes(a.status)).length;
-    const confirmadas = base.filter(a => a.status === 'confirmada').length;
-    return { total, confirmadas };
-  }, [branchApts, selectedDate, role, viewScope, profFilter]);
 
   function handleClosure(result: ClosureResult) {
     const apt = appointments.find(a => a.id === result.appointmentId);
@@ -359,60 +348,55 @@ export function AgendaPage({
       </div>
 
       {/* ── Content area ──────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-6 px-4 pt-4">{/* gap-[24px] per Figma */}
+      <div className="flex flex-col gap-6 px-4 pt-4">
 
-        {/* Info card: scope + date + availability icon + metrics */}
+        {/* APP Card / Action — context card (Figma 29552:1356 / 29552:1378) */}
         <div
-          className="bg-white rounded-[12px] px-4 py-3 flex flex-col gap-5"
-          style={{ boxShadow: '0px 4px 6px rgba(18,30,108,0.08)' }}
+          className="bg-white rounded-[16px] flex gap-3 items-center"
+          style={{
+            paddingLeft: '12px', paddingRight: '8px', paddingTop: '12px', paddingBottom: '12px',
+            boxShadow: '0px 4px 6px rgba(18,30,108,0.08)',
+            cursor: isAdmin ? 'pointer' : 'default',
+          }}
+          onClick={() => isAdmin && setShowScopeSheet(true)}
+          role={isAdmin ? 'button' : undefined}
         >
-          {/* Card header */}
-          <div className="flex items-start gap-1">
-            <div className="flex-1 min-w-0 flex flex-col gap-2">
-              {/* Scope selector */}
-              {isAdmin ? (
-                <button
-                  onClick={() => setShowScopeSheet(true)}
-                  className="flex items-center gap-1 active:opacity-70 transition-opacity w-fit"
-                >
-                  <span className="text-[14px] font-bold text-[#121e6c] leading-[20px]">
-                    {viewScope === 'team'
-                      ? 'Agenda del equipo'
-                      : (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')}
-                  </span>
-                  <ChevronDown size={14} color="#121e6c" strokeWidth={2.5} className="shrink-0" />
-                </button>
-              ) : (
-                <span className="text-[14px] font-bold text-[#121e6c] leading-[20px]">Mi agenda</span>
-              )}
-              {/* Date subtitle */}
-              <p className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">
-                {formatDateHeader(selectedDate)}
-              </p>
-            </div>
-            {/* CalendarOff / block availability */}
+          {/* Left icon: 28px */}
+          {isTeam
+            ? <Users size={28} color="#121e6c" strokeWidth={1.5} className="shrink-0" />
+            : <User size={28} color="#121e6c" strokeWidth={1.5} className="shrink-0" />
+          }
+
+          {/* Info */}
+          <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
+            <p className="text-[14px] font-bold text-[#121e6c] leading-[20px]">
+              {isTeam
+                ? 'Agenda del equipo'
+                : isAdmin
+                  ? (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')
+                  : (PROFESSIONALS.find(p => p.id === STAFF_PROF_ID)?.name ?? 'Mi agenda')}
+            </p>
+            <p className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">
+              {formatDateHeader(selectedDate)}
+            </p>
             {isAdmin && (
               <button
-                onClick={() => onOpenAvailability(viewScope === 'team')}
-                className="w-9 h-9 flex items-center justify-center transition-opacity active:opacity-60 shrink-0"
-                aria-label="Bloquear disponibilidad"
+                onClick={(e) => { e.stopPropagation(); onOpenAvailability(isTeam); }}
+                className="py-[4px] text-left active:opacity-70 transition-opacity w-fit"
               >
-                <CalendarOff size={22} color="#121e6c" strokeWidth={1.8} />
+                <span className="text-[12px] font-semibold leading-[16px] underline" style={{ color: '#FF2947' }}>
+                  Bloquear agenda
+                </span>
               </button>
             )}
           </div>
 
-          {/* Metric cells */}
-          <div className="flex gap-2">
-            <div className="flex-1 rounded-[12px] px-3 py-[10px] flex flex-col gap-1" style={{ backgroundColor: '#f3f3f3' }}>
-              <span className="text-[10px] font-normal text-[#1e1e1e] leading-[16px]">Citas</span>
-              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] tabular-nums">{metrics.total}</span>
+          {/* ChevronRight — only when admin (card is interactive) */}
+          {isAdmin && (
+            <div className="w-6 h-6 flex items-center justify-center shrink-0">
+              <ChevronRight size={18} color="#b0b5c8" strokeWidth={2} />
             </div>
-            <div className="flex-1 rounded-[12px] px-3 py-[10px] flex flex-col gap-1" style={{ backgroundColor: '#f4fdf9' }}>
-              <span className="text-[10px] font-normal text-[#1e1e1e] leading-[16px]">Confirmadas</span>
-              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] tabular-nums">{metrics.confirmadas}</span>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Filter tabs — underline style, visible only in team view */}
@@ -488,11 +472,31 @@ export function AgendaPage({
             }
             if (item.type === 'gap') {
               return (
-                <div key={`gap-${item.fromTime}`} className="flex items-center gap-3 py-0.5">
-                  <div className="flex-1 h-px" style={{ backgroundColor: '#e8eaf0' }} />
-                  <span className="text-[11px] font-medium shrink-0" style={{ color: '#b0b5c8' }}>libre {formatDuration(item.durationMin)}</span>
-                  <div className="flex-1 h-px" style={{ backgroundColor: '#e8eaf0' }} />
-                </div>
+                <button
+                  key={`gap-${item.fromTime}`}
+                  onClick={() => onNewApptAtSlot?.(selectedDate, item.fromTime)}
+                  className="w-full flex items-center gap-3 rounded-[16px] text-left active:opacity-60 transition-opacity"
+                  style={{
+                    paddingLeft: '12px', paddingRight: '8px', paddingTop: '12px', paddingBottom: '12px',
+                    backgroundColor: '#f7f8fb',
+                    border: '1.5px dashed rgba(18,30,108,0.14)',
+                  }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: 'rgba(18,30,108,0.06)' }}
+                  >
+                    <Plus size={16} color="#b0b5c8" strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-semibold leading-[20px]" style={{ color: '#b0b5c8' }}>
+                      Libre · {formatDuration(item.durationMin)}
+                    </p>
+                    <p className="text-[12px] font-normal leading-[16px]" style={{ color: '#d2d4e1' }}>
+                      {item.fromTime} – {item.toTime}
+                    </p>
+                  </div>
+                </button>
               );
             }
             const apt = item.apt;

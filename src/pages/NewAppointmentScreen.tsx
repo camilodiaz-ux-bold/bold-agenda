@@ -15,6 +15,8 @@ interface Props {
   appointments: Appointment[];
   availabilityBlocks: AvailabilityBlock[];
   bookingPolicy: BookingPolicy;
+  defaultDate?: string;
+  defaultTime?: string;
   onBack: () => void;
   onCreated: (apt: Appointment, newClient?: Client) => void;
 }
@@ -51,7 +53,7 @@ const STEP_TITLES: Record<Step, string> = {
 
 export function NewAppointmentScreen({
   role, viewScope, currentProfId, professionals, services, clients,
-  appointments, availabilityBlocks, bookingPolicy, onBack, onCreated,
+  appointments, availabilityBlocks, bookingPolicy, defaultDate, defaultTime, onBack, onCreated,
 }: Props) {
   const isAdmin = role === 'admin';
   const showProfSelector = isAdmin && viewScope === 'team';
@@ -65,8 +67,8 @@ export function NewAppointmentScreen({
   const [newClientErrors, setNewClientErrors] = useState<Record<string, string>>({});
   const [clientSearch, setClientSearch] = useState('');
   const [showNewClientForm, setShowNewClientForm] = useState(false);
-  const [selDate, setSelDate] = useState('');
-  const [selTime, setSelTime] = useState('');
+  const [selDate, setSelDate] = useState(defaultDate ?? '');
+  const [selTime, setSelTime] = useState(defaultTime ?? '');
   const [note, setNote] = useState('');
 
   const days = useMemo(() => getNextDays(28), []);
