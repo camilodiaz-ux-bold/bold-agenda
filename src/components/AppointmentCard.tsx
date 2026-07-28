@@ -9,16 +9,16 @@ interface Props {
 }
 
 const STATUS_DOT: Record<string, string> = {
-  confirmada: '#121e6c',
-  completada: '#22c55e',
+  confirmada: '#3E4983',
+  completada: '#1B8959',
   'no-show': '#BE123C',
-  reprogramada: '#9ca3af',
-  cancelada: '#9ca3af',
+  reprogramada: '#969696',
+  cancelada: '#969696',
   'cancelada-tarde': '#BE123C',
-  pendiente: '#d97706',
-  pagado: '#22c55e',
-  'pagado-anticipado': '#0D9488',
-  reembolsado: '#22c55e',
+  pendiente: '#969696',
+  pagado: '#1B8959',
+  'pagado-anticipado': '#1B8959',
+  reembolsado: '#1B8959',
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -51,13 +51,10 @@ export function AppointmentCard({ appointment, professional, service, onTap }: P
   return (
     <button
       onClick={onTap}
-      className="w-full text-left bg-white rounded-[16px] transition-all active:scale-[0.98] active:shadow-none"
-      style={{
-        boxShadow: '0px 4px 6px rgba(18, 30, 108, 0.08)',
-        opacity: isDimmed ? 0.72 : 1,
-      }}
+      className="w-full text-left bg-white rounded-[16px] transition-all active:scale-[0.98]"
+      style={{ opacity: isDimmed ? 0.72 : 1 }}
     >
-      <div className="flex gap-[10px] items-start px-4 py-3">
+      <div className="flex gap-[12px] items-start p-[12px]">
 
         {/* Time column — 41px, semibold 14px navy */}
         <div className="w-[41px] h-[40px] flex items-center justify-start shrink-0">

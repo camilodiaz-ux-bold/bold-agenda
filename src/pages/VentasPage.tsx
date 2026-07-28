@@ -360,10 +360,7 @@ export function VentasPage({ role, salesRecords, activeBranchId, branches, onOpe
 
         {/* APP Card / Dashboard */}
         {showDashboard && (
-          <div
-            className="bg-white rounded-[16px] p-[16px] flex flex-col gap-4"
-            style={{ boxShadow: '0px 4px 6px rgba(18,30,108,0.08)' }}
-          >
+          <div className="bg-white rounded-[16px] p-[12px] flex flex-col gap-4">
             {/* Primary info */}
             <div className="flex flex-col gap-1">
               <span className="text-[12px] font-medium text-[#1e1e1e] leading-[16px]">
@@ -434,11 +431,7 @@ export function VentasPage({ role, salesRecords, activeBranchId, branches, onOpe
                 <button
                   key={record.id}
                   onClick={() => openSaleDetail(record)}
-                  className="w-full bg-white rounded-[16px] text-left flex items-start gap-3 transition-all active:opacity-70"
-                  style={{
-                    padding: '12px 16px',
-                    boxShadow: '0px 4px 6px rgba(18,30,108,0.08)',
-                  }}
+                  className="w-full bg-white rounded-[16px] text-left flex items-start gap-3 transition-all active:opacity-70 p-[12px]"
                 >
                   {/* Icon container */}
                   <div

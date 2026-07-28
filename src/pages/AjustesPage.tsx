@@ -80,7 +80,7 @@ export function AjustesPage({
   // ── Equipo list detail ─────────────────────────────────────────────────
   if (detail?.screen === 'equipo') {
     return (
-      <div className="flex flex-col h-full bg-white">
+      <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
         <DetailHeader title="Equipo" onBack={() => setDetail(null)} />
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-4 flex flex-col gap-2">
@@ -91,7 +91,7 @@ export function AjustesPage({
                 <button
                   key={prof.id}
                   onClick={() => setDetail({ screen: 'equipo-prof', profId: prof.id })}
-                  className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3 active:bg-gray-50 transition-all"
+                  className="flex items-center gap-3 bg-white rounded-[16px] p-[12px] active:opacity-70 transition-all"
                 >
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
@@ -138,7 +138,7 @@ export function AjustesPage({
   // ── Servicios list detail ───────────────────────────────────────────────
   if (detail?.screen === 'servicios') {
     return (
-      <div className="flex flex-col h-full bg-white">
+      <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
         <DetailHeader title="Servicios" onBack={() => setDetail(null)} />
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-4 flex flex-col gap-2">
@@ -149,7 +149,7 @@ export function AjustesPage({
                 <button
                   key={svc.id}
                   onClick={() => setDetail({ screen: 'servicios-svc', svcId: svc.id })}
-                  className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3 active:bg-gray-50 transition-all"
+                  className="flex items-center gap-3 bg-white rounded-[16px] p-[12px] active:opacity-70 transition-all"
                   style={{ opacity: active ? 1 : 0.55 }}
                 >
                   <div className="flex-1 text-left min-w-0">
@@ -385,7 +385,7 @@ function PerfilDetail({ profile, isAdmin, onSave, onBack }: {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
       <DetailHeader title="Perfil del negocio" onBack={onBack} />
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
         {fields.map(({ key, label, multiline }) => (
@@ -441,7 +441,7 @@ function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
   const count = aptCount(appointments, a => a.professionalId === prof.id);
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
       <DetailHeader title={prof.name.split(' ')[0]} onBack={onBack} />
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
         {/* Avatar + name */}
@@ -520,7 +520,7 @@ function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
       <DetailHeader title={svc.name} onBack={onBack} />
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
         {/* Info card */}
@@ -616,7 +616,7 @@ function PoliticaDetail({ policy, isAdmin, onSave, onBack }: {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
       <DetailHeader title="Política de reservas" onBack={onBack} />
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
         {/* Cancellation window */}

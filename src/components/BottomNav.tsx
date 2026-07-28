@@ -17,7 +17,10 @@ export function BottomNav({ active, onChange }: Props) {
   return (
     <div
       className="shrink-0 px-5 pt-5 pb-6"
-      style={{ background: 'linear-gradient(to top, #f7f8fb 50%, rgba(247,248,251,0) 100%)' }}
+      style={{
+        backgroundImage: 'linear-gradient(0.515deg, rgb(235,237,251) 50.064%, rgba(235,237,251,0) 98.508%)',
+        backdropFilter: 'blur(8px)',
+      }}
     >
       <nav
         className="flex items-center px-[10px] rounded-[100px] border relative"

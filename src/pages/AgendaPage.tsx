@@ -352,12 +352,8 @@ export function AgendaPage({
 
         {/* APP Card / Action — context card (Figma 29552:1356 / 29552:1378) */}
         <div
-          className="bg-white rounded-[16px] flex gap-3 items-center"
-          style={{
-            paddingLeft: '12px', paddingRight: '8px', paddingTop: '12px', paddingBottom: '12px',
-            boxShadow: '0px 4px 6px rgba(18,30,108,0.08)',
-            cursor: isAdmin ? 'pointer' : 'default',
-          }}
+          className="bg-white rounded-[16px] flex gap-4 items-center p-[12px]"
+          style={{ cursor: isAdmin ? 'pointer' : 'default' }}
           onClick={() => isAdmin && setShowScopeSheet(true)}
           role={isAdmin ? 'button' : undefined}
         >

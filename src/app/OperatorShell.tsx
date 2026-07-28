@@ -137,7 +137,7 @@ export function OperatorShell() {
   return (
     <div
       className="relative h-full w-full flex flex-col overflow-hidden"
-      style={{ backgroundColor: '#f7f8fb' }}
+      style={{ backgroundImage: 'linear-gradient(178.5deg, rgba(247,248,251,0.032) 1.07%, rgba(4,7,245,0.051) 100%), linear-gradient(90deg, rgb(247,248,251) 0%, rgb(247,248,251) 100%)' }}
     >
       <div className="flex-1 overflow-y-auto min-h-0">
         {section === 'agenda' && (
