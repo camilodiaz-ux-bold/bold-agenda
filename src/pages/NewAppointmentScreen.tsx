@@ -17,6 +17,7 @@ interface Props {
   bookingPolicy: BookingPolicy;
   defaultDate?: string;
   defaultTime?: string;
+  defaultProfId?: string;
   onBack: () => void;
   onCreated: (apt: Appointment, newClient?: Client) => void;
 }
@@ -53,14 +54,14 @@ const STEP_TITLES: Record<Step, string> = {
 
 export function NewAppointmentScreen({
   role, viewScope, currentProfId, professionals, services, clients,
-  appointments, availabilityBlocks, bookingPolicy, defaultDate, defaultTime, onBack, onCreated,
+  appointments, availabilityBlocks, bookingPolicy, defaultDate, defaultTime, defaultProfId, onBack, onCreated,
 }: Props) {
   const isAdmin = role === 'admin';
   const showProfSelector = isAdmin && viewScope === 'team';
 
   const [step, setStep] = useState<Step>('service');
   const [selSvc, setSelSvc] = useState<Service | null>(null);
-  const [selProfId, setSelProfId] = useState<string>(currentProfId);
+  const [selProfId, setSelProfId] = useState<string>(defaultProfId ?? currentProfId);
   const [selClient, setSelClient] = useState<Client | null>(null);
   const [isNewClient, setIsNewClient] = useState(false);
   const [newClientForm, setNewClientForm] = useState({ name: '', phone: '', cedula: '', email: '' });

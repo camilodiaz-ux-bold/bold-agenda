@@ -1,73 +1,68 @@
 import { type ReactNode } from 'react';
-
-export const HOUR_HEIGHT = 102;       // px per hour — from Figma calendar-card blocks
-export const TIME_COL = 48;           // px — matches Figma w-[48px] time column
-export const CAL_START = 8;           // 08:00
-export const CAL_END = 20;            // 20:00
-export const PX_PER_MIN = HOUR_HEIGHT / 60;
-export const CARD_INSET = 10;         // px gap below hour separator before card starts
-export const CARD_MIN_H = 55;         // minimum card height (Figma compact card)
-
-/** Convert HH:MM to px from top of calendar grid */
-export function timeToPx(time: string): number {
-  const [h, m] = time.split(':').map(Number);
-  return Math.round(((h - CAL_START) * 60 + m) * PX_PER_MIN);
-}
-
-/** Duration in minutes → pixels */
-export function durationToPx(minutes: number): number {
-  return Math.round(minutes * PX_PER_MIN);
-}
-
-/** Card top px (with inset below separator) */
-export function cardTop(startTime: string): number {
-  return timeToPx(startTime) + CARD_INSET;
-}
-
-/** Card height in px (proportional, with minimum) */
-export function cardHeight(durationMin: number): number {
-  return Math.max(CARD_MIN_H, durationToPx(durationMin) - CARD_INSET);
-}
+import { CAL_START_H, CAL_END_H, HOUR_H, SLOT_H, CAL_H, TIME_COL_W, DAY_SLOTS, timeToPx } from '../lib/calendarMath';
 
 interface Props {
-  /** Positioned blocks (AppointmentBlock, BlockedTimeBlock, now indicator) */
   children?: ReactNode;
+  /** Se llama cuando el usuario toca una zona libre del calendario */
+  onSlotTap?: (time: string) => void;
 }
 
-export function CalendarGrid({ children }: Props) {
-  const hourCount = CAL_END - CAL_START;
-  const totalH = hourCount * HOUR_HEIGHT;
+const HOURS = Array.from({ length: CAL_END_H - CAL_START_H + 1 }, (_, i) => CAL_START_H + i);
+const HALF_HOUR_INDICES = Array.from({ length: CAL_END_H - CAL_START_H }, (_, i) => i);
 
+export function CalendarGrid({ children, onSlotTap }: Props) {
   return (
-    <div className="relative w-full" style={{ height: `${totalH}px` }}>
+    <div className="relative w-full select-none" style={{ height: `${CAL_H}px` }}>
 
-      {/* Hour labels */}
-      {Array.from({ length: hourCount + 1 }, (_, i) => {
-        const h = CAL_START + i;
-        return (
+      {/* Etiquetas de hora — centradas verticalmente sobre la línea mediante height:0 + -translate-y-1/2 */}
+      {HOURS.map((h, i) => (
+        <div
+          key={h}
+          className="absolute"
+          style={{ top: `${i * HOUR_H}px`, left: 0, width: `${TIME_COL_W}px`, height: 0 }}
+        >
           <span
-            key={h}
-            className="absolute text-[14px] font-semibold leading-[20px]"
-            style={{ top: `${i * HOUR_HEIGHT}px`, left: 0, width: `${TIME_COL}px`, color: '#606060' }}
+            className="absolute right-0 pr-[8px] text-[11px] font-semibold leading-none -translate-y-1/2 whitespace-nowrap pointer-events-none"
+            style={{ color: '#babdd3', top: 0 }}
           >
             {String(h).padStart(2, '0')}:00
           </span>
-        );
-      })}
+        </div>
+      ))}
 
-      {/* Content zone: separator lines + positioned children */}
-      <div className="absolute top-0 bottom-0" style={{ left: `${TIME_COL}px`, right: 0 }}>
+      {/* Zona de contenido: líneas + botones de slot + bloques posicionados */}
+      <div className="absolute top-0 bottom-0" style={{ left: `${TIME_COL_W}px`, right: 0 }}>
 
-        {/* Hour separator lines */}
-        {Array.from({ length: hourCount + 1 }, (_, i) => (
+        {/* Líneas de hora */}
+        {HOURS.map((h, i) => (
           <div
-            key={i}
-            className="absolute left-0 right-0 h-px"
-            style={{ top: `${i * HOUR_HEIGHT}px`, backgroundColor: '#babdd3' }}
+            key={h}
+            className="absolute left-0 right-0 h-px pointer-events-none"
+            style={{ top: `${i * HOUR_H}px`, backgroundColor: '#babdd3' }}
           />
         ))}
 
-        {/* Blocks (absolutely positioned by consumers) */}
+        {/* Líneas de media hora (más sutiles) */}
+        {HALF_HOUR_INDICES.map(i => (
+          <div
+            key={`hh-${i}`}
+            className="absolute left-0 right-0 h-px pointer-events-none"
+            style={{ top: `${i * HOUR_H + SLOT_H}px`, backgroundColor: '#d2d4e1', opacity: 0.5 }}
+          />
+        ))}
+
+        {/* Botones de slot vacío — bajo todo lo demás (z:0) */}
+        {onSlotTap && DAY_SLOTS.map(slot => (
+          <button
+            key={slot}
+            className="absolute left-0 right-0 transition-colors active:bg-[rgba(18,30,108,0.04)]"
+            style={{ top: `${timeToPx(slot)}px`, height: `${SLOT_H}px`, zIndex: 0 }}
+            onClick={() => onSlotTap(slot)}
+            aria-label={`Nueva cita a las ${slot}`}
+          />
+        ))}
+
+        {/* Bloques posicionados: AppointmentBlock, BlockedTimeBlock, indicador NOW */}
         {children}
       </div>
     </div>

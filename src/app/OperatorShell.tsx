@@ -29,7 +29,7 @@ export function OperatorShell() {
   const [role] = useState<Role>('admin');
   const [viewScope, setViewScope] = useState<'team' | 'mine'>('team');
   const [showNewAppt, setShowNewAppt] = useState(false);
-  const [newApptSlot, setNewApptSlot] = useState<{ date: string; time: string } | null>(null);
+  const [newApptSlot, setNewApptSlot] = useState<{ date: string; time: string; professionalId?: string } | null>(null);
   const [agendaJumpDate, setAgendaJumpDate] = useState<string | undefined>(undefined);
   const [activeBranchId, setActiveBranchId] = useState(initial.activeBranchId ?? 'norte');
 
@@ -157,7 +157,7 @@ export function OperatorShell() {
             onCloseDrawer={closeDrawer}
             onOpenEdit={openEditDrawer}
             onOpenAvailability={(showProfSelector) => openAvailabilityDrawer(showProfSelector)}
-            onNewApptAtSlot={(date, time) => { setNewApptSlot({ date, time }); setShowNewAppt(true); }}
+            onNewApptAtSlot={(date, time, professionalId) => { setNewApptSlot({ date, time, professionalId }); setShowNewAppt(true); }}
             jumpToDate={agendaJumpDate}
             onJumpHandled={() => setAgendaJumpDate(undefined)}
           />
@@ -249,6 +249,7 @@ export function OperatorShell() {
             bookingPolicy={bookingPolicy}
             defaultDate={newApptSlot?.date}
             defaultTime={newApptSlot?.time}
+            defaultProfId={newApptSlot?.professionalId}
             onBack={() => { setNewApptSlot(null); setShowNewAppt(false); }}
             onCreated={handleNewApptCreated}
           />

@@ -22,7 +22,7 @@ export function BlockedTimeBlock({ block, professional, topPx, heightPx, onClick
     <button
       onClick={onClick}
       className="absolute left-0 right-0 rounded-[16px] overflow-hidden text-left active:opacity-80 transition-opacity"
-      style={{ top: `${topPx}px`, height: `${heightPx}px`, backgroundColor: '#FFF3D1' }}
+      style={{ top: `${topPx}px`, height: `${heightPx}px`, backgroundColor: '#FFF3D1', zIndex: 1 }}
     >
       <div
         className={`flex gap-[12px] h-full ${isCompact ? 'items-center px-[12px] py-[4px]' : 'items-start p-[12px]'}`}

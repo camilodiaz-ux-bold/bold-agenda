@@ -3,10 +3,14 @@ import { Bell, ChevronDown, Users, User } from 'lucide-react';
 import { PROFESSIONALS, SERVICES } from '../data/appointments';
 import { AppointmentBlock } from '../components/AppointmentBlock';
 import { BlockedTimeBlock } from '../components/BlockedTimeBlock';
-import { CalendarGrid, timeToPx, durationToPx, cardTop, cardHeight, CAL_START, CAL_END, HOUR_HEIGHT, CARD_INSET } from '../components/CalendarGrid';
+import { CalendarGrid } from '../components/CalendarGrid';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
-import { timeToMin, PROTOTYPE_TODAY } from '../store/prototypeStore';
+import {
+  timeToPx, cardTop, cardHeight, HOUR_H, CAL_START_H, CAL_END_H,
+  timeToMin, layoutEvents, type CalEvent,
+} from '../lib/calendarMath';
+import { PROTOTYPE_TODAY } from '../store/prototypeStore';
 import type { Appointment, Professional, Service, SaleRecord, Role, AvailabilityBlock, Branch, Client } from '../types';
 
 interface Props {
@@ -25,7 +29,7 @@ interface Props {
   onCloseDrawer: () => void;
   onOpenEdit: (apt: Appointment) => void;
   onOpenAvailability: (showProfSelector: boolean) => void;
-  onNewApptAtSlot?: (date: string, time: string) => void;
+  onNewApptAtSlot?: (date: string, time: string, professionalId?: string) => void;
   jumpToDate?: string;
   onJumpHandled: () => void;
 }
@@ -85,10 +89,9 @@ export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
   activeBranchId, branches, clients = [],
   onBranchChange, onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
-  onOpenAvailability, jumpToDate, onJumpHandled,
+  onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
-  // In team view: which professional tab is selected. No 'all' option.
   const [profFilter, setProfFilter] = useState<string>(PROFESSIONALS[0].id);
   const [showScopeSheet, setShowScopeSheet] = useState(false);
   const [showBranchSheet, setShowBranchSheet] = useState(false);
@@ -96,7 +99,6 @@ export function AgendaPage({
 
   const isAdmin = role === 'admin';
   const isTeam = isAdmin && viewScope === 'team';
-
   const activeBranch = branches.find(b => b.id === activeBranchId);
 
   useEffect(() => {
@@ -111,6 +113,7 @@ export function AgendaPage({
     [selectedDate]
   );
 
+  // ── Refs para scroll de tira semanal ──────────────────────────────────────
   const stripRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
   const ignoreScrollRef = useRef(false);
@@ -150,12 +153,18 @@ export function AgendaPage({
     }, 150);
   }
 
+  // ── Ref para scroll automático del calendario ─────────────────────────────
+  const calScrollRef = useRef<HTMLDivElement>(null);
+
+  const isToday = selectedDate === PROTOTYPE_TODAY;
+  const nowPx = timeToPx(DEMO_NOW);
+
+  // ── Datos filtrados ───────────────────────────────────────────────────────
   const branchApts = useMemo(
     () => appointments.filter(a => (a.branchId ?? 'norte') === activeBranchId),
     [appointments, activeBranchId]
   );
 
-  // Active professional for the current view
   const activeProfId = useMemo(() => {
     if (role === 'staff') return STAFF_PROF_ID;
     if (viewScope === 'mine') return viewProfId;
@@ -163,8 +172,7 @@ export function AgendaPage({
   }, [role, viewScope, viewProfId, profFilter]);
 
   const dayAppointments = useMemo<Appointment[]>(() => {
-    const apts = branchApts
-      .filter(a => a.date === selectedDate && a.professionalId === activeProfId);
+    const apts = branchApts.filter(a => a.date === selectedDate && a.professionalId === activeProfId);
     return [...apts].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [branchApts, selectedDate, activeProfId]);
 
@@ -172,6 +180,56 @@ export function AgendaPage({
     () => availabilityBlocks.filter(b => b.date === selectedDate && b.professionalId === activeProfId),
     [availabilityBlocks, selectedDate, activeProfId]
   );
+
+  // ── Layout de solapamientos ───────────────────────────────────────────────
+  const layoutMap = useMemo(() => {
+    const events: CalEvent[] = dayAppointments.map(apt => {
+      const svc = SERVICES.find(s => s.id === apt.serviceId);
+      const endMin = timeToMin(apt.startTime) + (svc?.duration ?? 60);
+      return { id: apt.id, startMin: timeToMin(apt.startTime), endMin };
+    });
+    return layoutEvents(events);
+  }, [dayAppointments]);
+
+  // ── Detección de conflictos (cita coincide con bloqueo) ───────────────────
+  const conflictingAptIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const apt of dayAppointments) {
+      const svc = SERVICES.find(s => s.id === apt.serviceId);
+      if (!svc) continue;
+      const aptStart = timeToMin(apt.startTime);
+      const aptEnd = aptStart + svc.duration;
+      for (const block of calendarBlocks) {
+        if (block.type === 'full-day') { ids.add(apt.id); break; }
+        const bStart = timeToMin(block.startTime ?? '08:00');
+        const bEnd = timeToMin(block.endTime ?? '20:00');
+        if (aptStart < bEnd && aptEnd > bStart) { ids.add(apt.id); break; }
+      }
+    }
+    return ids;
+  }, [dayAppointments, calendarBlocks]);
+
+  // ── Auto-scroll al cambiar de fecha ──────────────────────────────────────
+  useEffect(() => {
+    const el = calScrollRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      let target: number;
+      if (isToday) {
+        target = Math.max(0, nowPx - 120);
+      } else if (dayAppointments.length > 0) {
+        target = Math.max(0, timeToPx(dayAppointments[0].startTime) - 80);
+      } else {
+        target = 0;
+      }
+      el.scrollTo({ top: target, behavior: 'smooth' });
+    });
+  }, [selectedDate]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  function handleSlotTap(time: string) {
+    onNewApptAtSlot?.(selectedDate, time, activeProfId);
+  }
 
   function handleClosure(result: ClosureResult) {
     const apt = appointments.find(a => a.id === result.appointmentId);
@@ -230,14 +288,11 @@ export function AgendaPage({
     );
   }
 
-  const isToday = selectedDate === PROTOTYPE_TODAY;
-  const nowPx = timeToPx(DEMO_NOW);
-
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col h-full">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="px-4 pt-10 pb-4">
+      <div className="px-4 pt-10 pb-4 shrink-0">
         <div className="relative flex items-center" style={{ height: '36px' }}>
           <span className="text-[16px] font-bold text-[#121e6c] leading-[20px]">Agenda</span>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -260,7 +315,7 @@ export function AgendaPage({
           </button>
         </div>
 
-        {/* Week day strip */}
+        {/* Tira semanal */}
         <div
           ref={stripRef}
           onScroll={handleStripScroll}
@@ -299,10 +354,8 @@ export function AgendaPage({
         </div>
       </div>
 
-      {/* ── Content area ────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-[16px] px-4 pt-2 pb-2">
-
-        {/* Context card — Figma: icon + name + date / two action buttons */}
+      {/* ── Card contextual + tabs ───────────────────────────────────────── */}
+      <div className="flex flex-col gap-[16px] px-4 pt-2 pb-2 shrink-0">
         <div className="bg-white rounded-[16px] flex flex-col gap-[16px] p-[12px]">
           <div className="flex items-center gap-[16px]">
             <div className="shrink-0">
@@ -346,7 +399,7 @@ export function AgendaPage({
           )}
         </div>
 
-        {/* APP Tabs — team view only, one tab per professional, no "Todos" */}
+        {/* Tabs de profesionales — solo en vista equipo */}
         {isTeam && (
           <div className="flex items-start border-b border-[#e8eaf0]" style={{ height: '28px' }}>
             {PROFESSIONALS.map(prof => {
@@ -373,34 +426,34 @@ export function AgendaPage({
         )}
       </div>
 
-      {/* ── Calendar Grid ────────────────────────────────────────────────── */}
-      <div className="flex-1 px-4 pt-3 pb-36 overflow-y-auto">
-        <CalendarGrid>
+      {/* ── Grid del calendario (zona con scroll interno) ────────────────── */}
+      <div ref={calScrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-36">
+        <CalendarGrid onSlotTap={onNewApptAtSlot ? handleSlotTap : undefined}>
 
-          {/* NOW indicator */}
+          {/* Indicador de ahora */}
           {isToday && nowPx > 0 && (
             <div
-              className="absolute left-0 right-0 flex items-center z-20 pointer-events-none"
-              style={{ top: `${nowPx}px` }}
+              className="absolute left-0 right-0 flex items-center pointer-events-none"
+              style={{ top: `${nowPx}px`, zIndex: 10 }}
             >
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#FF2947', marginLeft: '-4px' }} />
-              <div className="flex-1 h-px" style={{ backgroundColor: '#FF2947', opacity: 0.5 }} />
+              <div className="flex-1 h-px" style={{ backgroundColor: '#FF2947', opacity: 0.6 }} />
             </div>
           )}
 
-          {/* Availability blocks (blocked times) */}
+          {/* Bloques de disponibilidad bloqueada */}
           {calendarBlocks.map(block => {
             const prof = PROFESSIONALS.find(p => p.id === block.professionalId)!;
             let top: number;
             let h: number;
             if (block.type === 'full-day') {
-              top = CARD_INSET;
-              h = (CAL_END - CAL_START) * HOUR_HEIGHT - CARD_INSET * 2;
+              top = 2;
+              h = (CAL_END_H - CAL_START_H) * HOUR_H - 4;
             } else {
               const startMin = timeToMin(block.startTime ?? '08:00');
               const endMin = timeToMin(block.endTime ?? '20:00');
-              top = timeToPx(block.startTime ?? '08:00') + CARD_INSET;
-              h = Math.max(55, durationToPx(endMin - startMin) - CARD_INSET);
+              top = timeToPx(block.startTime ?? '08:00') + 2;
+              h = Math.max(46, Math.round((endMin - startMin) * (102 / 60)) - 4);
             }
             return (
               <BlockedTimeBlock
@@ -414,10 +467,11 @@ export function AgendaPage({
             );
           })}
 
-          {/* Appointment blocks */}
+          {/* Bloques de citas con solapamiento detectado */}
           {dayAppointments.map(apt => {
             const prof = PROFESSIONALS.find(p => p.id === apt.professionalId)!;
             const svc = SERVICES.find(s => s.id === apt.serviceId)!;
+            const layout = layoutMap.get(apt.id) ?? { column: 0, totalColumns: 1 };
             return (
               <AppointmentBlock
                 key={apt.id}
@@ -426,16 +480,19 @@ export function AgendaPage({
                 service={svc}
                 topPx={cardTop(apt.startTime)}
                 heightPx={cardHeight(svc.duration)}
+                column={layout.column}
+                totalColumns={layout.totalColumns}
+                hasConflict={conflictingAptIds.has(apt.id)}
                 onTap={() => openDetail(apt)}
               />
             );
           })}
 
-          {/* Empty day placeholder — rendered inside the grid at 10:00 */}
+          {/* Día vacío */}
           {dayAppointments.length === 0 && calendarBlocks.length === 0 && (
             <div
-              className="absolute left-0 right-0 flex flex-col items-center gap-2"
-              style={{ top: `${2 * HOUR_HEIGHT + 16}px` }}
+              className="absolute left-0 right-0 flex flex-col items-center gap-2 pointer-events-none"
+              style={{ top: `${2 * HOUR_H + 16}px`, zIndex: 3 }}
             >
               <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
                 style={{ boxShadow: '0px 2px 8px rgba(18,30,108,0.08)' }}>
@@ -449,7 +506,7 @@ export function AgendaPage({
         </CalendarGrid>
       </div>
 
-      {/* ── Branch selector sheet ────────────────────────────────────────── */}
+      {/* ── Sheets ──────────────────────────────────────────────────────── */}
       {showBranchSheet && (
         <div className="absolute inset-0" style={{ zIndex: 50 }}>
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowBranchSheet(false)} />
@@ -477,7 +534,6 @@ export function AgendaPage({
         </div>
       )}
 
-      {/* ── Scope sheet ──────────────────────────────────────────────────── */}
       {showScopeSheet && (
         <div className="absolute inset-0" style={{ zIndex: 50 }}>
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowScopeSheet(false)} />
@@ -486,11 +542,7 @@ export function AgendaPage({
             <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Cambiar vista</p>
 
             <button
-              onClick={() => {
-                onViewScopeChange('team');
-                setProfFilter(PROFESSIONALS[0].id);
-                setShowScopeSheet(false);
-              }}
+              onClick={() => { onViewScopeChange('team'); setProfFilter(PROFESSIONALS[0].id); setShowScopeSheet(false); }}
               className="w-full flex items-center gap-3 py-3.5 border-b border-gray-100 active:opacity-70"
             >
               <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
@@ -503,17 +555,11 @@ export function AgendaPage({
                 </p>
                 <p className="text-xs text-[#969696]">Todas las agendas</p>
               </div>
-              {viewScope === 'team' && (
-                <span className="text-xs font-bold shrink-0" style={{ color: '#FF2947' }}>✓</span>
-              )}
+              {viewScope === 'team' && <span className="text-xs font-bold shrink-0" style={{ color: '#FF2947' }}>✓</span>}
             </button>
 
             <button
-              onClick={() => {
-                onViewScopeChange('mine');
-                setViewProfId(STAFF_PROF_ID);
-                setShowScopeSheet(false);
-              }}
+              onClick={() => { onViewScopeChange('mine'); setViewProfId(STAFF_PROF_ID); setShowScopeSheet(false); }}
               className="w-full flex items-center gap-3 py-3.5 active:opacity-70"
             >
               <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
@@ -528,9 +574,7 @@ export function AgendaPage({
                   {PROFESSIONALS.find(p => p.id === STAFF_PROF_ID)?.name ?? 'Mi cuenta'}
                 </p>
               </div>
-              {viewScope === 'mine' && (
-                <span className="text-xs font-bold shrink-0" style={{ color: '#FF2947' }}>✓</span>
-              )}
+              {viewScope === 'mine' && <span className="text-xs font-bold shrink-0" style={{ color: '#FF2947' }}>✓</span>}
             </button>
           </div>
         </div>
