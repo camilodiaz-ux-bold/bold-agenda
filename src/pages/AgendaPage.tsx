@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
-import { Bell, ChevronDown, AlertTriangle, Users, User, Plus } from 'lucide-react';
-import { PROFESSIONALS, SERVICES, formatDuration } from '../data/appointments';
-import { AppointmentCard } from '../components/AppointmentCard';
+import { Bell, ChevronDown, Users, User } from 'lucide-react';
+import { PROFESSIONALS, SERVICES } from '../data/appointments';
+import { AppointmentBlock } from '../components/AppointmentBlock';
+import { BlockedTimeBlock } from '../components/BlockedTimeBlock';
+import { CalendarGrid, timeToPx, durationToPx, cardTop, cardHeight, CAL_START, CAL_END, HOUR_HEIGHT, CARD_INSET } from '../components/CalendarGrid';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
-import { timeToMin, minToTime, PROTOTYPE_TODAY } from '../store/prototypeStore';
+import { timeToMin, PROTOTYPE_TODAY } from '../store/prototypeStore';
 import type { Appointment, Professional, Service, SaleRecord, Role, AvailabilityBlock, Branch, Client } from '../types';
 
 interface Props {
@@ -70,28 +72,6 @@ function formatDateHeader(dateStr: string): string {
   return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${dayAndMonth}`;
 }
 
-interface ConflictInfo { profName: string; startTime: string; endTime: string }
-
-function getConflictInfo(apt: Appointment, blocks: AvailabilityBlock[], services: Service[]): ConflictInfo | null {
-  if (['cancelada', 'cancelada-tarde', 'completada', 'no-show'].includes(apt.status)) return null;
-  const profBlocks = blocks.filter(b => b.professionalId === apt.professionalId && b.date === apt.date);
-  const profName = PROFESSIONALS.find(p => p.id === apt.professionalId)?.name.split(' ')[0] ?? 'la profesional';
-  const fullDay = profBlocks.find(b => b.type === 'full-day');
-  if (fullDay) return { profName, startTime: '08:00', endTime: '19:00' };
-  const svc = services.find(s => s.id === apt.serviceId);
-  if (!svc) return null;
-  const aptStart = timeToMin(apt.startTime);
-  const aptEnd = aptStart + svc.duration;
-  for (const b of profBlocks) {
-    if (b.type !== 'range') continue;
-    const bStart = timeToMin(b.startTime!);
-    const bEnd = timeToMin(b.endTime!);
-    if (aptStart < bEnd && aptEnd > bStart) return { profName, startTime: b.startTime!, endTime: b.endTime! };
-  }
-  return null;
-}
-
-// Generate 5 weeks (2 before + current + 2 after) relative to PROTOTYPE_TODAY
 function buildAllWeeks(): string[][] {
   return Array.from({ length: TOTAL_WEEKS }, (_, i) => {
     const weekMon = getMondayStr(shiftDate(PROTOTYPE_TODAY, (i - CENTER_WEEK_IDX) * 7));
@@ -105,10 +85,11 @@ export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
   activeBranchId, branches, clients = [],
   onBranchChange, onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
-  onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled,
+  onOpenAvailability, jumpToDate, onJumpHandled,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
-  const [profFilter, setProfFilter] = useState<string>('all');
+  // In team view: which professional tab is selected. No 'all' option.
+  const [profFilter, setProfFilter] = useState<string>(PROFESSIONALS[0].id);
   const [showScopeSheet, setShowScopeSheet] = useState(false);
   const [showBranchSheet, setShowBranchSheet] = useState(false);
   const [viewProfId, setViewProfId] = useState(STAFF_PROF_ID);
@@ -118,7 +99,6 @@ export function AgendaPage({
 
   const activeBranch = branches.find(b => b.id === activeBranchId);
 
-  // Jump to date from external (e.g. after creating appointment)
   useEffect(() => {
     if (jumpToDate) {
       setSelectedDate(jumpToDate);
@@ -126,13 +106,11 @@ export function AgendaPage({
     }
   }, [jumpToDate]);
 
-  // Which week index contains selectedDate
   const selectedWeekIdx = useMemo(
     () => ALL_WEEKS.findIndex(week => isSameWeek(week[0], selectedDate)),
     [selectedDate]
   );
 
-  // Day strip scroll logic
   const stripRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
   const ignoreScrollRef = useRef(false);
@@ -142,7 +120,6 @@ export function AgendaPage({
     const el = stripRef.current;
     if (!el) return;
     const targetLeft = selectedWeekIdx * el.offsetWidth;
-
     if (!initializedRef.current) {
       const frame = requestAnimationFrame(() => {
         el.scrollLeft = selectedWeekIdx * el.offsetWidth;
@@ -150,7 +127,6 @@ export function AgendaPage({
       });
       return () => cancelAnimationFrame(frame);
     }
-
     if (Math.abs(el.scrollLeft - targetLeft) < 5) return;
     ignoreScrollRef.current = true;
     el.scrollTo({ left: targetLeft, behavior: 'smooth' });
@@ -174,24 +150,28 @@ export function AgendaPage({
     }, 150);
   }
 
-  // Filter appointments to active branch then apply scope/prof filters
   const branchApts = useMemo(
     () => appointments.filter(a => (a.branchId ?? 'norte') === activeBranchId),
     [appointments, activeBranchId]
   );
 
-  const dayAppointments = useMemo<Appointment[]>(() => {
-    let apts = branchApts.filter(a => a.date === selectedDate);
-    if (role === 'staff') {
-      apts = apts.filter(a => a.professionalId === STAFF_PROF_ID);
-    } else if (viewScope === 'mine') {
-      apts = apts.filter(a => a.professionalId === viewProfId);
-    } else if (profFilter !== 'all') {
-      apts = apts.filter(a => a.professionalId === profFilter);
-    }
-    return [...apts].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [branchApts, selectedDate, profFilter, role, viewScope, viewProfId]);
+  // Active professional for the current view
+  const activeProfId = useMemo(() => {
+    if (role === 'staff') return STAFF_PROF_ID;
+    if (viewScope === 'mine') return viewProfId;
+    return profFilter;
+  }, [role, viewScope, viewProfId, profFilter]);
 
+  const dayAppointments = useMemo<Appointment[]>(() => {
+    const apts = branchApts
+      .filter(a => a.date === selectedDate && a.professionalId === activeProfId);
+    return [...apts].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [branchApts, selectedDate, activeProfId]);
+
+  const calendarBlocks = useMemo(
+    () => availabilityBlocks.filter(b => b.date === selectedDate && b.professionalId === activeProfId),
+    [availabilityBlocks, selectedDate, activeProfId]
+  );
 
   function handleClosure(result: ClosureResult) {
     const apt = appointments.find(a => a.id === result.appointmentId);
@@ -251,41 +231,13 @@ export function AgendaPage({
   }
 
   const isToday = selectedDate === PROTOTYPE_TODAY;
-
-  type ListItem =
-    | { type: 'appointment'; apt: Appointment }
-    | { type: 'now' }
-    | { type: 'gap'; fromTime: string; toTime: string; durationMin: number };
-
-  const listItems = useMemo<ListItem[]>(() => {
-    if (dayAppointments.length === 0) return [];
-    const nowMin = isToday ? timeToMin(DEMO_NOW) : -1;
-    const items: ListItem[] = [];
-    let maxEndMin = -1;
-    let nowInserted = !isToday;
-    for (const apt of dayAppointments) {
-      const svc = SERVICES.find(s => s.id === apt.serviceId)!;
-      const startMin = timeToMin(apt.startTime);
-      const endMin = startMin + svc.duration;
-      if (maxEndMin >= 0 && startMin - maxEndMin > 15) {
-        items.push({ type: 'gap', fromTime: minToTime(maxEndMin), toTime: minToTime(startMin), durationMin: startMin - maxEndMin });
-        if (!nowInserted && nowMin >= maxEndMin && nowMin <= startMin) { items.push({ type: 'now' }); nowInserted = true; }
-      } else if (!nowInserted && nowMin >= 0 && nowMin <= startMin) {
-        items.push({ type: 'now' }); nowInserted = true;
-      }
-      items.push({ type: 'appointment', apt });
-      maxEndMin = maxEndMin < 0 ? endMin : Math.max(maxEndMin, endMin);
-    }
-    if (!nowInserted) items.push({ type: 'now' });
-    return items;
-  }, [dayAppointments, isToday]);
+  const nowPx = timeToPx(DEMO_NOW);
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* ── Header ────────────────────────────────────────────────────── */}
-      <div className="px-4 pt-10 pb-4">
 
-        {/* Row 1: Title | Branch (truly centered) | Bell */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="px-4 pt-10 pb-4">
         <div className="relative flex items-center" style={{ height: '36px' }}>
           <span className="text-[16px] font-bold text-[#121e6c] leading-[20px]">Agenda</span>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -308,7 +260,7 @@ export function AgendaPage({
           </button>
         </div>
 
-        {/* Day strip: swipeable 5 weeks, navy active pill */}
+        {/* Week day strip */}
         <div
           ref={stripRef}
           onScroll={handleStripScroll}
@@ -329,7 +281,7 @@ export function AgendaPage({
                 return (
                   <button
                     key={dateStr}
-                    onClick={() => { setSelectedDate(dateStr); setProfFilter('all'); }}
+                    onClick={() => setSelectedDate(dateStr)}
                     className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-full transition-all active:opacity-70"
                     style={{ backgroundColor: isSelected ? '#121e6c' : 'transparent' }}
                   >
@@ -347,13 +299,11 @@ export function AgendaPage({
         </div>
       </div>
 
-      {/* ── Content area ──────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-6 px-4 pt-4">
+      {/* ── Content area ────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-[16px] px-4 pt-2 pb-2">
 
-        {/* APP Card / Context — Figma: icon + name + date / two action buttons */}
+        {/* Context card — Figma: icon + name + date / two action buttons */}
         <div className="bg-white rounded-[16px] flex flex-col gap-[16px] p-[12px]">
-
-          {/* Fila 1: icono + nombre + fecha */}
           <div className="flex items-center gap-[16px]">
             <div className="shrink-0">
               {isTeam
@@ -374,8 +324,6 @@ export function AgendaPage({
               </span>
             </div>
           </div>
-
-          {/* Fila 2: botones de acción — solo admin */}
           {isAdmin && (
             <div className="flex items-center gap-[8px]">
               <button
@@ -398,141 +346,110 @@ export function AgendaPage({
           )}
         </div>
 
-        {/* Filter tabs — underline style, visible only in team view */}
+        {/* APP Tabs — team view only, one tab per professional, no "Todos" */}
         {isTeam && (
-          <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-            {/* All */}
-            <button
-              onClick={() => setProfFilter('all')}
-              className="flex flex-col items-center gap-1 shrink-0 pb-0.5 active:opacity-70"
-            >
-              <span
-                className="text-[14px] leading-[20px] whitespace-nowrap"
-                style={{ fontWeight: profFilter === 'all' ? 600 : 400, color: '#121e6c' }}
-              >
-                Todos
-              </span>
-              <div
-                className="h-0.5 w-full rounded-full transition-all"
-                style={{ backgroundColor: profFilter === 'all' ? '#121e6c' : 'transparent' }}
-              />
-            </button>
+          <div className="flex items-start border-b border-[#e8eaf0]" style={{ height: '28px' }}>
             {PROFESSIONALS.map(prof => {
               const isActive = profFilter === prof.id;
               return (
                 <button
                   key={prof.id}
-                  onClick={() => setProfFilter(isActive ? 'all' : prof.id)}
-                  className="flex flex-col items-center gap-1 shrink-0 pb-0.5 active:opacity-70"
+                  onClick={() => setProfFilter(prof.id)}
+                  className="flex-1 flex flex-col items-center pb-[4px] active:opacity-70 transition-opacity"
                 >
                   <span
-                    className="text-[14px] leading-[20px] whitespace-nowrap"
-                    style={{ fontWeight: isActive ? 600 : 400, color: '#121e6c' }}
+                    className="text-[14px] leading-[20px] text-[#121e6c]"
+                    style={{ fontWeight: isActive ? 600 : 400 }}
                   >
                     {prof.name.split(' ')[0]}
                   </span>
-                  <div
-                    className="h-0.5 w-full rounded-full transition-all"
-                    style={{ backgroundColor: isActive ? '#121e6c' : 'transparent' }}
-                  />
+                  {isActive && (
+                    <div className="h-[2px] w-full rounded-full" style={{ backgroundColor: '#121e6c' }} />
+                  )}
                 </button>
               );
             })}
-            <div className="w-2 shrink-0" />
           </div>
         )}
       </div>
 
-      {/* ── Lista de citas — Figma: cards en columna, sin pista temporal ── */}
-      <div className="flex-1 px-4 pt-3 pb-4">
-        {dayAppointments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-16">
-            <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center"
-              style={{ boxShadow: '0px 2px 8px rgba(18,30,108,0.08)' }}>
-              <Bell size={24} color="#d2d4e1" strokeWidth={1.5} />
+      {/* ── Calendar Grid ────────────────────────────────────────────────── */}
+      <div className="flex-1 px-4 pt-3 pb-36 overflow-y-auto">
+        <CalendarGrid>
+
+          {/* NOW indicator */}
+          {isToday && nowPx > 0 && (
+            <div
+              className="absolute left-0 right-0 flex items-center z-20 pointer-events-none"
+              style={{ top: `${nowPx}px` }}
+            >
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#FF2947', marginLeft: '-4px' }} />
+              <div className="flex-1 h-px" style={{ backgroundColor: '#FF2947', opacity: 0.5 }} />
             </div>
-            <div className="text-center">
+          )}
+
+          {/* Availability blocks (blocked times) */}
+          {calendarBlocks.map(block => {
+            const prof = PROFESSIONALS.find(p => p.id === block.professionalId)!;
+            let top: number;
+            let h: number;
+            if (block.type === 'full-day') {
+              top = CARD_INSET;
+              h = (CAL_END - CAL_START) * HOUR_HEIGHT - CARD_INSET * 2;
+            } else {
+              const startMin = timeToMin(block.startTime ?? '08:00');
+              const endMin = timeToMin(block.endTime ?? '20:00');
+              top = timeToPx(block.startTime ?? '08:00') + CARD_INSET;
+              h = Math.max(55, durationToPx(endMin - startMin) - CARD_INSET);
+            }
+            return (
+              <BlockedTimeBlock
+                key={block.id}
+                block={block}
+                professional={prof}
+                topPx={top}
+                heightPx={h}
+                onClick={() => onOpenAvailability(isTeam)}
+              />
+            );
+          })}
+
+          {/* Appointment blocks */}
+          {dayAppointments.map(apt => {
+            const prof = PROFESSIONALS.find(p => p.id === apt.professionalId)!;
+            const svc = SERVICES.find(s => s.id === apt.serviceId)!;
+            return (
+              <AppointmentBlock
+                key={apt.id}
+                appointment={apt}
+                professional={prof}
+                service={svc}
+                topPx={cardTop(apt.startTime)}
+                heightPx={cardHeight(svc.duration)}
+                onTap={() => openDetail(apt)}
+              />
+            );
+          })}
+
+          {/* Empty day placeholder — rendered inside the grid at 10:00 */}
+          {dayAppointments.length === 0 && calendarBlocks.length === 0 && (
+            <div
+              className="absolute left-0 right-0 flex flex-col items-center gap-2"
+              style={{ top: `${2 * HOUR_HEIGHT + 16}px` }}
+            >
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
+                style={{ boxShadow: '0px 2px 8px rgba(18,30,108,0.08)' }}>
+                <Bell size={22} color="#d2d4e1" strokeWidth={1.5} />
+              </div>
               <p className="text-sm font-semibold text-[#121e6c]">Sin citas este día</p>
-              <p className="text-xs text-[#969696] mt-1">Tarde libre</p>
+              <p className="text-xs text-[#969696]">Tarde libre</p>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-[14px]">
-            {listItems.map((item, idx) => {
+          )}
 
-              /* ── Indicador AHORA ─────────────────────────────────────── */
-              if (item.type === 'now') {
-                return (
-                  <div key="ahora" className="flex items-center gap-2 py-[2px]">
-                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: '#FF2947' }} />
-                    <div className="flex-1 h-px" style={{ backgroundColor: '#FF2947', opacity: 0.3 }} />
-                    <span className="text-[11px] font-bold tracking-wide shrink-0 tabular-nums" style={{ color: '#FF2947' }}>
-                      {DEMO_NOW}
-                    </span>
-                  </div>
-                );
-              }
-
-              /* ── Espacio libre ───────────────────────────────────────── */
-              if (item.type === 'gap') {
-                return (
-                  <button
-                    key={`gap-${item.fromTime}`}
-                    onClick={() => onNewApptAtSlot?.(selectedDate, item.fromTime)}
-                    className="w-full flex items-center gap-[12px] rounded-[16px] text-left active:opacity-60 transition-opacity p-[12px]"
-                    style={{
-                      backgroundColor: '#f7f8fb',
-                      border: '1.5px dashed rgba(18,30,108,0.14)',
-                    }}
-                  >
-                    <div
-                      className="size-6 rounded-full flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: 'rgba(18,30,108,0.06)' }}
-                    >
-                      <Plus size={13} color="#b0b5c8" strokeWidth={2} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-semibold leading-[20px]" style={{ color: '#b0b5c8' }}>
-                        Disponible · {formatDuration(item.durationMin)}
-                      </p>
-                      <p className="text-[12px] font-normal leading-[16px]" style={{ color: '#d2d4e1' }}>
-                        {item.fromTime} – {item.toTime}
-                      </p>
-                    </div>
-                  </button>
-                );
-              }
-
-              /* ── Card de cita ────────────────────────────────────────── */
-              const apt = item.apt;
-              const prof = PROFESSIONALS.find(p => p.id === apt.professionalId)!;
-              const svc = SERVICES.find(s => s.id === apt.serviceId)!;
-              const conflictInfo = getConflictInfo(apt, availabilityBlocks, SERVICES);
-              return (
-                <div key={apt.id + String(idx)} className="flex flex-col gap-[6px]">
-                  {conflictInfo && (
-                    <button
-                      onClick={() => onOpenEdit(apt)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-left active:opacity-70"
-                      style={{ backgroundColor: '#FFFBEB' }}
-                    >
-                      <AlertTriangle size={12} color="#B45309" strokeWidth={2} className="shrink-0" />
-                      <span className="text-[11px] text-[#B45309] font-semibold">
-                        Cruce con bloqueo de {conflictInfo.profName}, {conflictInfo.startTime}–{conflictInfo.endTime}
-                      </span>
-                    </button>
-                  )}
-                  <AppointmentCard appointment={apt} professional={prof} service={svc} onTap={() => openDetail(apt)} />
-                </div>
-              );
-            })}
-
-            <div className="h-36" />
-          </div>
-        )}
+        </CalendarGrid>
       </div>
 
-      {/* Branch selector sheet */}
+      {/* ── Branch selector sheet ────────────────────────────────────────── */}
       {showBranchSheet && (
         <div className="absolute inset-0" style={{ zIndex: 50 }}>
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowBranchSheet(false)} />
@@ -560,7 +477,7 @@ export function AgendaPage({
         </div>
       )}
 
-      {/* Scope sheet */}
+      {/* ── Scope sheet ──────────────────────────────────────────────────── */}
       {showScopeSheet && (
         <div className="absolute inset-0" style={{ zIndex: 50 }}>
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowScopeSheet(false)} />
@@ -568,9 +485,12 @@ export function AgendaPage({
             <div className="w-9 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
             <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Cambiar vista</p>
 
-            {/* Opción: Agenda del equipo */}
             <button
-              onClick={() => { onViewScopeChange('team'); setProfFilter('all'); setShowScopeSheet(false); }}
+              onClick={() => {
+                onViewScopeChange('team');
+                setProfFilter(PROFESSIONALS[0].id);
+                setShowScopeSheet(false);
+              }}
               className="w-full flex items-center gap-3 py-3.5 border-b border-gray-100 active:opacity-70"
             >
               <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
@@ -588,12 +508,10 @@ export function AgendaPage({
               )}
             </button>
 
-            {/* Opción: Mi agenda (admin) */}
             <button
               onClick={() => {
                 onViewScopeChange('mine');
                 setViewProfId(STAFF_PROF_ID);
-                setProfFilter('all');
                 setShowScopeSheet(false);
               }}
               className="w-full flex items-center gap-3 py-3.5 active:opacity-70"
