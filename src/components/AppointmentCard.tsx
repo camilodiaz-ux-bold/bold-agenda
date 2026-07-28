@@ -1,5 +1,5 @@
+import { Check, X, Calendar, CalendarClock, Clock, User, CreditCard } from 'lucide-react';
 import type { Appointment, Professional, Service } from '../types';
-import { formatCOP, formatDuration } from '../data/appointments';
 
 interface Props {
   appointment: Appointment;
@@ -8,99 +8,117 @@ interface Props {
   onTap: () => void;
 }
 
-const STATUS_DOT: Record<string, string> = {
-  confirmada: '#3E4983',
-  completada: '#1B8959',
-  'no-show': '#BE123C',
-  reprogramada: '#969696',
-  cancelada: '#969696',
-  'cancelada-tarde': '#BE123C',
-  pendiente: '#969696',
-  pagado: '#1B8959',
-  'pagado-anticipado': '#1B8959',
-  reembolsado: '#1B8959',
+function addMin(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+const ICON_CONFIG: Record<string, { bg: string; Icon: React.ComponentType<{ size: number; color: string; strokeWidth: number }> }> = {
+  confirmada:       { bg: '#3E4983', Icon: Calendar },
+  completada:       { bg: '#1B8959', Icon: Check },
+  'no-show':        { bg: '#BE123C', Icon: X },
+  reprogramada:     { bg: '#969696', Icon: CalendarClock },
+  cancelada:        { bg: '#969696', Icon: X },
+  'cancelada-tarde':{ bg: '#BE123C', Icon: X },
+  pendiente:        { bg: '#969696', Icon: Clock },
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  confirmada: 'Confirmada',
-  completada: 'Completado',
-  'no-show': 'No llegó',
-  reprogramada: 'Reprogramada',
-  cancelada: 'Cancelada',
-  'cancelada-tarde': 'Cancelación tardía',
-  pendiente: 'Por cobrar',
-  pagado: 'Pagado',
-  'pagado-anticipado': 'Prepagado',
-  reembolsado: 'Reembolsado',
+  confirmada:       'Confirmada',
+  completada:       'Completada',
+  'no-show':        'No asistió',
+  reprogramada:     'Reprogramada',
+  cancelada:        'Cancelada',
+  'cancelada-tarde':'Cancelada',
+  pendiente:        'Por confirmar',
 };
 
-function StatusDot({ status }: { status: string }) {
-  const color = STATUS_DOT[status] ?? '#9ca3af';
-  const label = STATUS_LABEL[status] ?? status;
+const PAYMENT_CONFIG: Record<string, { bg: string; color: string; label: string; Icon: React.ComponentType<{ size: number; color: string; strokeWidth: number }> }> = {
+  'pagado':          { bg: '#F4FDF9', color: '#1B8959', label: 'Pagada',      Icon: CreditCard },
+  'pagado-anticipado':{ bg: '#F4FDF9', color: '#1B8959', label: 'Prepagada', Icon: CreditCard },
+  'pendiente':       { bg: '#F3F3F3', color: '#1E1E1E', label: 'Por cobrar',  Icon: Clock },
+  'reembolsado':     { bg: '#F4FDF9', color: '#1B8959', label: 'Reembolsado', Icon: Check },
+};
+
+function StatusCircle({ status }: { status: string }) {
+  const cfg = ICON_CONFIG[status] ?? ICON_CONFIG.confirmada;
+  const { bg, Icon } = cfg;
   return (
-    <span className="inline-flex items-center gap-1 shrink-0">
-      <span className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: color }} />
-      <span className="text-[12px] font-medium text-[#1e1e1e] whitespace-nowrap leading-[16px]">{label}</span>
-    </span>
+    <div
+      className="shrink-0 size-6 rounded-full flex items-center justify-center"
+      style={{ backgroundColor: bg }}
+    >
+      <Icon size={13} color="white" strokeWidth={2.5} />
+    </div>
   );
 }
 
 export function AppointmentCard({ appointment, professional, service, onTap }: Props) {
-  const isDimmed = appointment.status === 'completada' || appointment.status === 'no-show';
+  const endTime = addMin(appointment.startTime, service.duration);
+  const statusLabel = STATUS_LABEL[appointment.status] ?? appointment.status;
+  const paymentCfg = PAYMENT_CONFIG[appointment.paymentStatus] ?? PAYMENT_CONFIG['pendiente'];
+  const PayIcon = paymentCfg.Icon;
 
   return (
     <button
       onClick={onTap}
-      className="w-full text-left bg-white rounded-[16px] transition-all active:scale-[0.98]"
-      style={{ opacity: isDimmed ? 0.72 : 1 }}
+      className="w-full text-left bg-white rounded-[16px] active:opacity-70 transition-opacity"
     >
       <div className="flex gap-[12px] items-start p-[12px]">
 
-        {/* Time column — 41px, semibold 14px navy */}
-        <div className="w-[41px] h-[40px] flex items-center justify-start shrink-0">
-          <span className="text-[14px] font-semibold text-[#121e6c] tabular-nums leading-[20px]">
-            {appointment.startTime}
-          </span>
-        </div>
+        {/* Icono de estado — círculo coloreado 24px */}
+        <StatusCircle status={appointment.status} />
 
-        {/* Vertical divider */}
-        <div className="w-px bg-gray-200 self-stretch shrink-0" />
+        {/* Info */}
+        <div className="flex-1 min-w-0 flex flex-col gap-[6px]">
 
-        {/* Info column */}
-        <div className="flex-1 min-w-0 flex flex-col gap-1">
-
-          {/* Level 1 — client name + duration */}
-          <div className="flex items-center justify-between gap-2 min-h-[40px]">
-            <span className={`text-[14px] font-semibold leading-[20px] truncate ${appointment.clientName ? 'text-[#1e1e1e]' : 'text-[#b0b5c8] italic'}`}>
-              {appointment.clientName ?? 'Sin cliente asociado'}
+          {/* Fila 1 — nombre + estado */}
+          <div className="flex items-start justify-between gap-2">
+            <span
+              className="flex-1 min-w-0 text-[14px] font-medium leading-[20px] truncate"
+              style={{ color: appointment.clientName ? '#1E1E1E' : '#969696', fontStyle: appointment.clientName ? 'normal' : 'italic' }}
+            >
+              {appointment.clientName ?? 'Sin cliente'}
             </span>
-            <span className="text-[14px] font-semibold text-[#1e1e1e] shrink-0 whitespace-nowrap leading-[20px]">
-              {formatDuration(service.duration)}
+            <span className="text-[12px] font-normal leading-[16px] shrink-0 whitespace-nowrap" style={{ color: '#969696' }}>
+              {statusLabel}
             </span>
           </div>
 
-          {/* Level 2 — service + price */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px] truncate">{service.name}</span>
-            <span className="text-[12px] font-medium text-[#1e1e1e] shrink-0 tabular-nums leading-[16px]">{formatCOP(service.price)}</span>
+          {/* Fila 2 — hora + servicio */}
+          <div className="flex flex-col gap-[4px]">
+            <span className="text-[14px] font-medium leading-[20px]" style={{ color: '#1E1E1E' }}>
+              {appointment.startTime} -{endTime}
+            </span>
+            <span className="text-[12px] font-normal leading-[16px]" style={{ color: '#606060' }}>
+              {service.name}
+            </span>
           </div>
 
-          {/* Level 3 — professional */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">Profesional</span>
-            <span className="text-[12px] font-medium text-[#1e1e1e] shrink-0 leading-[16px]">{professional.name.split(' ')[0]}</span>
-          </div>
+          {/* Fila 3 — tags */}
+          <div className="flex items-center justify-between">
+            {/* Tag profesional */}
+            <div
+              className="inline-flex items-center gap-[6px] rounded-[100px] px-[10px]"
+              style={{ height: '25px', backgroundColor: '#F7F8FB' }}
+            >
+              <User size={12} color="#3E4983" strokeWidth={2} />
+              <span className="text-[12px] font-medium leading-[16px]" style={{ color: '#3E4983' }}>
+                {professional.name.split(' ')[0]}
+              </span>
+            </div>
 
-          {/* Level 4 — appointment status */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">Estado del servicio</span>
-            <StatusDot status={appointment.status} />
-          </div>
-
-          {/* Level 5 — payment status */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">Estado del pago</span>
-            <StatusDot status={appointment.paymentStatus} />
+            {/* Tag pago */}
+            <div
+              className="inline-flex items-center gap-[6px] rounded-[100px] px-[10px]"
+              style={{ height: '25px', backgroundColor: paymentCfg.bg }}
+            >
+              <PayIcon size={12} color={paymentCfg.color} strokeWidth={2} />
+              <span className="text-[12px] font-medium leading-[16px]" style={{ color: paymentCfg.color }}>
+                {paymentCfg.label}
+              </span>
+            </div>
           </div>
 
         </div>

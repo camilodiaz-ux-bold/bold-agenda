@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
-import { Bell, ChevronDown, AlertTriangle, Users, User, ChevronRight, Plus } from 'lucide-react';
+import { Bell, ChevronDown, AlertTriangle, Users, User, Plus } from 'lucide-react';
 import { PROFESSIONALS, SERVICES, formatDuration } from '../data/appointments';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
@@ -350,47 +350,50 @@ export function AgendaPage({
       {/* ── Content area ──────────────────────────────────────────────── */}
       <div className="flex flex-col gap-6 px-4 pt-4">
 
-        {/* APP Card / Action — context card (Figma 29552:1356 / 29552:1378) */}
-        <div
-          className="bg-white rounded-[16px] flex gap-4 items-center p-[12px]"
-          style={{ cursor: isAdmin ? 'pointer' : 'default' }}
-          onClick={() => isAdmin && setShowScopeSheet(true)}
-          role={isAdmin ? 'button' : undefined}
-        >
-          {/* Left icon: 28px */}
-          {isTeam
-            ? <Users size={28} color="#121e6c" strokeWidth={1.5} className="shrink-0" />
-            : <User size={28} color="#121e6c" strokeWidth={1.5} className="shrink-0" />
-          }
+        {/* APP Card / Context — Figma: icon + name + date / two action buttons */}
+        <div className="bg-white rounded-[16px] flex flex-col gap-[16px] p-[12px]">
 
-          {/* Info */}
-          <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
-            <p className="text-[14px] font-bold text-[#121e6c] leading-[20px]">
+          {/* Fila 1: icono + nombre + fecha */}
+          <div className="flex items-center gap-[16px]">
+            <div className="shrink-0">
               {isTeam
-                ? 'Agenda del equipo'
-                : isAdmin
-                  ? (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')
-                  : (PROFESSIONALS.find(p => p.id === STAFF_PROF_ID)?.name ?? 'Mi agenda')}
-            </p>
-            <p className="text-[12px] font-normal text-[#1e1e1e] leading-[16px]">
-              {formatDateHeader(selectedDate)}
-            </p>
-            {isAdmin && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onOpenAvailability(isTeam); }}
-                className="py-[4px] text-left active:opacity-70 transition-opacity w-fit"
-              >
-                <span className="text-[12px] font-semibold leading-[16px] underline" style={{ color: '#FF2947' }}>
-                  Bloquear agenda
-                </span>
-              </button>
-            )}
+                ? <Users size={24} color="#3E4983" strokeWidth={2} />
+                : <User size={24} color="#3E4983" strokeWidth={2} />
+              }
+            </div>
+            <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+              <span className="flex-1 min-w-0 text-[16px] font-medium leading-[22px] truncate" style={{ color: '#1E1E1E' }}>
+                {isTeam
+                  ? 'Equipo'
+                  : isAdmin
+                    ? (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')
+                    : (PROFESSIONALS.find(p => p.id === STAFF_PROF_ID)?.name ?? 'Mi agenda')}
+              </span>
+              <span className="text-[12px] font-normal leading-[16px] shrink-0 whitespace-nowrap" style={{ color: '#606060' }}>
+                {formatDateHeader(selectedDate)}
+              </span>
+            </div>
           </div>
 
-          {/* ChevronRight — only when admin (card is interactive) */}
+          {/* Fila 2: botones de acción — solo admin */}
           {isAdmin && (
-            <div className="w-6 h-6 flex items-center justify-center shrink-0">
-              <ChevronRight size={18} color="#b0b5c8" strokeWidth={2} />
+            <div className="flex items-center gap-[8px]">
+              <button
+                onClick={() => onOpenAvailability(isTeam)}
+                className="flex-1 flex items-center justify-center rounded-[12px] h-[40px] active:opacity-70 transition-opacity"
+                style={{ backgroundColor: '#F1F2F6' }}
+              >
+                <span className="text-[14px] font-semibold leading-[20px]" style={{ color: '#121E6C' }}>Bloquear</span>
+              </button>
+              <button
+                onClick={() => setShowScopeSheet(true)}
+                className="flex-1 flex items-center justify-center rounded-[12px] h-[40px] active:opacity-70 transition-opacity"
+                style={{ backgroundColor: '#F1F2F6' }}
+              >
+                <span className="text-[14px] font-semibold leading-[20px]" style={{ color: '#121E6C' }}>
+                  {isTeam ? 'Ver mi agenda' : 'Ver equipo'}
+                </span>
+              </button>
             </div>
           )}
         </div>
@@ -440,7 +443,7 @@ export function AgendaPage({
         )}
       </div>
 
-      {/* ── Timeline ──────────────────────────────────────────────────── */}
+      {/* ── Lista de citas — Figma: cards en columna, sin pista temporal ── */}
       <div className="flex-1 px-4 pt-3 pb-4">
         {dayAppointments.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16">
@@ -454,99 +457,72 @@ export function AgendaPage({
             </div>
           </div>
         ) : (
-          <div className="relative">
-            {/* Continuous vertical time track */}
-            <div
-              className="absolute top-3 bottom-0 w-px"
-              style={{ left: '52px', backgroundColor: '#e8eaf0' }}
-            />
-
+          <div className="flex flex-col gap-[14px]">
             {listItems.map((item, idx) => {
-              /* ── Now indicator ─────────────────────────────────────── */
+
+              /* ── Indicador AHORA ─────────────────────────────────────── */
               if (item.type === 'now') {
                 return (
-                  <div key="ahora" className="flex items-center mb-3">
-                    <div className="w-[52px] shrink-0 text-right pr-2">
-                      <span className="text-[11px] font-bold tabular-nums" style={{ color: '#FF2947' }}>{DEMO_NOW}</span>
-                    </div>
-                    <div className="flex flex-1 items-center gap-1.5">
-                      {/* Dot centered on the track */}
-                      <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0 z-10"
-                        style={{ backgroundColor: '#FF2947', marginLeft: '-5px' }}
-                      />
-                      <div className="flex-1 h-px" style={{ backgroundColor: '#FF2947', opacity: 0.35 }} />
-                      <span className="text-[10px] font-bold tracking-wide shrink-0" style={{ color: '#FF2947' }}>AHORA</span>
-                    </div>
+                  <div key="ahora" className="flex items-center gap-2 py-[2px]">
+                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: '#FF2947' }} />
+                    <div className="flex-1 h-px" style={{ backgroundColor: '#FF2947', opacity: 0.3 }} />
+                    <span className="text-[11px] font-bold tracking-wide shrink-0 tabular-nums" style={{ color: '#FF2947' }}>
+                      {DEMO_NOW}
+                    </span>
                   </div>
                 );
               }
 
-              /* ── Available slot ────────────────────────────────────── */
+              /* ── Espacio libre ───────────────────────────────────────── */
               if (item.type === 'gap') {
                 return (
-                  <div key={`gap-${item.fromTime}`} className="flex items-start mb-3">
-                    <div className="w-[52px] shrink-0 text-right pr-2 pt-3">
-                      <span className="text-[11px] font-medium leading-none" style={{ color: '#b0b5c8' }}>
-                        {item.fromTime}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => onNewApptAtSlot?.(selectedDate, item.fromTime)}
-                      className="flex-1 flex items-center gap-3 rounded-[16px] text-left active:opacity-60 transition-opacity"
-                      style={{
-                        paddingLeft: '12px', paddingRight: '8px', paddingTop: '12px', paddingBottom: '12px',
-                        marginLeft: '8px',
-                        backgroundColor: '#f7f8fb',
-                        border: '1.5px dashed rgba(18,30,108,0.14)',
-                      }}
+                  <button
+                    key={`gap-${item.fromTime}`}
+                    onClick={() => onNewApptAtSlot?.(selectedDate, item.fromTime)}
+                    className="w-full flex items-center gap-[12px] rounded-[16px] text-left active:opacity-60 transition-opacity p-[12px]"
+                    style={{
+                      backgroundColor: '#f7f8fb',
+                      border: '1.5px dashed rgba(18,30,108,0.14)',
+                    }}
+                  >
+                    <div
+                      className="size-6 rounded-full flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: 'rgba(18,30,108,0.06)' }}
                     >
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: 'rgba(18,30,108,0.06)' }}
-                      >
-                        <Plus size={15} color="#b0b5c8" strokeWidth={2} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-semibold leading-[20px]" style={{ color: '#b0b5c8' }}>
-                          Disponible · {formatDuration(item.durationMin)}
-                        </p>
-                        <p className="text-[12px] font-normal leading-[16px]" style={{ color: '#d2d4e1' }}>
-                          {item.fromTime} – {item.toTime}
-                        </p>
-                      </div>
-                    </button>
-                  </div>
+                      <Plus size={13} color="#b0b5c8" strokeWidth={2} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-semibold leading-[20px]" style={{ color: '#b0b5c8' }}>
+                        Disponible · {formatDuration(item.durationMin)}
+                      </p>
+                      <p className="text-[12px] font-normal leading-[16px]" style={{ color: '#d2d4e1' }}>
+                        {item.fromTime} – {item.toTime}
+                      </p>
+                    </div>
+                  </button>
                 );
               }
 
-              /* ── Appointment card ───────────────────────────────────── */
+              /* ── Card de cita ────────────────────────────────────────── */
               const apt = item.apt;
               const prof = PROFESSIONALS.find(p => p.id === apt.professionalId)!;
               const svc = SERVICES.find(s => s.id === apt.serviceId)!;
               const conflictInfo = getConflictInfo(apt, availabilityBlocks, SERVICES);
               return (
-                <div key={apt.id + String(idx)} className="flex items-start mb-3">
-                  <div className="w-[52px] shrink-0 text-right pr-2 pt-3">
-                    <span className="text-[11px] font-medium leading-none" style={{ color: '#b0b5c8' }}>
-                      {apt.startTime}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0" style={{ marginLeft: '8px' }}>
-                    {conflictInfo && (
-                      <button
-                        onClick={() => onOpenEdit(apt)}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl mb-1 text-left active:opacity-70"
-                        style={{ backgroundColor: '#FFFBEB' }}
-                      >
-                        <AlertTriangle size={12} color="#B45309" strokeWidth={2} className="shrink-0" />
-                        <span className="text-[11px] text-[#B45309] font-semibold">
-                          Esta cita se cruza con un bloqueo de {conflictInfo.profName}, {conflictInfo.startTime}–{conflictInfo.endTime}
-                        </span>
-                      </button>
-                    )}
-                    <AppointmentCard appointment={apt} professional={prof} service={svc} onTap={() => openDetail(apt)} />
-                  </div>
+                <div key={apt.id + String(idx)} className="flex flex-col gap-[6px]">
+                  {conflictInfo && (
+                    <button
+                      onClick={() => onOpenEdit(apt)}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-left active:opacity-70"
+                      style={{ backgroundColor: '#FFFBEB' }}
+                    >
+                      <AlertTriangle size={12} color="#B45309" strokeWidth={2} className="shrink-0" />
+                      <span className="text-[11px] text-[#B45309] font-semibold">
+                        Cruce con bloqueo de {conflictInfo.profName}, {conflictInfo.startTime}–{conflictInfo.endTime}
+                      </span>
+                    </button>
+                  )}
+                  <AppointmentCard appointment={apt} professional={prof} service={svc} onTap={() => openDetail(apt)} />
                 </div>
               );
             })}
