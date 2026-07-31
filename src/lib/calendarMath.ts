@@ -1,16 +1,16 @@
 // Single source of truth for all calendar geometry.
+// Valores validados contra Figma: node-id 29531-10863 y 29568-2500.
 
 export const CAL_START_H = 8;           // primera hora visible (08:00)
 export const CAL_END_H = 20;            // última hora visible (20:00, exclusiva)
 export const SLOT_MIN = 30;             // intervalo base en minutos
-export const PX_PER_MIN = 102 / 60;    // 1.7 px/min — de bloques Figma calendar-card
+export const PX_PER_MIN = 102 / 60;    // 1.7 px/min — de calendar-card en Figma
 export const HOUR_H = PX_PER_MIN * 60; // 102px por hora
 export const SLOT_H = PX_PER_MIN * SLOT_MIN; // 51px por slot de 30 min
 export const CAL_H = (CAL_END_H - CAL_START_H) * HOUR_H; // 1224px total
-export const TIME_COL_W = 52;          // ancho columna izquierda (etiquetas de hora)
-export const CARD_INSET = 2;           // px de separación entre línea y borde superior de card
-export const CARD_TRAIL = 2;           // px de separación entre borde inferior de card y línea siguiente
-export const CARD_MIN_H = 46;          // altura mínima de cualquier card
+export const TIME_COL_W = 48;          // ancho columna de etiquetas (Figma: w-[48px])
+export const CARD_INSET = 10;          // px bajo la línea antes de iniciar la card (Figma: top-[10px])
+export const CARD_MIN_H = 60;          // altura mínima — card de 30 min (Figma: h-[60px])
 
 // ─── Conversión de tiempo ─────────────────────────────────────────────────────
 
@@ -35,14 +35,19 @@ export function durationToPx(minutes: number): number {
   return Math.round(minutes * PX_PER_MIN);
 }
 
-/** Top de una card incluyendo el inset bajo la línea de hora */
+/** Top de una card (línea de hora + CARD_INSET) */
 export function cardTop(startTime: string): number {
   return timeToPx(startTime) + CARD_INSET;
 }
 
-/** Altura proporcional de una card (con mínimo) */
+/**
+ * Altura de una card.
+ * Figma: 60 min → h-[102px], 30 min → h-[60px].
+ * Formula: max(CARD_MIN_H, durationToPx(duration)).
+ * Las líneas de hora se renderizan sobre las cards (z-index superior).
+ */
 export function cardHeight(durationMin: number): number {
-  return Math.max(CARD_MIN_H, durationToPx(durationMin) - CARD_INSET - CARD_TRAIL);
+  return Math.max(CARD_MIN_H, durationToPx(durationMin));
 }
 
 // ─── Slots disponibles ────────────────────────────────────────────────────────
@@ -80,7 +85,6 @@ export function layoutEvents(events: CalEvent[]): Map<string, LayoutCol> {
 
   const sorted = [...events].sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin);
 
-  // Agrupar eventos que se solapan entre sí
   const groups: CalEvent[][] = [];
   let current: CalEvent[] = [];
   let maxEnd = -Infinity;
@@ -98,7 +102,6 @@ export function layoutEvents(events: CalEvent[]): Map<string, LayoutCol> {
   if (current.length) groups.push(current);
 
   for (const group of groups) {
-    // Asignación greedy de columnas
     const colEnds: number[] = [];
     const assignments: number[] = [];
 

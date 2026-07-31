@@ -1,25 +1,29 @@
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 interface Props {
   onPress: () => void;
-  label?: string;
+  isOpen?: boolean;
 }
 
-export function FAB({ onPress, label = 'Nueva cita' }: Props) {
+export function FAB({ onPress, isOpen = false }: Props) {
   return (
     <button
       onClick={onPress}
-      className="absolute right-5 flex items-center gap-2 rounded-full px-5 transition-all active:scale-95"
+      className="absolute right-5 flex items-center justify-center transition-transform active:scale-95"
       style={{
+        width: '53px',
+        height: '53px',
+        borderRadius: '32px',
         backgroundColor: '#FF2947',
-        height: '46px',
         bottom: '96px',
         zIndex: 30,
-        boxShadow: '0px 4px 12px rgba(255,41,71,0.35)',
+        boxShadow: '0px 4px 16px rgba(255,41,71,0.40)',
       }}
     >
-      <Plus size={20} color="white" strokeWidth={2.5} />
-      <span className="text-white text-[14px] font-bold leading-[20px]">{label}</span>
+      {isOpen
+        ? <X size={22} color="white" strokeWidth={2.5} />
+        : <Plus size={22} color="white" strokeWidth={2.5} />
+      }
     </button>
   );
 }

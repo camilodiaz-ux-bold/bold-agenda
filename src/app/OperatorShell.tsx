@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Plus, Lock } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 import { FAB } from '../components/FAB';
 import { Drawer } from '../components/Drawer';
@@ -29,6 +30,7 @@ export function OperatorShell() {
   const [role] = useState<Role>('admin');
   const [viewScope, setViewScope] = useState<'team' | 'mine'>('team');
   const [showNewAppt, setShowNewAppt] = useState(false);
+  const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const [newApptSlot, setNewApptSlot] = useState<{ date: string; time: string; professionalId?: string } | null>(null);
   const [agendaJumpDate, setAgendaJumpDate] = useState<string | undefined>(undefined);
   const [activeBranchId, setActiveBranchId] = useState(initial.activeBranchId ?? 'norte');
@@ -221,12 +223,44 @@ export function OperatorShell() {
         )}
       </div>
 
-      {/* FAB — Nueva cita */}
+      {/* FAB — speed-dial con "Nueva cita" y "Bloquear agenda" */}
       {section === 'agenda' && (
-        <FAB onPress={() => setShowNewAppt(true)} />
+        <>
+          {fabMenuOpen && (
+            <div
+              className="absolute inset-0 bg-black/20"
+              style={{ zIndex: 29 }}
+              onClick={() => setFabMenuOpen(false)}
+            />
+          )}
+          {fabMenuOpen && (
+            <div
+              className="absolute right-5 flex flex-col items-end gap-[12px]"
+              style={{ bottom: '162px', zIndex: 30 }}
+            >
+              <button
+                onClick={() => { setFabMenuOpen(false); setNewApptSlot(null); setShowNewAppt(true); }}
+                className="flex items-center gap-[8px] rounded-full active:opacity-80 transition-opacity"
+                style={{ height: '40px', padding: '0 20px', backgroundColor: '#FF2947', boxShadow: '0px 4px 12px rgba(255,41,71,0.35)' }}
+              >
+                <Plus size={16} color="white" strokeWidth={2.5} />
+                <span className="text-white text-[13px] font-semibold">Nueva cita</span>
+              </button>
+              <button
+                onClick={() => { setFabMenuOpen(false); openAvailabilityDrawer(viewScope === 'team'); }}
+                className="flex items-center gap-[8px] rounded-full active:opacity-80 transition-opacity"
+                style={{ height: '40px', padding: '0 20px', backgroundColor: '#121E6C', boxShadow: '0px 4px 12px rgba(18,30,108,0.30)' }}
+              >
+                <Lock size={16} color="white" strokeWidth={2} />
+                <span className="text-white text-[13px] font-semibold">Bloquear agenda</span>
+              </button>
+            </div>
+          )}
+          <FAB onPress={() => setFabMenuOpen(v => !v)} isOpen={fabMenuOpen} />
+        </>
       )}
 
-      <BottomNav active={section} onChange={(s) => { setSection(s); closeDrawer(); }} />
+      <BottomNav active={section} onChange={(s) => { setSection(s); closeDrawer(); setFabMenuOpen(false); }} />
 
       {drawer && (
         <Drawer title={drawer.title} onClose={closeDrawer} height={drawer.height}>

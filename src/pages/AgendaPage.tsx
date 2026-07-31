@@ -7,11 +7,11 @@ import { CalendarGrid } from '../components/CalendarGrid';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
 import {
-  timeToPx, cardTop, cardHeight, HOUR_H, CAL_START_H, CAL_END_H,
-  timeToMin, layoutEvents, type CalEvent,
+  timeToPx, cardTop, cardHeight, durationToPx, CARD_MIN_H,
+  HOUR_H, CAL_START_H, CAL_END_H, timeToMin, layoutEvents, type CalEvent,
 } from '../lib/calendarMath';
 import { PROTOTYPE_TODAY } from '../store/prototypeStore';
-import type { Appointment, Professional, Service, SaleRecord, Role, AvailabilityBlock, Branch, Client } from '../types';
+import type { Appointment, Service, SaleRecord, Role, AvailabilityBlock, Branch, Client } from '../types';
 
 interface Props {
   role: Role;
@@ -93,9 +93,8 @@ export function AgendaPage({
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
   const [profFilter, setProfFilter] = useState<string>(PROFESSIONALS[0].id);
-  const [showScopeSheet, setShowScopeSheet] = useState(false);
   const [showBranchSheet, setShowBranchSheet] = useState(false);
-  const [viewProfId, setViewProfId] = useState(STAFF_PROF_ID);
+  const [viewProfId] = useState(STAFF_PROF_ID);
 
   const isAdmin = role === 'admin';
   const isTeam = isAdmin && viewScope === 'team';
@@ -191,24 +190,6 @@ export function AgendaPage({
     return layoutEvents(events);
   }, [dayAppointments]);
 
-  // ── Detección de conflictos (cita coincide con bloqueo) ───────────────────
-  const conflictingAptIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const apt of dayAppointments) {
-      const svc = SERVICES.find(s => s.id === apt.serviceId);
-      if (!svc) continue;
-      const aptStart = timeToMin(apt.startTime);
-      const aptEnd = aptStart + svc.duration;
-      for (const block of calendarBlocks) {
-        if (block.type === 'full-day') { ids.add(apt.id); break; }
-        const bStart = timeToMin(block.startTime ?? '08:00');
-        const bEnd = timeToMin(block.endTime ?? '20:00');
-        if (aptStart < bEnd && aptEnd > bStart) { ids.add(apt.id); break; }
-      }
-    }
-    return ids;
-  }, [dayAppointments, calendarBlocks]);
-
   // ── Auto-scroll al cambiar de fecha ──────────────────────────────────────
   useEffect(() => {
     const el = calScrollRef.current;
@@ -262,7 +243,8 @@ export function AgendaPage({
     }
   }
 
-  function openClosure(apt: Appointment, prof: Professional, svc: Service) {
+  function openClosure(apt: Appointment, prof: ReturnType<typeof PROFESSIONALS.find>, svc: Service) {
+    if (!prof || !svc) return;
     onOpenDrawer(
       <ServiceClosureDrawer appointment={apt} professional={prof} service={svc}
         onClose={onCloseDrawer} onComplete={handleClosure}
@@ -286,6 +268,15 @@ export function AgendaPage({
         }}
       />, undefined, '88%'
     );
+  }
+
+  function handleScopeToggle() {
+    if (isTeam) {
+      onViewScopeChange('mine');
+    } else {
+      onViewScopeChange('team');
+      setProfFilter(PROFESSIONALS[0].id);
+    }
   }
 
   return (
@@ -354,48 +345,40 @@ export function AgendaPage({
         </div>
       </div>
 
-      {/* ── Card contextual + tabs ───────────────────────────────────────── */}
-      <div className="flex flex-col gap-[16px] px-4 pt-2 pb-2 shrink-0">
-        <div className="bg-white rounded-[16px] flex flex-col gap-[16px] p-[12px]">
-          <div className="flex items-center gap-[16px]">
-            <div className="shrink-0">
+      {/* ── Card contextual — single row (Figma: h-[62px]) ───────────────── */}
+      <div className="flex flex-col gap-[12px] px-4 pt-2 pb-2 shrink-0">
+        <div
+          className="bg-white rounded-[16px] px-[12px]"
+          style={{ height: '62px', display: 'flex', alignItems: 'center', gap: '12px' }}
+        >
+          <div className="shrink-0">
+            {isTeam
+              ? <Users size={22} color="#3E4983" strokeWidth={2} />
+              : <User size={22} color="#3E4983" strokeWidth={2} />
+            }
+          </div>
+          <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+            <span className="text-[16px] font-medium leading-[20px] truncate" style={{ color: '#1E1E1E' }}>
               {isTeam
-                ? <Users size={24} color="#3E4983" strokeWidth={2} />
-                : <User size={24} color="#3E4983" strokeWidth={2} />
-              }
-            </div>
-            <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
-              <span className="flex-1 min-w-0 text-[16px] font-medium leading-[22px] truncate" style={{ color: '#1E1E1E' }}>
-                {isTeam
-                  ? 'Equipo'
-                  : isAdmin
-                    ? (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')
-                    : (PROFESSIONALS.find(p => p.id === STAFF_PROF_ID)?.name ?? 'Mi agenda')}
-              </span>
-              <span className="text-[12px] font-normal leading-[16px] shrink-0 whitespace-nowrap" style={{ color: '#606060' }}>
-                {formatDateHeader(selectedDate)}
-              </span>
-            </div>
+                ? 'Equipo'
+                : isAdmin
+                  ? (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')
+                  : (PROFESSIONALS.find(p => p.id === STAFF_PROF_ID)?.name ?? 'Mi agenda')}
+            </span>
+            <span className="text-[12px] font-normal leading-[16px] truncate" style={{ color: '#606060' }}>
+              {formatDateHeader(selectedDate)}
+            </span>
           </div>
           {isAdmin && (
-            <div className="flex items-center gap-[8px]">
-              <button
-                onClick={() => onOpenAvailability(isTeam)}
-                className="flex-1 flex items-center justify-center rounded-[12px] h-[40px] active:opacity-70 transition-opacity"
-                style={{ backgroundColor: '#F1F2F6' }}
-              >
-                <span className="text-[14px] font-semibold leading-[20px]" style={{ color: '#121E6C' }}>Bloquear</span>
-              </button>
-              <button
-                onClick={() => setShowScopeSheet(true)}
-                className="flex-1 flex items-center justify-center rounded-[12px] h-[40px] active:opacity-70 transition-opacity"
-                style={{ backgroundColor: '#F1F2F6' }}
-              >
-                <span className="text-[14px] font-semibold leading-[20px]" style={{ color: '#121E6C' }}>
-                  {isTeam ? 'Ver mi agenda' : 'Ver equipo'}
-                </span>
-              </button>
-            </div>
+            <button
+              onClick={handleScopeToggle}
+              className="shrink-0 flex items-center justify-center rounded-[12px] active:opacity-70 transition-opacity"
+              style={{ backgroundColor: '#F1F2F6', height: '34px', padding: '0 16px' }}
+            >
+              <span className="text-[12px] font-semibold leading-[16px]" style={{ color: '#121E6C' }}>
+                {isTeam ? 'Ver mi agenda' : 'Ver equipo'}
+              </span>
+            </button>
           )}
         </div>
 
@@ -426,8 +409,11 @@ export function AgendaPage({
         )}
       </div>
 
-      {/* ── Grid del calendario (zona con scroll interno) ────────────────── */}
-      <div ref={calScrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-36">
+      {/* ── Grid del calendario (zona con scroll interno, bg-white) ─────── */}
+      <div
+        ref={calScrollRef}
+        className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-36 bg-white"
+      >
         <CalendarGrid onSlotTap={onNewApptAtSlot ? handleSlotTap : undefined}>
 
           {/* Indicador de ahora */}
@@ -443,23 +429,21 @@ export function AgendaPage({
 
           {/* Bloques de disponibilidad bloqueada */}
           {calendarBlocks.map(block => {
-            const prof = PROFESSIONALS.find(p => p.id === block.professionalId)!;
             let top: number;
             let h: number;
             if (block.type === 'full-day') {
-              top = 2;
-              h = (CAL_END_H - CAL_START_H) * HOUR_H - 4;
+              top = 0;
+              h = (CAL_END_H - CAL_START_H) * HOUR_H;
             } else {
               const startMin = timeToMin(block.startTime ?? '08:00');
               const endMin = timeToMin(block.endTime ?? '20:00');
-              top = timeToPx(block.startTime ?? '08:00') + 2;
-              h = Math.max(46, Math.round((endMin - startMin) * (102 / 60)) - 4);
+              top = timeToPx(block.startTime ?? '08:00');
+              h = Math.max(CARD_MIN_H, durationToPx(endMin - startMin));
             }
             return (
               <BlockedTimeBlock
                 key={block.id}
                 block={block}
-                professional={prof}
                 topPx={top}
                 heightPx={h}
                 onClick={() => onOpenAvailability(isTeam)}
@@ -472,17 +456,17 @@ export function AgendaPage({
             const prof = PROFESSIONALS.find(p => p.id === apt.professionalId)!;
             const svc = SERVICES.find(s => s.id === apt.serviceId)!;
             const layout = layoutMap.get(apt.id) ?? { column: 0, totalColumns: 1 };
+            const row3Label = isTeam ? prof.name.split(' ')[0] : svc.name;
             return (
               <AppointmentBlock
                 key={apt.id}
                 appointment={apt}
-                professional={prof}
                 service={svc}
                 topPx={cardTop(apt.startTime)}
                 heightPx={cardHeight(svc.duration)}
                 column={layout.column}
                 totalColumns={layout.totalColumns}
-                hasConflict={conflictingAptIds.has(apt.id)}
+                row3Label={row3Label}
                 onTap={() => openDetail(apt)}
               />
             );
@@ -506,7 +490,7 @@ export function AgendaPage({
         </CalendarGrid>
       </div>
 
-      {/* ── Sheets ──────────────────────────────────────────────────────── */}
+      {/* ── Sheet de sucursal ────────────────────────────────────────────── */}
       {showBranchSheet && (
         <div className="absolute inset-0" style={{ zIndex: 50 }}>
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowBranchSheet(false)} />
@@ -530,52 +514,6 @@ export function AgendaPage({
                 )}
               </button>
             ))}
-          </div>
-        </div>
-      )}
-
-      {showScopeSheet && (
-        <div className="absolute inset-0" style={{ zIndex: 50 }}>
-          <div className="absolute inset-0 bg-black/30" onClick={() => setShowScopeSheet(false)} />
-          <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl px-5 pt-4 pb-10">
-            <div className="w-9 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Cambiar vista</p>
-
-            <button
-              onClick={() => { onViewScopeChange('team'); setProfFilter(PROFESSIONALS[0].id); setShowScopeSheet(false); }}
-              className="w-full flex items-center gap-3 py-3.5 border-b border-gray-100 active:opacity-70"
-            >
-              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: viewScope === 'team' ? '#121e6c' : '#f7f8fb' }}>
-                <Users size={16} color={viewScope === 'team' ? '#fff' : '#606060'} strokeWidth={2} />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-semibold" style={{ color: viewScope === 'team' ? '#121e6c' : '#1e1e1e' }}>
-                  Agenda del equipo
-                </p>
-                <p className="text-xs text-[#969696]">Todas las agendas</p>
-              </div>
-              {viewScope === 'team' && <span className="text-xs font-bold shrink-0" style={{ color: '#FF2947' }}>✓</span>}
-            </button>
-
-            <button
-              onClick={() => { onViewScopeChange('mine'); setViewProfId(STAFF_PROF_ID); setShowScopeSheet(false); }}
-              className="w-full flex items-center gap-3 py-3.5 active:opacity-70"
-            >
-              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: viewScope === 'mine' ? '#121e6c' : '#f7f8fb' }}>
-                <User size={16} color={viewScope === 'mine' ? '#fff' : '#606060'} strokeWidth={2} />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-semibold" style={{ color: viewScope === 'mine' ? '#121e6c' : '#1e1e1e' }}>
-                  Mi agenda
-                </p>
-                <p className="text-xs text-[#969696]">
-                  {PROFESSIONALS.find(p => p.id === STAFF_PROF_ID)?.name ?? 'Mi cuenta'}
-                </p>
-              </div>
-              {viewScope === 'mine' && <span className="text-xs font-bold shrink-0" style={{ color: '#FF2947' }}>✓</span>}
-            </button>
           </div>
         </div>
       )}
