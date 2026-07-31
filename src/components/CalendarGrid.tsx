@@ -7,30 +7,11 @@ interface Props {
 }
 
 const HOURS = Array.from({ length: CAL_END_H - CAL_START_H + 1 }, (_, i) => CAL_START_H + i);
-
-// Las líneas se implementan como background-image CSS en lugar de elementos DOM.
-// Esto garantiza que SIEMPRE queden detrás de las cards, incluyendo sus esquinas
-// redondeadas (que son transparentes y dejarían ver líneas DOM con z-index).
-const GRID_BACKGROUND = [
-  // Media hora — línea sutil al 50% de cada bloque horario
-  `repeating-linear-gradient(to bottom,`,
-  `  transparent 0px, transparent ${SLOT_H - 0.5}px,`,
-  `  rgba(186,189,211,0.45) ${SLOT_H - 0.5}px, rgba(186,189,211,0.45) ${SLOT_H + 0.5}px,`,
-  `  transparent ${SLOT_H + 0.5}px, transparent ${HOUR_H}px`,
-  `),`,
-  // Hora entera — línea más definida al inicio de cada bloque
-  `repeating-linear-gradient(to bottom,`,
-  `  rgba(186,189,211,0.85) 0px, rgba(186,189,211,0.85) 1px,`,
-  `  transparent 1px, transparent ${HOUR_H}px`,
-  `),`,
-  // Fondo blanco base
-  `#ffffff`,
-].join(' ');
+const HALF_HOUR_INDICES = Array.from({ length: CAL_END_H - CAL_START_H }, (_, i) => i);
 
 export function CalendarGrid({ children, onSlotTap }: Props) {
   return (
-    // bg-white cubre también la columna de etiquetas (izq. de TIME_COL_W)
-    <div className="relative w-full select-none bg-white" style={{ height: `${CAL_H}px` }}>
+    <div className="relative w-full select-none" style={{ height: `${CAL_H}px` }}>
 
       {/* Etiquetas de hora — top-aligned a la línea (Figma: 14px Semibold #606060) */}
       {HOURS.map((h, i) => (
@@ -48,17 +29,28 @@ export function CalendarGrid({ children, onSlotTap }: Props) {
         </div>
       ))}
 
-      {/* Zona de contenido: background-image con líneas + slot buttons + bloques posicionados */}
-      <div
-        className="absolute top-0 bottom-0"
-        style={{
-          left: `${TIME_COL_W}px`,
-          right: 0,
-          backgroundImage: GRID_BACKGROUND,
-        }}
-      >
+      {/* Zona de contenido: líneas + botones de slot + bloques posicionados */}
+      <div className="absolute top-0 bottom-0" style={{ left: `${TIME_COL_W}px`, right: 0 }}>
 
-        {/* Slot buttons — z-index 0, reciben taps en espacios vacíos */}
+        {/* Líneas de hora — z-index 0, DETRÁS de las cards (cards en z-index 2) */}
+        {HOURS.map((h, i) => (
+          <div
+            key={h}
+            className="absolute left-0 right-0 h-px pointer-events-none"
+            style={{ top: `${i * HOUR_H}px`, backgroundColor: '#BABDD3', zIndex: 0 }}
+          />
+        ))}
+
+        {/* Líneas de media hora — más sutiles, también detrás de las cards */}
+        {HALF_HOUR_INDICES.map(i => (
+          <div
+            key={`hh-${i}`}
+            className="absolute left-0 right-0 h-px pointer-events-none"
+            style={{ top: `${i * HOUR_H + SLOT_H}px`, backgroundColor: '#BABDD3', opacity: 0.35, zIndex: 0 }}
+          />
+        ))}
+
+        {/* Botones de slot vacío — z-index 0, atrás de los bloques */}
         {onSlotTap && DAY_SLOTS.map(slot => (
           <button
             key={slot}

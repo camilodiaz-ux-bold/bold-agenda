@@ -345,19 +345,11 @@ export function AgendaPage({
         </div>
       </div>
 
-      {/* ── Card contextual + tabs — fondo blanco desde aquí hasta el final ── */}
-      {/* El header (título + tira semanal) muestra el gradiente de página.    */}
-      {/* El blanco comienza aquí y termina visualmente en la línea de los tabs.*/}
-      <div className="flex flex-col gap-[12px] px-4 pt-3 pb-0 shrink-0 bg-white">
+      {/* ── Card contextual — single row (Figma: h-[62px]) ───────────────── */}
+      <div className="flex flex-col gap-[12px] px-4 pt-2 pb-2 shrink-0">
         <div
           className="bg-white rounded-[16px] px-[12px]"
-          style={{
-            height: '62px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            boxShadow: '0px 1px 10px rgba(18,30,108,0.08)',
-          }}
+          style={{ height: '62px', display: 'flex', alignItems: 'center', gap: '12px' }}
         >
           <div className="shrink-0">
             {isTeam

@@ -18,8 +18,8 @@ export function BottomNav({ active, onChange }: Props) {
     <div
       className="shrink-0 px-5 pt-5 pb-6"
       style={{
-        backgroundImage: 'linear-gradient(0deg, rgba(247,248,251,0.72) 0%, transparent 100%)',
-        backdropFilter: 'blur(4px)',
+        backgroundImage: 'linear-gradient(0.515deg, rgb(235,237,251) 50.064%, rgba(235,237,251,0) 98.508%)',
+        backdropFilter: 'blur(8px)',
       }}
     >
       <nav
