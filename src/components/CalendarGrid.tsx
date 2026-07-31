@@ -32,25 +32,25 @@ export function CalendarGrid({ children, onSlotTap }: Props) {
       {/* Zona de contenido: líneas + botones de slot + bloques posicionados */}
       <div className="absolute top-0 bottom-0" style={{ left: `${TIME_COL_W}px`, right: 0 }}>
 
-        {/* Líneas de hora — z-index 4, por encima de las cards */}
+        {/* Líneas de hora — z-index 0, DETRÁS de las cards (cards en z-index 2) */}
         {HOURS.map((h, i) => (
           <div
             key={h}
             className="absolute left-0 right-0 h-px pointer-events-none"
-            style={{ top: `${i * HOUR_H}px`, backgroundColor: '#BABDD3', zIndex: 4 }}
+            style={{ top: `${i * HOUR_H}px`, backgroundColor: '#BABDD3', zIndex: 0 }}
           />
         ))}
 
-        {/* Líneas de media hora — más sutiles, también encima de las cards */}
+        {/* Líneas de media hora — más sutiles, también detrás de las cards */}
         {HALF_HOUR_INDICES.map(i => (
           <div
             key={`hh-${i}`}
             className="absolute left-0 right-0 h-px pointer-events-none"
-            style={{ top: `${i * HOUR_H + SLOT_H}px`, backgroundColor: '#BABDD3', opacity: 0.35, zIndex: 4 }}
+            style={{ top: `${i * HOUR_H + SLOT_H}px`, backgroundColor: '#BABDD3', opacity: 0.35, zIndex: 0 }}
           />
         ))}
 
-        {/* Botones de slot vacío — bajo todo */}
+        {/* Botones de slot vacío — z-index 0, atrás de los bloques */}
         {onSlotTap && DAY_SLOTS.map(slot => (
           <button
             key={slot}

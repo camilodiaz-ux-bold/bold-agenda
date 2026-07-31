@@ -236,7 +236,7 @@ export function OperatorShell() {
           {fabMenuOpen && (
             <div
               className="absolute right-5 flex flex-col items-end gap-[12px]"
-              style={{ bottom: '162px', zIndex: 30 }}
+              style={{ bottom: '186px', zIndex: 30 }}
             >
               <button
                 onClick={() => { setFabMenuOpen(false); setNewApptSlot(null); setShowNewAppt(true); }}

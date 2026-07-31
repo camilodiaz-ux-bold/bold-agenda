@@ -1,18 +1,26 @@
-// Single source of truth for all calendar geometry.
-// Valores validados contra Figma: node-id 29531-10863 y 29568-2500.
+// Single source of truth — geometría del calendario.
+// Fórmula canónica:
+//   top    = (startMin - CAL_START_MIN) * PX_PER_MIN  → timeToPx(startTime)
+//   height = durationMin * PX_PER_MIN                 → durationToPx(durationMin)
+// No hay inset ni padding extra en el posicionamiento. Las cards empiezan exactamente
+// en la línea de inicio y terminan exactamente en la línea de fin.
 
-export const CAL_START_H = 8;           // primera hora visible (08:00)
-export const CAL_END_H = 20;            // última hora visible (20:00, exclusiva)
-export const SLOT_MIN = 30;             // intervalo base en minutos
-export const PX_PER_MIN = 102 / 60;    // 1.7 px/min — de calendar-card en Figma
-export const HOUR_H = PX_PER_MIN * 60; // 102px por hora
-export const SLOT_H = PX_PER_MIN * SLOT_MIN; // 51px por slot de 30 min
-export const CAL_H = (CAL_END_H - CAL_START_H) * HOUR_H; // 1224px total
-export const TIME_COL_W = 48;          // ancho columna de etiquetas (Figma: w-[48px])
-export const CARD_INSET = 10;          // px bajo la línea antes de iniciar la card (Figma: top-[10px])
-export const CARD_MIN_H = 60;          // altura mínima — card de 30 min (Figma: h-[60px])
+export const CAL_START_H = 8;
+export const CAL_END_H   = 20;
+export const SLOT_MIN    = 30;
 
-// ─── Conversión de tiempo ─────────────────────────────────────────────────────
+// 102px/h validado contra Figma (card de 60 min tiene h=[102px])
+export const PX_PER_MIN  = 102 / 60;              // 1.7 px/min
+export const HOUR_H      = PX_PER_MIN * 60;       // 102px por hora
+export const SLOT_H      = PX_PER_MIN * SLOT_MIN; // 51px por slot de 30 min
+export const CAL_H       = (CAL_END_H - CAL_START_H) * HOUR_H; // 1224px total
+export const TIME_COL_W  = 48;                    // ancho columna de etiquetas (Figma)
+
+// Altura mínima de card = slot mínimo (30 min = 51px).
+// No se infla artificialmente: deja las cards del tamaño exacto de su duración.
+export const CARD_MIN_H = Math.round(SLOT_MIN * PX_PER_MIN); // 51
+
+// ─── Tiempo ────────────────────────────────────────────────────────────────────
 
 export function timeToMin(time: string): number {
   const [h, m] = time.split(':').map(Number);
@@ -24,33 +32,32 @@ export function minToTime(totalMin: number): string {
   return `${String(Math.floor(c / 60)).padStart(2, '0')}:${String(c % 60).padStart(2, '0')}`;
 }
 
-/** HH:MM → px desde el borde superior del grid */
+/** HH:MM → px desde el borde superior del grid. */
 export function timeToPx(time: string): number {
   const offsetMin = timeToMin(time) - CAL_START_H * 60;
   return Math.round(Math.max(0, offsetMin) * PX_PER_MIN);
 }
 
-/** Duración en minutos → píxeles */
+/** Duración en minutos → px. */
 export function durationToPx(minutes: number): number {
   return Math.round(minutes * PX_PER_MIN);
 }
 
-/** Top de una card (línea de hora + CARD_INSET) */
+/** Top de una card = exactamente la línea de inicio (sin inset). */
 export function cardTop(startTime: string): number {
-  return timeToPx(startTime) + CARD_INSET;
+  return timeToPx(startTime);
 }
 
 /**
  * Altura de una card.
- * Figma: 60 min → h-[102px], 30 min → h-[60px].
- * Formula: max(CARD_MIN_H, durationToPx(duration)).
- * Las líneas de hora se renderizan sobre las cards (z-index superior).
+ * Para el prototipo, el mínimo es un slot de 30 min (51 px).
+ * Para duraciones ≥ 30 min, height = durationToPx(duration) — geometría pura.
  */
 export function cardHeight(durationMin: number): number {
   return Math.max(CARD_MIN_H, durationToPx(durationMin));
 }
 
-// ─── Slots disponibles ────────────────────────────────────────────────────────
+// ─── Slots ─────────────────────────────────────────────────────────────────────
 
 export function getDaySlots(): string[] {
   const slots: string[] = [];
@@ -75,10 +82,6 @@ export interface LayoutCol {
   totalColumns: number;
 }
 
-/**
- * Asigna columnas a eventos que se solapan para renderizarlos en paralelo.
- * Eventos sin solapamiento reciben column=0, totalColumns=1.
- */
 export function layoutEvents(events: CalEvent[]): Map<string, LayoutCol> {
   const result = new Map<string, LayoutCol>();
   if (!events.length) return result;

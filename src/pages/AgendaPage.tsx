@@ -412,7 +412,8 @@ export function AgendaPage({
       {/* ── Grid del calendario (zona con scroll interno, bg-white) ─────── */}
       <div
         ref={calScrollRef}
-        className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-36 bg-white"
+        className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 bg-white"
+        style={{ paddingBottom: '200px' }}
       >
         <CalendarGrid onSlotTap={onNewApptAtSlot ? handleSlotTap : undefined}>
 

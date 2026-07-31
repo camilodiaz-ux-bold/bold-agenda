@@ -15,7 +15,7 @@ export function FAB({ onPress, isOpen = false }: Props) {
         height: '53px',
         borderRadius: '32px',
         backgroundColor: '#FF2947',
-        bottom: '96px',
+        bottom: '120px',
         zIndex: 30,
         boxShadow: '0px 4px 16px rgba(255,41,71,0.40)',
       }}
