@@ -16,10 +16,17 @@ const TABS: { key: OperatorSection; label: string; Icon: React.ComponentType<{ s
 export function BottomNav({ active, onChange }: Props) {
   return (
     <div
-      className="shrink-0 px-5 pt-5 pb-6"
       style={{
-        backgroundImage: 'linear-gradient(0.515deg, rgb(235,237,251) 50.064%, rgba(235,237,251,0) 98.508%)',
-        backdropFilter: 'blur(8px)',
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        padding: '20px 20px 24px',
+        background: 'transparent',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+        zIndex: 20,
+        pointerEvents: 'none',
       }}
     >
       <nav
@@ -30,6 +37,7 @@ export function BottomNav({ active, onChange }: Props) {
           backgroundColor: 'rgba(255,255,255,0.6)',
           backdropFilter: 'blur(6px)',
           boxShadow: '0px 10px 18.7px 0px rgba(18,30,108,0.09), inset 0px -2px 4px 0px #ffffff, inset 0px 3px 7.5px 0px rgba(18,30,108,0.13)',
+          pointerEvents: 'auto',
         }}
       >
         {TABS.map(({ key, label, Icon }) => {
