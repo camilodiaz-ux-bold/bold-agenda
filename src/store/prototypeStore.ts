@@ -6,6 +6,7 @@ import type {
   Appointment, Client, SaleRecord, Professional, Service,
   AvailabilityBlock, BookingPolicy, BusinessProfile,
 } from '../types';
+import { getSlotsFromSchedule } from '../lib/availability';
 
 export interface PrototypeState {
   appointments: Appointment[];
@@ -19,7 +20,7 @@ export interface PrototypeState {
   activeBranchId: string;
 }
 
-const STORAGE_KEY = 'bold_agenda_v4';
+const STORAGE_KEY = 'bold_agenda_v5';
 
 function seedState(): PrototypeState {
   return {
@@ -100,8 +101,7 @@ export function isWithinCancellationWindow(apt: Appointment, policy: BookingPoli
   return hoursUntilAppointment(apt) >= windowHours;
 }
 
-/** Returns time slots for a specific professional on a date, excluding blocks and occupied appointments.
- *  Pass excludeAptId to omit the current appointment from conflict calculation (for rescheduling). */
+/** Returns available time slots for a specific professional, using their weeklySchedule. */
 export function getSlotsForProf(
   service: Service,
   date: string,
@@ -110,49 +110,15 @@ export function getSlotsForProf(
   availabilityBlocks: AvailabilityBlock[],
   excludeAptId?: string,
 ): string[] {
-  const block = availabilityBlocks.find(
-    b => b.professionalId === profId && b.date === date && b.type === 'full-day'
-  );
-  if (block) return [];
-
-  const START = 8 * 60;
-  const END = 19 * 60;
-  const slots: string[] = [];
-  for (let m = START; m + service.duration <= END; m += 30) {
-    slots.push(minToTime(m));
-  }
-
-  const rangeBlocks = availabilityBlocks.filter(
-    b => b.professionalId === profId && b.date === date && b.type === 'range'
-  );
-
-  const busy = allAppointments.filter(
-    a => a.date === date && a.professionalId === profId
-      && a.id !== excludeAptId
-      && a.status !== 'no-show' && a.status !== 'cancelada' && a.status !== 'cancelada-tarde' && a.status !== 'completada'
-  );
-
-  return slots.filter(slot => {
-    const sStart = timeToMin(slot);
-    const sEnd = sStart + service.duration;
-
-    // Check range blocks
-    for (const rb of rangeBlocks) {
-      const bStart = timeToMin(rb.startTime!);
-      const bEnd = timeToMin(rb.endTime!);
-      if (sStart < bEnd && sEnd > bStart) return false;
-    }
-
-    // Check appointments
-    for (const a of busy) {
-      const svc = store.get().services.find(sv => sv.id === a.serviceId);
-      if (!svc) continue;
-      const aStart = timeToMin(a.startTime);
-      const aEnd = aStart + svc.duration;
-      if (sStart < aEnd && sEnd > aStart) return false;
-    }
-
-    return true;
+  const state = store.get();
+  const professional = state.professionals.find(p => p.id === profId);
+  if (!professional) return [];
+  return getSlotsFromSchedule({
+    professional, date, service,
+    appointments: allAppointments,
+    blocks: availabilityBlocks,
+    services: state.services,
+    excludeAptId,
   });
 }
 
@@ -164,8 +130,6 @@ export function getAvailableSlots(
   availabilityBlocks: AvailabilityBlock[],
   excludeAptId?: string,
 ): string[] {
-  const isDayOff = (d: string) => new Date(d + 'T12:00:00').getDay() === 0;
-  if (isDayOff(date)) return [];
   const profs = store.get().professionals;
   if (profId !== 'any') return getSlotsForProf(service, date, profId, allAppointments, availabilityBlocks, excludeAptId);
   const all = new Set<string>();

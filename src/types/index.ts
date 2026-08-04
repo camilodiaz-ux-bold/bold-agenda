@@ -38,6 +38,16 @@ export type AppointmentStatus = 'confirmada' | 'completada' | 'no-show' | 'repro
 export type PaymentStatus = 'pendiente' | 'pagado' | 'pagado-anticipado' | 'reembolsado';
 export type PaymentMethod = 'datafono' | 'qr' | 'link' | 'anticipado';
 
+export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+
+export interface WorkingDay {
+  enabled: boolean;
+  startTime?: string;
+  endTime?: string;
+}
+
+export type WeeklySchedule = Record<Weekday, WorkingDay>;
+
 export interface Professional {
   id: string;
   name: string;
@@ -45,6 +55,8 @@ export interface Professional {
   color: string;
   initials: string;
   commissionRate: number;
+  active?: boolean;
+  weeklySchedule: WeeklySchedule;
 }
 
 export interface Service {

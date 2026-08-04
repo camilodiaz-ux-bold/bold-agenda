@@ -1,4 +1,4 @@
-import type { Professional, Service, Appointment, Client, SaleRecord, AvailabilityBlock, BookingPolicy, BusinessProfile, Branch } from '../types';
+import type { Professional, Service, Appointment, Client, SaleRecord, AvailabilityBlock, BookingPolicy, BusinessProfile, Branch, WeeklySchedule } from '../types';
 
 export const SALON = {
   name: 'Salón Camila',
@@ -12,6 +12,39 @@ export const BRANCHES: Branch[] = [
   { id: 'centro', name: 'Salón Camila Centro', address: 'Carrera 13 #85-24', neighborhood: 'Chapinero · Bogotá' },
 ];
 
+// ── Weekly schedules ─────────────────────────────────────────────────────────
+
+const CAMILA_SCHEDULE: WeeklySchedule = {
+  mon: { enabled: true,  startTime: '08:00', endTime: '17:00' },
+  tue: { enabled: true,  startTime: '08:00', endTime: '17:00' },
+  wed: { enabled: true,  startTime: '08:00', endTime: '17:00' },
+  thu: { enabled: true,  startTime: '08:00', endTime: '17:00' },
+  fri: { enabled: true,  startTime: '08:00', endTime: '17:00' },
+  sat: { enabled: true,  startTime: '09:00', endTime: '14:00' },
+  sun: { enabled: false },
+};
+
+const VALENTINA_SCHEDULE: WeeklySchedule = {
+  mon: { enabled: false },
+  tue: { enabled: true,  startTime: '10:00', endTime: '19:00' },
+  wed: { enabled: true,  startTime: '10:00', endTime: '19:00' },
+  thu: { enabled: true,  startTime: '10:00', endTime: '19:00' },
+  fri: { enabled: true,  startTime: '10:00', endTime: '19:00' },
+  sat: { enabled: true,  startTime: '10:00', endTime: '19:00' },
+  sun: { enabled: false },
+};
+
+// Mon/Wed/Fri 07:00–15:00 (clamped to 08:00 by calendar grid), Tue/Thu 12:00–20:00
+const ANDRES_SCHEDULE: WeeklySchedule = {
+  mon: { enabled: true,  startTime: '07:00', endTime: '15:00' },
+  tue: { enabled: true,  startTime: '12:00', endTime: '20:00' },
+  wed: { enabled: true,  startTime: '07:00', endTime: '15:00' },
+  thu: { enabled: true,  startTime: '12:00', endTime: '20:00' },
+  fri: { enabled: true,  startTime: '07:00', endTime: '15:00' },
+  sat: { enabled: false },
+  sun: { enabled: false },
+};
+
 export const PROFESSIONALS: Professional[] = [
   {
     id: 'p1',
@@ -20,6 +53,7 @@ export const PROFESSIONALS: Professional[] = [
     color: '#FF2947',
     initials: 'CV',
     commissionRate: 0.45,
+    weeklySchedule: CAMILA_SCHEDULE,
   },
   {
     id: 'p2',
@@ -28,6 +62,7 @@ export const PROFESSIONALS: Professional[] = [
     color: '#7C3AED',
     initials: 'VR',
     commissionRate: 0.40,
+    weeklySchedule: VALENTINA_SCHEDULE,
   },
   {
     id: 'p3',
@@ -36,6 +71,7 @@ export const PROFESSIONALS: Professional[] = [
     color: '#2563EB',
     initials: 'AM',
     commissionRate: 0.35,
+    weeklySchedule: ANDRES_SCHEDULE,
   },
 ];
 
@@ -154,12 +190,12 @@ export const APPOINTMENTS: Appointment[] = [
   {
     id: 'a9',
     professionalId: 'p1',
-    serviceId: 's3',
+    serviceId: 's1',
     clientName: 'Valentina Ospina',
     clientPhone: '3145678901',
     clientCedula: '43876543',
     date: '2026-07-16',
-    startTime: '16:00',
+    startTime: '15:00',
     status: 'confirmada',
     paymentStatus: 'pagado-anticipado',
     paymentMethod: 'anticipado',
@@ -214,7 +250,7 @@ export const APPOINTMENTS: Appointment[] = [
     clientName: 'Natalia Ruiz',
     clientPhone: '3167890123',
     clientCedula: '52654321',
-    date: '2026-07-20',
+    date: '2026-07-21',
     startTime: '10:00',
     status: 'confirmada' as const,
     paymentStatus: 'pagado-anticipado' as const,
@@ -298,8 +334,8 @@ export const APPOINTMENTS: Appointment[] = [
     clientName: 'Paula Herrera',
     clientPhone: '3213456789',
     clientCedula: '1023467890',
-    date: '2026-07-18',
-    startTime: '11:00',
+    date: '2026-07-20',
+    startTime: '09:00',
     status: 'confirmada',
     paymentStatus: 'pendiente',
   },
@@ -525,7 +561,7 @@ export const APPOINTMENTS: Appointment[] = [
     clientPhone: '3201122334',
     clientCedula: '1098765432',
     date: '2026-07-24',
-    startTime: '10:00',
+    startTime: '12:30',
     status: 'confirmada',
     paymentStatus: 'pendiente',
   },
@@ -549,7 +585,7 @@ export const APPOINTMENTS: Appointment[] = [
     clientPhone: '3124567890',
     clientCedula: '52987654',
     date: '2026-07-25',
-    startTime: '09:30',
+    startTime: '10:30',
     status: 'confirmada',
     paymentStatus: 'pagado-anticipado',
     paymentMethod: 'anticipado' as const,
@@ -612,7 +648,7 @@ export const APPOINTMENTS: Appointment[] = [
   {
     id: 'c5', professionalId: 'p2', serviceId: 's3', branchId: 'centro',
     clientName: 'Patricia Luna', clientPhone: '3186789012', clientCedula: '16789005',
-    date: '2026-07-22', startTime: '09:30',
+    date: '2026-07-22', startTime: '10:30',
     status: 'confirmada', paymentStatus: 'pagado-anticipado',
     paymentMethod: 'anticipado' as const,
     originalPrice: 220000,
