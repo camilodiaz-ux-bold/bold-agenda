@@ -4,6 +4,7 @@ import { PROFESSIONALS, SERVICES } from '../data/appointments';
 import { AppointmentBlock } from '../components/AppointmentBlock';
 import { BlockedTimeBlock } from '../components/BlockedTimeBlock';
 import { CalendarGrid } from '../components/CalendarGrid';
+import { TeamDayView } from '../components/TeamDayView';
 import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
 import {
@@ -92,7 +93,7 @@ export function AgendaPage({
   onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
-  const [profFilter, setProfFilter] = useState<string>(PROFESSIONALS[0].id);
+  const [profFilter, setProfFilter] = useState<string>('all');
   const [showBranchSheet, setShowBranchSheet] = useState(false);
   const [viewProfId] = useState(STAFF_PROF_ID);
 
@@ -385,6 +386,27 @@ export function AgendaPage({
         {/* Tabs de profesionales — solo en vista equipo */}
         {isTeam && (
           <div className="flex items-start border-b border-[#e8eaf0]" style={{ height: '28px' }}>
+            {/* Tab "Todos" */}
+            {(() => {
+              const isActive = profFilter === 'all';
+              return (
+                <button
+                  key="all"
+                  onClick={() => setProfFilter('all')}
+                  className="flex-1 flex flex-col items-center pb-[4px] active:opacity-70 transition-opacity"
+                >
+                  <span
+                    className="text-[14px] leading-[20px] text-[#121e6c]"
+                    style={{ fontWeight: isActive ? 600 : 400 }}
+                  >
+                    Todos
+                  </span>
+                  {isActive && (
+                    <div className="h-[2px] w-full rounded-full" style={{ backgroundColor: '#121e6c' }} />
+                  )}
+                </button>
+              );
+            })()}
             {PROFESSIONALS.map(prof => {
               const isActive = profFilter === prof.id;
               return (
@@ -409,7 +431,22 @@ export function AgendaPage({
         )}
       </div>
 
+      {/* ── Vista multi-columna "Todos" ──────────────────────────────────── */}
+      {isTeam && profFilter === 'all' && (
+        <TeamDayView
+          date={selectedDate}
+          appointments={branchApts}
+          availabilityBlocks={availabilityBlocks}
+          isToday={isToday}
+          nowPx={nowPx}
+          onSlotTap={onNewApptAtSlot ? (date, time, profId) => onNewApptAtSlot(date, time, profId) : undefined}
+          onAptTap={openDetail}
+          onBlockTap={() => onOpenAvailability(true)}
+        />
+      )}
+
       {/* ── Grid del calendario (zona con scroll interno, bg-white) ─────── */}
+      {!(isTeam && profFilter === 'all') && (
       <div
         ref={calScrollRef}
         className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 bg-white"
@@ -490,6 +527,7 @@ export function AgendaPage({
 
         </CalendarGrid>
       </div>
+      )}
 
       {/* ── Sheet de sucursal ────────────────────────────────────────────── */}
       {showBranchSheet && (

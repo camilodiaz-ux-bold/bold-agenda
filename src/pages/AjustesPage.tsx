@@ -5,7 +5,10 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { formatCOP, formatDuration } from '../data/appointments';
-import type { Role, Professional, Service, BusinessProfile, BookingPolicy, Appointment } from '../types';
+import type { Role, Professional, Service, BusinessProfile, BookingPolicy, Appointment, WeeklySchedule, Weekday } from '../types';
+import { getWeekday, DEFAULT_WEEKLY_SCHEDULE } from '../lib/availability';
+import { store, PROTOTYPE_TODAY } from '../store/prototypeStore';
+import { timeToMin, minToTime } from '../lib/calendarMath';
 
 interface Props {
   role: Role;
@@ -431,6 +434,70 @@ function PerfilDetail({ profile, isAdmin, onSave, onBack }: {
   );
 }
 
+// ── Helpers de horario ───────────────────────────────────────────────────────
+
+const DAYS_ES: { key: Weekday; name: string }[] = [
+  { key: 'mon', name: 'Lunes' },
+  { key: 'tue', name: 'Martes' },
+  { key: 'wed', name: 'Miércoles' },
+  { key: 'thu', name: 'Jueves' },
+  { key: 'fri', name: 'Viernes' },
+  { key: 'sat', name: 'Sábado' },
+  { key: 'sun', name: 'Domingo' },
+];
+
+const TIME_OPTIONS: string[] = (() => {
+  const opts: string[] = [];
+  for (let m = 7 * 60; m <= 20 * 60; m += 30) {
+    opts.push(minToTime(m));
+  }
+  return opts;
+})();
+
+function groupScheduleDays(schedule: WeeklySchedule): Array<{ label: string; time: string }> {
+  const rows: Array<{ label: string; time: string }> = [];
+  let i = 0;
+  while (i < DAYS_ES.length) {
+    const day = DAYS_ES[i];
+    const wd = schedule[day.key];
+    let j = i + 1;
+    if (wd.enabled && wd.startTime && wd.endTime) {
+      const sig = `${wd.startTime}-${wd.endTime}`;
+      while (j < DAYS_ES.length) {
+        const nwd = schedule[DAYS_ES[j].key];
+        if (!nwd.enabled || `${nwd.startTime}-${nwd.endTime}` !== sig) break;
+        j++;
+      }
+      const label = j === i + 1 ? day.name : `${day.name} a ${DAYS_ES[j - 1].name}`;
+      rows.push({ label, time: `${wd.startTime} – ${wd.endTime}` });
+    } else {
+      while (j < DAYS_ES.length && !schedule[DAYS_ES[j].key].enabled) j++;
+      const label = j === i + 1 ? day.name : `${day.name} a ${DAYS_ES[j - 1].name}`;
+      rows.push({ label, time: 'No trabaja' });
+    }
+    i = j;
+  }
+  return rows;
+}
+
+function countScheduleConflicts(
+  profId: string, newSchedule: WeeklySchedule, appointments: Appointment[],
+): number {
+  const { services } = store.get();
+  return appointments.filter(a => {
+    if (a.professionalId !== profId) return false;
+    if (a.date < PROTOTYPE_TODAY) return false;
+    if (['cancelada', 'cancelada-tarde', 'completada', 'no-show'].includes(a.status)) return false;
+    const wd = newSchedule[getWeekday(a.date)];
+    if (!wd.enabled) return true;
+    if (!wd.startTime || !wd.endTime) return true;
+    const svc = services.find(s => s.id === a.serviceId);
+    const aptStart = timeToMin(a.startTime);
+    const aptEnd = aptStart + (svc?.duration ?? 60);
+    return aptStart < timeToMin(wd.startTime) || aptEnd > timeToMin(wd.endTime);
+  }).length;
+}
+
 // ── Prof detail screen ────────────────────────────────────────────────────────
 
 function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
@@ -438,6 +505,13 @@ function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
   onSave: (p: Professional) => void; onBack: () => void;
 }) {
   const [active, setActive] = useState((prof as any).active !== false);
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>(
+    prof.weeklySchedule ?? DEFAULT_WEEKLY_SCHEDULE,
+  );
+  const [showScheduleEdit, setShowScheduleEdit] = useState(false);
+  const [draft, setDraft] = useState<WeeklySchedule>(weeklySchedule);
+  const [scheduleConflicts, setScheduleConflicts] = useState(0);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const count = aptCount(appointments, a => a.professionalId === prof.id);
 
   return (
@@ -486,12 +560,154 @@ function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
             </button>
           </div>
         )}
+
+        {/* Horario laboral */}
+        {isAdmin && (
+          <div className="flex flex-col gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-[#1e1e1e]">Horario laboral</p>
+              {!showScheduleEdit && (
+                <button
+                  onClick={() => {
+                    setDraft({ ...weeklySchedule });
+                    setScheduleConflicts(0);
+                    setScheduleError(null);
+                    setShowScheduleEdit(true);
+                  }}
+                  className="text-[12px] font-semibold text-[#121e6c] active:opacity-60 transition-opacity"
+                >
+                  Editar
+                </button>
+              )}
+            </div>
+
+            {/* Vista lectura */}
+            {!showScheduleEdit && (
+              <div className="flex flex-col gap-2">
+                {groupScheduleDays(weeklySchedule).map((row, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[#1e1e1e]">{row.label}</span>
+                    <span className="text-xs text-[#969696]">{row.time}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Editor inline */}
+            {showScheduleEdit && (
+              <div className="flex flex-col gap-3">
+                {DAYS_ES.map(({ key, name }) => {
+                  const wd = draft[key];
+                  return (
+                    <div key={key} className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-[#1e1e1e]">{name}</span>
+                        <button
+                          onClick={() => setDraft(d => ({
+                            ...d,
+                            [key]: {
+                              ...d[key],
+                              enabled: !d[key].enabled,
+                              startTime: d[key].startTime ?? '08:00',
+                              endTime: d[key].endTime ?? '18:00',
+                            },
+                          }))}
+                          className="transition-all active:opacity-70"
+                        >
+                          {wd.enabled
+                            ? <ToggleRight size={24} color="#121e6c" strokeWidth={1.8} />
+                            : <ToggleLeft size={24} color="#969696" strokeWidth={1.8} />
+                          }
+                        </button>
+                      </div>
+                      {wd.enabled && (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={wd.startTime ?? '08:00'}
+                            onChange={e => setDraft(d => ({ ...d, [key]: { ...d[key], startTime: e.target.value } }))}
+                            className={INPUT_CLZ}
+                            style={{ ...INPUT_STYLE, height: 36, flex: 1 }}
+                          >
+                            {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <span className="text-xs text-[#969696] shrink-0">a</span>
+                          <select
+                            value={wd.endTime ?? '18:00'}
+                            onChange={e => setDraft(d => ({ ...d, [key]: { ...d[key], endTime: e.target.value } }))}
+                            className={INPUT_CLZ}
+                            style={{ ...INPUT_STYLE, height: 36, flex: 1 }}
+                          >
+                            {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      {!wd.enabled && (
+                        <p className="text-xs text-[#b0b5c8]">No trabaja</p>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {scheduleError && (
+                  <p className="text-xs text-red-500">{scheduleError}</p>
+                )}
+
+                {scheduleConflicts > 0 && (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 flex items-start gap-2">
+                    <AlertTriangle size={14} color="#b45309" strokeWidth={2} className="mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-700">
+                      {scheduleConflicts} cita{scheduleConflicts !== 1 ? 's' : ''} quedará{scheduleConflicts !== 1 ? 'n' : ''} fuera del nuevo horario de {prof.name.split(' ')[0]}. Puedes revisarlas desde la agenda.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      setShowScheduleEdit(false);
+                      setScheduleConflicts(0);
+                      setScheduleError(null);
+                    }}
+                    className="flex-1 h-9 rounded-full border text-xs font-semibold text-[#606060] active:opacity-70 transition-opacity"
+                    style={{ borderColor: '#d2d4e1' }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      let err: string | null = null;
+                      for (const { key } of DAYS_ES) {
+                        const wd = draft[key];
+                        if (wd.enabled && wd.startTime && wd.endTime) {
+                          if (timeToMin(wd.endTime) <= timeToMin(wd.startTime)) {
+                            err = 'La hora de cierre debe ser posterior a la de apertura.';
+                            break;
+                          }
+                        }
+                      }
+                      if (err) { setScheduleError(err); return; }
+                      setScheduleError(null);
+                      const conflicts = countScheduleConflicts(prof.id, draft, appointments);
+                      setScheduleConflicts(conflicts);
+                      setWeeklySchedule({ ...draft });
+                      setShowScheduleEdit(false);
+                    }}
+                    className="flex-1 h-9 rounded-full text-xs font-semibold text-white active:opacity-80 transition-opacity"
+                    style={{ backgroundColor: '#121e6c' }}
+                  >
+                    Guardar cambios
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {isAdmin && (
         <div className="shrink-0 px-4 pt-3 pb-6 border-t border-gray-100">
           <button
-            onClick={() => onSave({ ...prof, active } as Professional)}
+            onClick={() => onSave({ ...prof, active, weeklySchedule } as Professional)}
             className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
             style={{ backgroundColor: '#FF2947' }}
           >
