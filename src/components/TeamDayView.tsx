@@ -10,7 +10,7 @@ import { BlockedTimeBlock } from './BlockedTimeBlock';
 import { store } from '../store/prototypeStore';
 import type { Appointment, AvailabilityBlock } from '../types';
 
-const COL_W = 170;
+const COL_W = 240;
 const HEADER_H = 36;
 const SLOT_MIN = 30;
 const HOURS = Array.from({ length: CAL_END_H - CAL_START_H + 1 }, (_, i) => CAL_START_H + i);
@@ -103,8 +103,8 @@ export function TeamDayView({
                       position: 'sticky', top: 0, zIndex: 5,
                     }}>
                       <span style={{
-                        fontSize: 12, fontWeight: 600, color: prof.color,
-                        backgroundColor: `${prof.color}18`,
+                        fontSize: 12, fontWeight: 600, color: '#1e1e1e',
+                        backgroundColor: '#F1F2F6',
                         borderRadius: 100, padding: '3px 10px',
                         letterSpacing: 0,
                       }}>

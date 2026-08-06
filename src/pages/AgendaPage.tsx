@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
-import { Bell, ChevronDown, Users, User } from 'lucide-react';
+import { Bell, ChevronDown, Users, User, Check } from 'lucide-react';
 import { PROFESSIONALS, SERVICES } from '../data/appointments';
 import { AppointmentBlock } from '../components/AppointmentBlock';
 import { BlockedTimeBlock } from '../components/BlockedTimeBlock';
@@ -95,6 +95,7 @@ export function AgendaPage({
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
   const [profFilter, setProfFilter] = useState<string>('all');
   const [showBranchSheet, setShowBranchSheet] = useState(false);
+  const [showViewSheet, setShowViewSheet] = useState(false);
   const [viewProfId] = useState(STAFF_PROF_ID);
 
   const isAdmin = role === 'admin';
@@ -271,13 +272,14 @@ export function AgendaPage({
     );
   }
 
-  function handleScopeToggle() {
-    if (isTeam) {
+  function handleViewSelect(scope: 'team' | 'mine', profId?: string) {
+    if (scope === 'mine') {
       onViewScopeChange('mine');
     } else {
       onViewScopeChange('team');
-      setProfFilter(PROFESSIONALS[0].id);
+      setProfFilter(profId ?? 'all');
     }
+    setShowViewSheet(false);
   }
 
   return (
@@ -353,18 +355,20 @@ export function AgendaPage({
           style={{ height: '62px', display: 'flex', alignItems: 'center', gap: '12px' }}
         >
           <div className="shrink-0">
-            {isTeam
+            {(isTeam && profFilter === 'all')
               ? <Users size={22} color="#3E4983" strokeWidth={2} />
               : <User size={22} color="#3E4983" strokeWidth={2} />
             }
           </div>
           <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
             <span className="text-[16px] font-medium leading-[20px] truncate" style={{ color: '#1E1E1E' }}>
-              {isTeam
-                ? 'Equipo'
-                : isAdmin
-                  ? (PROFESSIONALS.find(p => p.id === viewProfId)?.name ?? 'Camila Vargas')
-                  : (PROFESSIONALS.find(p => p.id === STAFF_PROF_ID)?.name ?? 'Mi agenda')}
+              {role === 'staff'
+                ? (PROFESSIONALS.find(p => p.id === STAFF_PROF_ID)?.name ?? 'Mi agenda')
+                : viewScope === 'mine'
+                  ? 'Mi agenda'
+                  : profFilter === 'all'
+                    ? 'Equipo'
+                    : (PROFESSIONALS.find(p => p.id === profFilter)?.name.split(' ')[0] ?? profFilter)}
             </span>
             <span className="text-[12px] font-normal leading-[16px] truncate" style={{ color: '#606060' }}>
               {formatDateHeader(selectedDate)}
@@ -372,63 +376,17 @@ export function AgendaPage({
           </div>
           {isAdmin && (
             <button
-              onClick={handleScopeToggle}
+              onClick={() => setShowViewSheet(true)}
               className="shrink-0 flex items-center justify-center rounded-[12px] active:opacity-70 transition-opacity"
               style={{ backgroundColor: '#F1F2F6', height: '34px', padding: '0 16px' }}
             >
               <span className="text-[12px] font-semibold leading-[16px]" style={{ color: '#121E6C' }}>
-                {isTeam ? 'Ver mi agenda' : 'Ver equipo'}
+                Cambiar vista
               </span>
             </button>
           )}
         </div>
 
-        {/* Tabs de profesionales — solo en vista equipo */}
-        {isTeam && (
-          <div className="flex items-start border-b border-[#e8eaf0]" style={{ height: '28px' }}>
-            {/* Tab "Todos" */}
-            {(() => {
-              const isActive = profFilter === 'all';
-              return (
-                <button
-                  key="all"
-                  onClick={() => setProfFilter('all')}
-                  className="flex-1 flex flex-col items-center pb-[4px] active:opacity-70 transition-opacity"
-                >
-                  <span
-                    className="text-[14px] leading-[20px] text-[#121e6c]"
-                    style={{ fontWeight: isActive ? 600 : 400 }}
-                  >
-                    Todos
-                  </span>
-                  {isActive && (
-                    <div className="h-[2px] w-full rounded-full" style={{ backgroundColor: '#121e6c' }} />
-                  )}
-                </button>
-              );
-            })()}
-            {PROFESSIONALS.map(prof => {
-              const isActive = profFilter === prof.id;
-              return (
-                <button
-                  key={prof.id}
-                  onClick={() => setProfFilter(prof.id)}
-                  className="flex-1 flex flex-col items-center pb-[4px] active:opacity-70 transition-opacity"
-                >
-                  <span
-                    className="text-[14px] leading-[20px] text-[#121e6c]"
-                    style={{ fontWeight: isActive ? 600 : 400 }}
-                  >
-                    {prof.name.split(' ')[0]}
-                  </span>
-                  {isActive && (
-                    <div className="h-[2px] w-full rounded-full" style={{ backgroundColor: '#121e6c' }} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* ── Vista multi-columna "Todos" ──────────────────────────────────── */}
@@ -553,6 +511,81 @@ export function AgendaPage({
                 )}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Sheet de selección de vista ──────────────────────────────────── */}
+      {showViewSheet && (
+        <div className="absolute inset-0" style={{ zIndex: 50 }}>
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowViewSheet(false)} />
+          <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl px-5 pt-4 pb-10">
+            <div className="w-9 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-4">Ver agenda de</p>
+            {/* Todo el equipo */}
+            {(() => {
+              const isSelected = viewScope === 'team' && profFilter === 'all';
+              return (
+                <button
+                  onClick={() => handleViewSelect('team', 'all')}
+                  className="w-full flex items-center gap-3 py-3 border-b border-gray-100 active:opacity-70"
+                >
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: '#F1F2F6' }}>
+                    <Users size={16} color="#3E4983" strokeWidth={2} />
+                  </div>
+                  <span className="flex-1 text-left text-sm font-semibold"
+                    style={{ color: isSelected ? '#121e6c' : '#1e1e1e' }}>
+                    Todo el equipo
+                  </span>
+                  {isSelected && <Check size={18} color="#121e6c" strokeWidth={2.5} className="shrink-0" />}
+                </button>
+              );
+            })()}
+            {/* Mi agenda */}
+            {(() => {
+              const isSelected = viewScope === 'mine';
+              return (
+                <button
+                  onClick={() => handleViewSelect('mine')}
+                  className="w-full flex items-center gap-3 py-3 border-b border-gray-100 active:opacity-70"
+                >
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: '#F1F2F6' }}>
+                    <User size={16} color="#3E4983" strokeWidth={2} />
+                  </div>
+                  <span className="flex-1 text-left text-sm font-semibold"
+                    style={{ color: isSelected ? '#121e6c' : '#1e1e1e' }}>
+                    Mi agenda
+                  </span>
+                  {isSelected && <Check size={18} color="#121e6c" strokeWidth={2.5} className="shrink-0" />}
+                </button>
+              );
+            })()}
+            {/* Profesionales individuales */}
+            {PROFESSIONALS.map((prof, idx) => {
+              const isSelected = viewScope === 'team' && profFilter === prof.id;
+              return (
+                <button
+                  key={prof.id}
+                  onClick={() => handleViewSelect('team', prof.id)}
+                  className="w-full flex items-center gap-3 py-3 active:opacity-70"
+                  style={{ borderBottom: idx < PROFESSIONALS.length - 1 ? '1px solid #f3f4f6' : 'none' }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[12px] font-semibold"
+                    style={{ backgroundColor: '#F1F2F6', color: '#3E4983' }}
+                  >
+                    {prof.initials}
+                  </div>
+                  <span className="flex-1 text-left text-sm font-semibold"
+                    style={{ color: isSelected ? '#121e6c' : '#1e1e1e' }}>
+                    {prof.name.split(' ')[0]}
+                  </span>
+                  {isSelected && <Check size={18} color="#121e6c" strokeWidth={2.5} className="shrink-0" />}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
