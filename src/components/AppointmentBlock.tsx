@@ -125,12 +125,13 @@ export function AppointmentBlock({
           )}
 
           <div className="flex items-center gap-[6px] shrink-0">
-            {/* Badge de pago — texto plano, sin borde, metadata secundaria */}
+            {/* Badge de pago — ícono + texto discreto, sin pill ni borde */}
             {paymentBadge && (
               <span
-                className="text-[10px] font-semibold leading-none"
-                style={{ color: paymentBadge.color }}
+                className="flex items-center gap-[2px] text-[10px] font-medium leading-none"
+                style={{ color: paymentBadge.color, opacity: 0.75 }}
               >
+                <Check size={9} strokeWidth={2.5} color={paymentBadge.color} />
                 {paymentBadge.label}
               </span>
             )}
