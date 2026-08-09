@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import {
   CAL_START_H, CAL_END_H, HOUR_H, CAL_H, TIME_COL_W,
   timeToPx, durationToPx, cardTop, cardHeight, CARD_MIN_H,
@@ -15,6 +15,15 @@ const HEADER_H = 36;
 const SLOT_MIN = 30;
 const HOURS = Array.from({ length: CAL_END_H - CAL_START_H + 1 }, (_, i) => CAL_START_H + i);
 const HALF_HOURS = Array.from({ length: CAL_END_H - CAL_START_H }, (_, i) => i);
+
+// Tratamiento visual para horas fuera del turno laboral.
+// Patrón diagonal sutil — claramente deshabilitado, sin competir con citas ni bloqueos.
+const OFFHOURS_BG: CSSProperties = {
+  backgroundColor: 'rgba(18,30,108,0.025)',
+  backgroundImage:
+    'repeating-linear-gradient(45deg, rgba(18,30,108,0.06) 0px, rgba(18,30,108,0.06) 1px, transparent 1px, transparent 8px)',
+  pointerEvents: 'none' as const,
+};
 
 interface Props {
   date: string;
@@ -133,11 +142,11 @@ export function TeamDayView({
                         }} />
                       ))}
 
-                      {/* Non-working: doesn't work this day */}
+                      {/* Non-working: doesn't work this day — cubre toda la columna */}
                       {!avail.working && (
                         <div style={{
                           position: 'absolute', inset: 0, zIndex: 1,
-                          backgroundColor: 'rgba(18,30,108,0.04)', pointerEvents: 'none',
+                          ...OFFHOURS_BG,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
                           <span style={{ fontSize: 10, color: '#b0b5c8', fontWeight: 500, textAlign: 'center', padding: '0 8px' }}>
@@ -146,24 +155,24 @@ export function TeamDayView({
                         </div>
                       )}
 
-                      {/* Non-working: before schedule start */}
+                      {/* Non-working: antes del inicio del turno */}
                       {workStart !== null && workStart > gridStart && (
                         <div style={{
                           position: 'absolute', left: 0, right: 0, top: 0,
                           height: timeToPx(minToTime(workStart)),
-                          backgroundColor: 'rgba(18,30,108,0.04)',
-                          zIndex: 1, pointerEvents: 'none',
+                          zIndex: 1,
+                          ...OFFHOURS_BG,
                         }} />
                       )}
 
-                      {/* Non-working: after schedule end */}
+                      {/* Non-working: después del fin del turno */}
                       {workEnd !== null && workEnd < gridEnd && (
                         <div style={{
                           position: 'absolute', left: 0, right: 0,
                           top: timeToPx(minToTime(workEnd)),
                           height: CAL_H - timeToPx(minToTime(workEnd)),
-                          backgroundColor: 'rgba(18,30,108,0.04)',
-                          zIndex: 1, pointerEvents: 'none',
+                          zIndex: 1,
+                          ...OFFHOURS_BG,
                         }} />
                       )}
 

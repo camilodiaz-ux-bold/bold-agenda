@@ -1,4 +1,4 @@
-import { Check, AlertCircle, Calendar, BadgeCheck } from 'lucide-react';
+import { Check, AlertCircle, Calendar } from 'lucide-react';
 import type { Appointment, Service } from '../types';
 
 interface Props {
@@ -12,12 +12,13 @@ interface Props {
   onTap: () => void;
 }
 
-type Variant = 'finalizada' | 'no-asiste' | 'agendada' | 'pagada';
+// Variante determinada exclusivamente por el estado operativo de la cita.
+type Variant = 'finalizada' | 'no-asiste' | 'agendada' | 'reprogramada';
 
-function getVariant(status: string, paymentStatus: string): Variant {
+function getVariant(status: string): Variant {
   if (status === 'no-show') return 'no-asiste';
-  if (paymentStatus === 'pagado' || paymentStatus === 'pagado-anticipado') return 'pagada';
   if (status === 'completada') return 'finalizada';
+  if (status === 'reprogramada') return 'reprogramada';
   return 'agendada';
 }
 
@@ -26,11 +27,19 @@ type IconComp = React.ComponentType<{ size: number; color: string; strokeWidth: 
 const VARIANTS: Record<Variant, {
   bg: string; border: string; text: string; label: string; Icon: IconComp;
 }> = {
-  finalizada: { bg: '#F4FDF9', border: '#1B8959', text: '#1B8959', label: 'Finalizada', Icon: Check },
-  'no-asiste': { bg: '#FBF3F5', border: '#910022', text: '#910022', label: 'No asiste', Icon: AlertCircle },
-  agendada:    { bg: '#F1F9FF', border: '#0A53A5', text: '#0A53A5', label: 'Agendada',  Icon: Calendar },
-  pagada:      { bg: '#F7F8FB', border: '#3E4983', text: '#3E4983', label: 'Pagada',     Icon: BadgeCheck },
+  finalizada:   { bg: '#F4FDF9', border: '#1B8959', text: '#1B8959', label: 'Finalizada',   Icon: Check },
+  'no-asiste':  { bg: '#FBF3F5', border: '#910022', text: '#910022', label: 'No asiste',    Icon: AlertCircle },
+  agendada:     { bg: '#F1F9FF', border: '#0A53A5', text: '#0A53A5', label: 'Agendada',     Icon: Calendar },
+  reprogramada: { bg: '#F1F9FF', border: '#0A53A5', text: '#0A53A5', label: 'Reprogramada', Icon: Calendar },
 };
+
+// Badge secundario de pago — metadata, no determina el background de la card.
+function getPaymentBadge(paymentStatus: string): { label: string; color: string } | null {
+  if (paymentStatus === 'pagado')           return { label: 'Pagada',      color: '#1B8959' };
+  if (paymentStatus === 'pagado-anticipado') return { label: 'Prepagada',   color: '#0A53A5' };
+  if (paymentStatus === 'reembolsado')       return { label: 'Reembolsada', color: '#910022' };
+  return null; // pendiente → sin badge
+}
 
 function addMin(time: string, minutes: number): string {
   const [h, m] = time.split(':').map(Number);
@@ -43,18 +52,17 @@ export function AppointmentBlock({
   column = 0, totalColumns = 1, row3Label, onTap,
 }: Props) {
   const endTime = addMin(appointment.startTime, service.duration);
-  const v = VARIANTS[getVariant(appointment.status, appointment.paymentStatus)];
+  const v = VARIANTS[getVariant(appointment.status)];
+  const paymentBadge = getPaymentBadge(appointment.paymentStatus);
 
-  // Cards < 90px (30-60 min): 2 filas con padding reducido.
+  // Cards < 90px (30–60 min): 2 filas con padding reducido.
   // Cards ≥ 90px (≥ 60 min): 3 filas con padding completo.
   const isCompact = heightPx < 90;
-  // Para cards muy cortas (< 60px, ej. 30 min = 51px) reducir padding vertical más.
+  // Cards muy cortas (< 60px, ej. 30 min = 51px): padding vertical mínimo.
   const isTiny = heightPx < 60;
 
   const colPct = 100 / totalColumns;
   const leftPct = column * colPct;
-
-  // Separación de 2px entre columnas solapadas (se descuenta del ancho, no del fondo)
   const rightGap = totalColumns > 1 && column < totalColumns - 1 ? 2 : 0;
 
   return (
@@ -82,7 +90,7 @@ export function AppointmentBlock({
         {!isTiny && (
           <div
             className="shrink-0 inline-flex items-center justify-center rounded-[100px]"
-            style={{ height: '24px', backgroundColor: '#fff', padding: '0 8px', flexShrink: 0 }}
+            style={{ height: '24px', backgroundColor: '#fff', padding: '0 8px' }}
           >
             <span
               className="text-[10px] font-medium leading-none"
@@ -102,7 +110,7 @@ export function AppointmentBlock({
         {appointment.startTime} – {endTime}
       </span>
 
-      {/* Row 3: label izquierda + tag estado — solo cards completas (≥ 90px) */}
+      {/* Row 3: label + badge de pago (secundario) + badge de estado — solo cards completas (≥ 90px) */}
       {!isCompact && (
         <div className="flex items-center justify-between gap-[6px] mt-auto">
           {row3Label ? (
@@ -115,19 +123,32 @@ export function AppointmentBlock({
           ) : (
             <span />
           )}
-          <div
-            className="shrink-0 inline-flex items-center gap-[4px] rounded-[100px]"
-            style={{
-              height: '22px',
-              padding: '0 8px',
-              border: `1px solid ${v.border}`,
-              backgroundColor: v.bg,
-            }}
-          >
-            <v.Icon size={11} color={v.text} strokeWidth={2} />
-            <span className="text-[10px] font-medium leading-none" style={{ color: v.text }}>
-              {v.label}
-            </span>
+
+          <div className="flex items-center gap-[6px] shrink-0">
+            {/* Badge de pago — texto plano, sin borde, metadata secundaria */}
+            {paymentBadge && (
+              <span
+                className="text-[10px] font-semibold leading-none"
+                style={{ color: paymentBadge.color }}
+              >
+                {paymentBadge.label}
+              </span>
+            )}
+            {/* Badge de estado operativo — siempre visible en cards completas */}
+            <div
+              className="shrink-0 inline-flex items-center gap-[4px] rounded-[100px]"
+              style={{
+                height: '22px',
+                padding: '0 8px',
+                border: `1px solid ${v.border}`,
+                backgroundColor: v.bg,
+              }}
+            >
+              <v.Icon size={11} color={v.text} strokeWidth={2} />
+              <span className="text-[10px] font-medium leading-none" style={{ color: v.text }}>
+                {v.label}
+              </span>
+            </div>
           </div>
         </div>
       )}
