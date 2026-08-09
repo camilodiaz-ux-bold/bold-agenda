@@ -349,7 +349,7 @@ export function AgendaPage({
       </div>
 
       {/* ── Card contextual — single row (Figma: h-[62px]) ───────────────── */}
-      <div className="flex flex-col gap-[12px] px-4 pt-2 pb-0 shrink-0">
+      <div className="flex flex-col gap-[12px] px-4 pt-2 pb-4 shrink-0">
         <div
           className="bg-white rounded-[16px] px-[12px]"
           style={{ height: '62px', display: 'flex', alignItems: 'center', gap: '12px' }}

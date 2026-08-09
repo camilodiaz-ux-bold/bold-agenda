@@ -33,13 +33,6 @@ const VARIANTS: Record<Variant, {
   reprogramada: { bg: '#F1F9FF', border: '#0A53A5', text: '#0A53A5', label: 'Reprogramada', Icon: Calendar },
 };
 
-// Badge secundario de pago — metadata, no determina el background de la card.
-function getPaymentBadge(paymentStatus: string): { label: string; color: string } | null {
-  if (paymentStatus === 'pagado')           return { label: 'Pagada',      color: '#1B8959' };
-  if (paymentStatus === 'pagado-anticipado') return { label: 'Prepagada',   color: '#0A53A5' };
-  if (paymentStatus === 'reembolsado')       return { label: 'Reembolsada', color: '#910022' };
-  return null; // pendiente → sin badge
-}
 
 function addMin(time: string, minutes: number): string {
   const [h, m] = time.split(':').map(Number);
@@ -53,7 +46,6 @@ export function AppointmentBlock({
 }: Props) {
   const endTime = addMin(appointment.startTime, service.duration);
   const v = VARIANTS[getVariant(appointment.status)];
-  const paymentBadge = getPaymentBadge(appointment.paymentStatus);
 
   // Cards < 90px (30–60 min): 2 filas con padding reducido.
   // Cards ≥ 90px (≥ 60 min): 3 filas con padding completo.
@@ -125,17 +117,7 @@ export function AppointmentBlock({
           )}
 
           <div className="flex items-center gap-[6px] shrink-0">
-            {/* Badge de pago — ícono + texto discreto, sin pill ni borde */}
-            {paymentBadge && (
-              <span
-                className="flex items-center gap-[2px] text-[10px] font-medium leading-none"
-                style={{ color: paymentBadge.color, opacity: 0.75 }}
-              >
-                <Check size={9} strokeWidth={2.5} color={paymentBadge.color} />
-                {paymentBadge.label}
-              </span>
-            )}
-            {/* Badge de estado operativo — siempre visible en cards completas */}
+            {/* Badge de estado operativo — único indicador visible en las cards */}
             <div
               className="shrink-0 inline-flex items-center gap-[4px] rounded-[100px]"
               style={{
