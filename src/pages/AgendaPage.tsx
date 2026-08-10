@@ -239,7 +239,7 @@ export function AgendaPage({
         total: (apt.originalPrice ?? svc.price) + result.tip,
         paymentMethod: result.paymentMethod ?? 'anticipado',
         paymentStatus: result.paymentMethod ? 'pagado' : 'pagado-anticipado',
-        commission: Math.round((apt.originalPrice ?? svc.price) * prof.commissionRate),
+        commission: Math.round((apt.originalPrice ?? svc.price) * (svc.commissionPercent / 100)),
         completedAt: new Date().toISOString(),
       });
     }

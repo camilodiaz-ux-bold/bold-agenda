@@ -145,7 +145,7 @@ export function BookingSite() {
   // First service for downstream booking slot calc (prototype simplification)
   const firstItem = Object.values(selectedItems)[0];
   const selectedServiceForFlow: Service | null = firstItem
-    ? { id: firstItem.service.id, name: firstItem.service.name, duration: firstItem.service.duration, price: firstItem.service.price, requiresDeposit: firstItem.service.requiresDeposit }
+    ? { id: firstItem.service.id, name: firstItem.service.name, duration: firstItem.service.duration, price: firstItem.service.price, requiresDeposit: firstItem.service.requiresDeposit, commissionPercent: 0 }
     : null;
 
   const branchCategories = selectedBranch

@@ -187,10 +187,10 @@ export function AppointmentDetailDrawer({
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[#606060]">
                     {appointment.status === 'completada' ? 'Tu comisión' : 'Comisión estimada'}
-                    <span className="ml-1 text-[#b0b5c8]">({Math.round(professional.commissionRate * 100)}%)</span>
+                    <span className="ml-1 text-[#b0b5c8]">({service.commissionPercent}%)</span>
                   </span>
                   <span className="text-sm font-bold tabular-nums" style={{ color: '#FF2947' }}>
-                    {formatCOP(Math.round(service.price * professional.commissionRate))}
+                    {formatCOP(Math.round(service.price * (service.commissionPercent / 100)))}
                   </span>
                 </div>
                 {appointment.tip != null && appointment.tip > 0 && (

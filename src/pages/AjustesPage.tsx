@@ -5,7 +5,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { formatCOP, formatDuration } from '../data/appointments';
-import type { Role, Professional, Service, BusinessProfile, BookingPolicy, Appointment, WeeklySchedule, Weekday } from '../types';
+import type { Role, Professional, Service, BusinessProfile, BookingPolicy, Appointment, WeeklySchedule, Weekday, WorkingDay } from '../types';
 import { getWeekday, DEFAULT_WEEKLY_SCHEDULE } from '../lib/availability';
 import { store, PROTOTYPE_TODAY } from '../store/prototypeStore';
 import { timeToMin, minToTime } from '../lib/calendarMath';
@@ -68,6 +68,7 @@ export function AjustesPage({
     return (
       <ProfDetail
         prof={prof}
+        services={services}
         appointments={appointments}
         isAdmin={isAdmin}
         onSave={(updated) => {
@@ -104,9 +105,7 @@ export function AjustesPage({
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <p className="text-sm font-semibold text-[#1e1e1e]">{prof.name}</p>
-                    <p className="text-xs text-[#969696] mt-0.5">
-                      {prof.role} · {Math.round(prof.commissionRate * 100)}% comisión
-                    </p>
+                    <p className="text-xs text-[#969696] mt-0.5">{prof.role}</p>
                     {!active && <p className="text-[10px] text-[#969696] mt-0.5">Inactiva</p>}
                     {active && count > 0 && <p className="text-[10px] text-[#b0b5c8] mt-0.5">{count} cita{count > 1 ? 's' : ''} pendiente{count > 1 ? 's' : ''}</p>}
                   </div>
@@ -454,30 +453,26 @@ const TIME_OPTIONS: string[] = (() => {
   return opts;
 })();
 
-function groupScheduleDays(schedule: WeeklySchedule): Array<{ label: string; time: string }> {
-  const rows: Array<{ label: string; time: string }> = [];
-  let i = 0;
-  while (i < DAYS_ES.length) {
-    const day = DAYS_ES[i];
-    const wd = schedule[day.key];
-    let j = i + 1;
-    if (wd.enabled && wd.startTime && wd.endTime) {
-      const sig = `${wd.startTime}-${wd.endTime}`;
-      while (j < DAYS_ES.length) {
-        const nwd = schedule[DAYS_ES[j].key];
-        if (!nwd.enabled || `${nwd.startTime}-${nwd.endTime}` !== sig) break;
-        j++;
-      }
-      const label = j === i + 1 ? day.name : `${day.name} a ${DAYS_ES[j - 1].name}`;
-      rows.push({ label, time: `${wd.startTime} – ${wd.endTime}` });
-    } else {
-      while (j < DAYS_ES.length && !schedule[DAYS_ES[j].key].enabled) j++;
-      const label = j === i + 1 ? day.name : `${day.name} a ${DAYS_ES[j - 1].name}`;
-      rows.push({ label, time: 'No trabaja' });
+const MAX_INTERVALS_PER_DAY = 3;
+
+function formatDaySchedule(day: WorkingDay): string {
+  if (!day.enabled || day.intervals.length === 0) return 'No trabaja';
+  return day.intervals.map(iv => `${iv.startTime}–${iv.endTime}`).join(' · ');
+}
+
+function validateDayIntervals(day: WorkingDay): string | null {
+  if (!day.enabled) return null;
+  if (day.intervals.length === 0) return 'Agrega al menos un bloque horario.';
+  const sorted = [...day.intervals].sort((a, b) => timeToMin(a.startTime) - timeToMin(b.startTime));
+  for (let i = 0; i < sorted.length; i++) {
+    if (timeToMin(sorted[i].endTime) <= timeToMin(sorted[i].startTime)) {
+      return 'La hora de cierre debe ser posterior a la de apertura.';
     }
-    i = j;
+    if (i > 0 && timeToMin(sorted[i].startTime) < timeToMin(sorted[i - 1].endTime)) {
+      return 'Los bloques no pueden solaparse.';
+    }
   }
-  return rows;
+  return null;
 }
 
 function countScheduleConflicts(
@@ -489,22 +484,28 @@ function countScheduleConflicts(
     if (a.date < PROTOTYPE_TODAY) return false;
     if (['cancelada', 'cancelada-tarde', 'completada', 'no-show'].includes(a.status)) return false;
     const wd = newSchedule[getWeekday(a.date)];
-    if (!wd.enabled) return true;
-    if (!wd.startTime || !wd.endTime) return true;
     const svc = services.find(s => s.id === a.serviceId);
     const aptStart = timeToMin(a.startTime);
     const aptEnd = aptStart + (svc?.duration ?? 60);
-    return aptStart < timeToMin(wd.startTime) || aptEnd > timeToMin(wd.endTime);
+    if (!wd.enabled || wd.intervals.length === 0) return true;
+    const fitsSomeInterval = wd.intervals.some(
+      iv => aptStart >= timeToMin(iv.startTime) && aptEnd <= timeToMin(iv.endTime)
+    );
+    return !fitsSomeInterval;
   }).length;
 }
 
 // ── Prof detail screen ────────────────────────────────────────────────────────
 
-function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
-  prof: Professional; appointments: Appointment[]; isAdmin: boolean;
+function ProfDetail({ prof, services, appointments, isAdmin, onSave, onBack }: {
+  prof: Professional; services: Service[]; appointments: Appointment[]; isAdmin: boolean;
   onSave: (p: Professional) => void; onBack: () => void;
 }) {
   const [active, setActive] = useState((prof as any).active !== false);
+  const [serviceIds, setServiceIds] = useState<string[]>(prof.serviceIds ?? []);
+  const [showServicesEdit, setShowServicesEdit] = useState(false);
+  const [servicesDraft, setServicesDraft] = useState<string[]>(serviceIds);
+
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>(
     prof.weeklySchedule ?? DEFAULT_WEEKLY_SCHEDULE,
   );
@@ -513,6 +514,43 @@ function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
   const [scheduleConflicts, setScheduleConflicts] = useState(0);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const count = aptCount(appointments, a => a.professionalId === prof.id);
+
+  function toggleDay(key: Weekday) {
+    setDraft(d => {
+      const wd = d[key];
+      if (wd.enabled) return { ...d, [key]: { ...wd, enabled: false } };
+      return {
+        ...d,
+        [key]: {
+          ...wd,
+          enabled: true,
+          intervals: wd.intervals.length ? wd.intervals : [{ startTime: '08:00', endTime: '18:00' }],
+        },
+      };
+    });
+  }
+
+  function addInterval(key: Weekday) {
+    setDraft(d => {
+      const wd = d[key];
+      if (wd.intervals.length >= MAX_INTERVALS_PER_DAY) return d;
+      return { ...d, [key]: { ...wd, intervals: [...wd.intervals, { startTime: '08:00', endTime: '18:00' }] } };
+    });
+  }
+
+  function removeInterval(key: Weekday, idx: number) {
+    setDraft(d => ({ ...d, [key]: { ...d[key], intervals: d[key].intervals.filter((_, i) => i !== idx) } }));
+  }
+
+  function updateInterval(key: Weekday, idx: number, field: 'startTime' | 'endTime', value: string) {
+    setDraft(d => ({
+      ...d,
+      [key]: {
+        ...d[key],
+        intervals: d[key].intervals.map((iv, i) => i === idx ? { ...iv, [field]: value } : iv),
+      },
+    }));
+  }
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
@@ -529,18 +567,11 @@ function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
           <div>
             <p className="text-sm font-bold text-[#1e1e1e]">{prof.name}</p>
             <p className="text-xs text-[#969696] mt-0.5">{prof.role}</p>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="flex gap-2">
-          <div className="flex-1 bg-[#f7f8fb] rounded-xl px-3 py-3 text-center">
-            <p className="text-base font-bold text-[#121e6c]">{Math.round(prof.commissionRate * 100)}%</p>
-            <p className="text-[10px] text-[#969696] mt-0.5">Comisión</p>
-          </div>
-          <div className="flex-1 bg-[#f7f8fb] rounded-xl px-3 py-3 text-center">
-            <p className="text-base font-bold text-[#121e6c]">{count}</p>
-            <p className="text-[10px] text-[#969696] mt-0.5">Citas pendientes</p>
+            {count > 0 && (
+              <p className="text-[10px] text-[#b0b5c8] mt-1">
+                {count} cita{count > 1 ? 's' : ''} pendiente{count > 1 ? 's' : ''}
+              </p>
+            )}
           </div>
         </div>
 
@@ -561,145 +592,203 @@ function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
           </div>
         )}
 
+        {/* Servicios */}
+        <div className="flex flex-col gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-[#1e1e1e]">Servicios</p>
+              <p className="text-xs text-[#969696] mt-0.5">
+                {serviceIds.length} servicio{serviceIds.length !== 1 ? 's' : ''} asignado{serviceIds.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            {isAdmin && !showServicesEdit && (
+              <button
+                onClick={() => { setServicesDraft(serviceIds); setShowServicesEdit(true); }}
+                className="text-[12px] font-semibold text-[#121e6c] active:opacity-60 transition-opacity"
+              >
+                Gestionar
+              </button>
+            )}
+          </div>
+
+          {showServicesEdit && (
+            <div className="flex flex-col gap-2">
+              {services.map(svc => {
+                const checked = servicesDraft.includes(svc.id);
+                return (
+                  <button
+                    key={svc.id}
+                    onClick={() => setServicesDraft(d => checked ? d.filter(id => id !== svc.id) : [...d, svc.id])}
+                    className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 bg-[#f7f8fb] transition-opacity active:opacity-70"
+                  >
+                    <span className="text-xs font-medium text-[#1e1e1e]">{svc.name}</span>
+                    {checked
+                      ? <Check size={16} color="#121e6c" strokeWidth={2.5} />
+                      : <div className="w-4 h-4 rounded border" style={{ borderColor: '#d2d4e1' }} />}
+                  </button>
+                );
+              })}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setShowServicesEdit(false)}
+                  className="flex-1 h-9 rounded-full border text-xs font-semibold text-[#606060] active:opacity-70 transition-opacity"
+                  style={{ borderColor: '#d2d4e1' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => { setServiceIds(servicesDraft); setShowServicesEdit(false); }}
+                  className="flex-1 h-9 rounded-full text-xs font-semibold text-white active:opacity-80 transition-opacity"
+                  style={{ backgroundColor: '#121e6c' }}
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Horario laboral */}
-        {isAdmin && (
-          <div className="flex flex-col gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-[#1e1e1e]">Horario laboral</p>
-              {!showScheduleEdit && (
+        <div className="flex flex-col gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-[#1e1e1e]">Horario laboral</p>
+            {isAdmin && !showScheduleEdit && (
+              <button
+                onClick={() => {
+                  setDraft(weeklySchedule);
+                  setScheduleConflicts(0);
+                  setScheduleError(null);
+                  setShowScheduleEdit(true);
+                }}
+                className="text-[12px] font-semibold text-[#121e6c] active:opacity-60 transition-opacity"
+              >
+                Editar
+              </button>
+            )}
+          </div>
+
+          {/* Vista lectura */}
+          {!showScheduleEdit && (
+            <div className="flex flex-col gap-2">
+              {DAYS_ES.map(({ key, name }) => (
+                <div key={key} className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium text-[#1e1e1e] shrink-0">{name}</span>
+                  <span className="text-xs text-[#969696] text-right">{formatDaySchedule(weeklySchedule[key])}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Editor de bloques por día */}
+          {showScheduleEdit && (
+            <div className="flex flex-col gap-4">
+              {DAYS_ES.map(({ key, name }) => {
+                const wd = draft[key];
+                return (
+                  <div key={key} className="flex flex-col gap-2 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-[#1e1e1e]">{name}</span>
+                      <button onClick={() => toggleDay(key)} className="transition-all active:opacity-70">
+                        {wd.enabled
+                          ? <ToggleRight size={24} color="#121e6c" strokeWidth={1.8} />
+                          : <ToggleLeft size={24} color="#969696" strokeWidth={1.8} />
+                        }
+                      </button>
+                    </div>
+
+                    {wd.enabled ? (
+                      <div className="flex flex-col gap-2">
+                        {wd.intervals.map((iv, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <select
+                              value={iv.startTime}
+                              onChange={e => updateInterval(key, idx, 'startTime', e.target.value)}
+                              className={INPUT_CLZ}
+                              style={{ ...INPUT_STYLE, height: 36, flex: 1 }}
+                            >
+                              {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <span className="text-xs text-[#969696] shrink-0">a</span>
+                            <select
+                              value={iv.endTime}
+                              onChange={e => updateInterval(key, idx, 'endTime', e.target.value)}
+                              className={INPUT_CLZ}
+                              style={{ ...INPUT_STYLE, height: 36, flex: 1 }}
+                            >
+                              {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            {wd.intervals.length > 1 && (
+                              <button
+                                onClick={() => removeInterval(key, idx)}
+                                className="text-[11px] font-semibold text-[#BE123C] shrink-0 active:opacity-70 transition-opacity"
+                              >
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {wd.intervals.length < MAX_INTERVALS_PER_DAY && (
+                          <button
+                            onClick={() => addInterval(key)}
+                            className="text-[12px] font-semibold text-[#121e6c] text-left active:opacity-60 transition-opacity"
+                          >
+                            + Agregar horario
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#b0b5c8]">No trabaja</p>
+                    )}
+                  </div>
+                );
+              })}
+
+              {scheduleError && (
+                <p className="text-xs text-red-500">{scheduleError}</p>
+              )}
+
+              <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => {
-                    setDraft({ ...weeklySchedule });
+                    setShowScheduleEdit(false);
                     setScheduleConflicts(0);
                     setScheduleError(null);
-                    setShowScheduleEdit(true);
                   }}
-                  className="text-[12px] font-semibold text-[#121e6c] active:opacity-60 transition-opacity"
+                  className="flex-1 h-9 rounded-full border text-xs font-semibold text-[#606060] active:opacity-70 transition-opacity"
+                  style={{ borderColor: '#d2d4e1' }}
                 >
-                  Editar
+                  Cancelar
                 </button>
-              )}
+                <button
+                  onClick={() => {
+                    let err: string | null = null;
+                    for (const { key, name } of DAYS_ES) {
+                      const dayErr = validateDayIntervals(draft[key]);
+                      if (dayErr) { err = `${name}: ${dayErr}`; break; }
+                    }
+                    if (err) { setScheduleError(err); return; }
+                    setScheduleError(null);
+                    const conflicts = countScheduleConflicts(prof.id, draft, appointments);
+                    setScheduleConflicts(conflicts);
+                    setWeeklySchedule(draft);
+                    setShowScheduleEdit(false);
+                  }}
+                  className="flex-1 h-9 rounded-full text-xs font-semibold text-white active:opacity-80 transition-opacity"
+                  style={{ backgroundColor: '#121e6c' }}
+                >
+                  Guardar cambios
+                </button>
+              </div>
             </div>
+          )}
+        </div>
 
-            {/* Vista lectura */}
-            {!showScheduleEdit && (
-              <div className="flex flex-col gap-2">
-                {groupScheduleDays(weeklySchedule).map((row, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-[#1e1e1e]">{row.label}</span>
-                    <span className="text-xs text-[#969696]">{row.time}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Editor inline */}
-            {showScheduleEdit && (
-              <div className="flex flex-col gap-3">
-                {DAYS_ES.map(({ key, name }) => {
-                  const wd = draft[key];
-                  return (
-                    <div key={key} className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[#1e1e1e]">{name}</span>
-                        <button
-                          onClick={() => setDraft(d => ({
-                            ...d,
-                            [key]: {
-                              ...d[key],
-                              enabled: !d[key].enabled,
-                              startTime: d[key].startTime ?? '08:00',
-                              endTime: d[key].endTime ?? '18:00',
-                            },
-                          }))}
-                          className="transition-all active:opacity-70"
-                        >
-                          {wd.enabled
-                            ? <ToggleRight size={24} color="#121e6c" strokeWidth={1.8} />
-                            : <ToggleLeft size={24} color="#969696" strokeWidth={1.8} />
-                          }
-                        </button>
-                      </div>
-                      {wd.enabled && (
-                        <div className="flex items-center gap-2">
-                          <select
-                            value={wd.startTime ?? '08:00'}
-                            onChange={e => setDraft(d => ({ ...d, [key]: { ...d[key], startTime: e.target.value } }))}
-                            className={INPUT_CLZ}
-                            style={{ ...INPUT_STYLE, height: 36, flex: 1 }}
-                          >
-                            {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                          <span className="text-xs text-[#969696] shrink-0">a</span>
-                          <select
-                            value={wd.endTime ?? '18:00'}
-                            onChange={e => setDraft(d => ({ ...d, [key]: { ...d[key], endTime: e.target.value } }))}
-                            className={INPUT_CLZ}
-                            style={{ ...INPUT_STYLE, height: 36, flex: 1 }}
-                          >
-                            {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                        </div>
-                      )}
-                      {!wd.enabled && (
-                        <p className="text-xs text-[#b0b5c8]">No trabaja</p>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {scheduleError && (
-                  <p className="text-xs text-red-500">{scheduleError}</p>
-                )}
-
-                {scheduleConflicts > 0 && (
-                  <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 flex items-start gap-2">
-                    <AlertTriangle size={14} color="#b45309" strokeWidth={2} className="mt-0.5 shrink-0" />
-                    <p className="text-xs text-amber-700">
-                      {scheduleConflicts} cita{scheduleConflicts !== 1 ? 's' : ''} quedará{scheduleConflicts !== 1 ? 'n' : ''} fuera del nuevo horario de {prof.name.split(' ')[0]}. Puedes revisarlas desde la agenda.
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => {
-                      setShowScheduleEdit(false);
-                      setScheduleConflicts(0);
-                      setScheduleError(null);
-                    }}
-                    className="flex-1 h-9 rounded-full border text-xs font-semibold text-[#606060] active:opacity-70 transition-opacity"
-                    style={{ borderColor: '#d2d4e1' }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={() => {
-                      let err: string | null = null;
-                      for (const { key } of DAYS_ES) {
-                        const wd = draft[key];
-                        if (wd.enabled && wd.startTime && wd.endTime) {
-                          if (timeToMin(wd.endTime) <= timeToMin(wd.startTime)) {
-                            err = 'La hora de cierre debe ser posterior a la de apertura.';
-                            break;
-                          }
-                        }
-                      }
-                      if (err) { setScheduleError(err); return; }
-                      setScheduleError(null);
-                      const conflicts = countScheduleConflicts(prof.id, draft, appointments);
-                      setScheduleConflicts(conflicts);
-                      setWeeklySchedule({ ...draft });
-                      setShowScheduleEdit(false);
-                    }}
-                    className="flex-1 h-9 rounded-full text-xs font-semibold text-white active:opacity-80 transition-opacity"
-                    style={{ backgroundColor: '#121e6c' }}
-                  >
-                    Guardar cambios
-                  </button>
-                </div>
-              </div>
-            )}
+        {scheduleConflicts > 0 && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 flex items-start gap-2">
+            <AlertTriangle size={14} color="#b45309" strokeWidth={2} className="mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-700">
+              Este cambio deja {scheduleConflicts} cita{scheduleConflicts !== 1 ? 's' : ''} fuera del horario de {prof.name.split(' ')[0]}. Las citas no se modificarán y podrás revisarlas desde la agenda.
+            </p>
           </div>
         )}
       </div>
@@ -707,7 +796,7 @@ function ProfDetail({ prof, appointments, isAdmin, onSave, onBack }: {
       {isAdmin && (
         <div className="shrink-0 px-4 pt-3 pb-6 border-t border-gray-100">
           <button
-            onClick={() => onSave({ ...prof, active, weeklySchedule } as Professional)}
+            onClick={() => onSave({ ...prof, active, weeklySchedule, serviceIds } as Professional)}
             className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
             style={{ backgroundColor: '#FF2947' }}
           >
@@ -726,13 +815,21 @@ function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
   onSave: (s: Service) => void; onBack: () => void;
 }) {
   const [price, setPrice] = useState(String(svc.price));
+  const [commissionPercent, setCommissionPercent] = useState(String(svc.commissionPercent));
   const [requiresDeposit, setRequiresDeposit] = useState(svc.requiresDeposit);
   const [active, setActive] = useState((svc as any).active !== false);
   const count = aptCount(appointments, a => a.serviceId === svc.id);
 
   function handleSave() {
     const parsedPrice = parseInt(price.replace(/\D/g, ''), 10);
-    onSave({ ...svc, price: isNaN(parsedPrice) ? svc.price : parsedPrice, requiresDeposit, active });
+    const parsedCommission = parseInt(commissionPercent.replace(/\D/g, ''), 10);
+    onSave({
+      ...svc,
+      price: isNaN(parsedPrice) ? svc.price : parsedPrice,
+      commissionPercent: isNaN(parsedCommission) ? svc.commissionPercent : Math.min(100, parsedCommission),
+      requiresDeposit,
+      active,
+    });
   }
 
   return (
@@ -761,6 +858,26 @@ function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
             </div>
           ) : (
             <p className="text-sm font-bold text-[#121e6c] bg-[#f7f8fb] rounded-xl px-3 py-2.5">{formatCOP(svc.price)}</p>
+          )}
+        </div>
+
+        {/* Commission */}
+        <div className="flex flex-col gap-1">
+          <label className={LABEL_CLZ}>Comisión %</label>
+          {isAdmin ? (
+            <div className="flex items-center gap-2 h-10 rounded-xl border px-3 bg-white" style={INPUT_STYLE}>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={commissionPercent}
+                onChange={e => setCommissionPercent(e.target.value)}
+                className="flex-1 bg-transparent text-sm font-bold text-[#121e6c] outline-none tabular-nums"
+              />
+              <span className="text-sm text-[#969696]">%</span>
+            </div>
+          ) : (
+            <p className="text-sm font-bold text-[#121e6c] bg-[#f7f8fb] rounded-xl px-3 py-2.5">{svc.commissionPercent}%</p>
           )}
         </div>
 

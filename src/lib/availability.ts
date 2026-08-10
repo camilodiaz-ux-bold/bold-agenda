@@ -10,23 +10,25 @@ export function getWeekday(dateStr: string): Weekday {
   return WEEKDAY_IDX[new Date(dateStr + 'T12:00:00').getDay()];
 }
 
-export function getWorkingInterval(
+export function getWorkingIntervals(
   schedule: WeeklySchedule,
   date: string,
-): { start: number; end: number } | null {
+): Array<{ start: number; end: number }> {
   const day = schedule[getWeekday(date)];
-  if (!day.enabled || !day.startTime || !day.endTime) return null;
-  return { start: timeToMin(day.startTime), end: timeToMin(day.endTime) };
+  if (!day.enabled || !day.intervals.length) return [];
+  return day.intervals
+    .map(iv => ({ start: timeToMin(iv.startTime), end: timeToMin(iv.endTime) }))
+    .sort((a, b) => a.start - b.start);
 }
 
 export const DEFAULT_WEEKLY_SCHEDULE: WeeklySchedule = {
-  mon: { enabled: true, startTime: '08:00', endTime: '18:00' },
-  tue: { enabled: true, startTime: '08:00', endTime: '18:00' },
-  wed: { enabled: true, startTime: '08:00', endTime: '18:00' },
-  thu: { enabled: true, startTime: '08:00', endTime: '18:00' },
-  fri: { enabled: true, startTime: '08:00', endTime: '18:00' },
-  sat: { enabled: false },
-  sun: { enabled: false },
+  mon: { enabled: true, intervals: [{ startTime: '08:00', endTime: '18:00' }] },
+  tue: { enabled: true, intervals: [{ startTime: '08:00', endTime: '18:00' }] },
+  wed: { enabled: true, intervals: [{ startTime: '08:00', endTime: '18:00' }] },
+  thu: { enabled: true, intervals: [{ startTime: '08:00', endTime: '18:00' }] },
+  fri: { enabled: true, intervals: [{ startTime: '08:00', endTime: '18:00' }] },
+  sat: { enabled: false, intervals: [] },
+  sun: { enabled: false, intervals: [] },
 };
 
 export interface BusyInterval {
@@ -45,7 +47,7 @@ export interface BlockInterval {
 }
 
 export interface DayAvailability {
-  working: { start: number; end: number } | null;
+  working: Array<{ start: number; end: number }>;
   busy: BusyInterval[];
   blocked: BlockInterval[];
   free: Array<{ start: number; end: number }>;
@@ -65,7 +67,7 @@ export function computeDayAvailability({
   blocks: AvailabilityBlock[];
   services: Service[];
 }): DayAvailability {
-  const working = getWorkingInterval(professional.weeklySchedule, date);
+  const working = getWorkingIntervals(professional.weeklySchedule, date);
 
   const profApts = appointments.filter(
     a => a.professionalId === professional.id && a.date === date
@@ -98,14 +100,13 @@ export function computeDayAvailability({
 
   const conflictAptIds: string[] = [];
   activeBusy.forEach(b => {
-    if (!working || b.start < working.start || b.end > working.end) {
+    const fitsSomeInterval = working.some(w => b.start >= w.start && b.end <= w.end);
+    if (!fitsSomeInterval) {
       conflictAptIds.push(b.aptId);
     }
   });
 
-  let free: Array<{ start: number; end: number }> = working
-    ? [{ start: working.start, end: working.end }]
-    : [];
+  let free: Array<{ start: number; end: number }> = working.map(w => ({ ...w }));
 
   for (const occ of [...activeBusy, ...blocked]) {
     free = free.flatMap(f => {
@@ -145,7 +146,7 @@ export function getSlotsFromSchedule({
     professional, date, appointments: filteredApts, blocks, services,
   });
 
-  if (!avail.working) return [];
+  if (!avail.working.length) return [];
 
   // Clamp to visible calendar bounds so off-grid hours don't surface as slots
   const gridStart = CAL_START_H * 60;

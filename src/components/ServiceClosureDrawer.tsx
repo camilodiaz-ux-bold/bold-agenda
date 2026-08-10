@@ -377,7 +377,7 @@ export function ServiceClosureDrawer({ appointment, professional, service, onClo
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={13} color="#15803D" strokeWidth={2.5} />
                 <span className="text-xs text-[#606060]">
-                  Comisión {Math.round(professional.commissionRate * 100)}%  →  {formatCOP(Math.round(service.price * professional.commissionRate))}
+                  Comisión {service.commissionPercent}%  →  {formatCOP(Math.round(service.price * (service.commissionPercent / 100)))}
                 </span>
               </div>
               {tipAmount > 0 && (

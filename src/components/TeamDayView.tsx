@@ -172,8 +172,21 @@ export function TeamDayView({
           {/* Columnas de profesionales — sin headers (están en el row sticky de arriba) */}
           <div style={{ display: 'flex', minWidth: totalColsW }}>
             {dayData.map(({ prof, avail, profApts, profBlocks }) => {
-              const workStart = avail.working?.start ?? null;
-              const workEnd = avail.working?.end ?? null;
+              const working = avail.working;
+              // Huecos fuera de horario: antes del primer bloque, entre bloques, y después del último.
+              const offHoursGaps: Array<{ start: number; end: number }> = [];
+              if (working.length > 0) {
+                if (working[0].start > gridStart) {
+                  offHoursGaps.push({ start: gridStart, end: working[0].start });
+                }
+                for (let i = 0; i < working.length - 1; i++) {
+                  offHoursGaps.push({ start: working[i].end, end: working[i + 1].start });
+                }
+                const last = working[working.length - 1];
+                if (last.end < gridEnd) {
+                  offHoursGaps.push({ start: last.end, end: gridEnd });
+                }
+              }
 
               return (
                 <div
@@ -202,7 +215,7 @@ export function TeamDayView({
                     ))}
 
                     {/* Fuera de horario: no trabaja este día */}
-                    {!avail.working && (
+                    {working.length === 0 && (
                       <div style={{
                         position: 'absolute', inset: 0, zIndex: 1,
                         ...OFFHOURS_BG,
@@ -214,26 +227,16 @@ export function TeamDayView({
                       </div>
                     )}
 
-                    {/* Fuera de horario: antes del inicio del turno */}
-                    {workStart !== null && workStart > gridStart && (
-                      <div style={{
-                        position: 'absolute', left: 0, right: 0, top: 0,
-                        height: timeToPx(minToTime(workStart)),
-                        zIndex: 1,
-                        ...OFFHOURS_BG,
-                      }} />
-                    )}
-
-                    {/* Fuera de horario: después del fin del turno */}
-                    {workEnd !== null && workEnd < gridEnd && (
-                      <div style={{
+                    {/* Fuera de horario: antes del primer bloque, entre bloques, después del último */}
+                    {offHoursGaps.map((gap, i) => (
+                      <div key={i} style={{
                         position: 'absolute', left: 0, right: 0,
-                        top: timeToPx(minToTime(workEnd)),
-                        height: CAL_H - timeToPx(minToTime(workEnd)),
+                        top: timeToPx(minToTime(gap.start)),
+                        height: timeToPx(minToTime(gap.end)) - timeToPx(minToTime(gap.start)),
                         zIndex: 1,
                         ...OFFHOURS_BG,
                       }} />
-                    )}
+                    ))}
 
                     {/* Botones de slot — solo intervalos libres */}
                     {onSlotTap && avail.free.map((interval) => {

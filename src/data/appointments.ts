@@ -15,34 +15,34 @@ export const BRANCHES: Branch[] = [
 // ── Weekly schedules ─────────────────────────────────────────────────────────
 
 const CAMILA_SCHEDULE: WeeklySchedule = {
-  mon: { enabled: true,  startTime: '08:00', endTime: '17:00' },
-  tue: { enabled: true,  startTime: '08:00', endTime: '17:00' },
-  wed: { enabled: true,  startTime: '08:00', endTime: '17:00' },
-  thu: { enabled: true,  startTime: '08:00', endTime: '17:00' },
-  fri: { enabled: true,  startTime: '08:00', endTime: '17:00' },
-  sat: { enabled: true,  startTime: '09:00', endTime: '14:00' },
-  sun: { enabled: false },
+  mon: { enabled: true,  intervals: [{ startTime: '08:00', endTime: '17:00' }] },
+  tue: { enabled: true,  intervals: [{ startTime: '08:00', endTime: '17:00' }] },
+  wed: { enabled: true,  intervals: [{ startTime: '08:00', endTime: '17:00' }] },
+  thu: { enabled: true,  intervals: [{ startTime: '08:00', endTime: '17:00' }] },
+  fri: { enabled: true,  intervals: [{ startTime: '08:00', endTime: '17:00' }] },
+  sat: { enabled: true,  intervals: [{ startTime: '09:00', endTime: '14:00' }] },
+  sun: { enabled: false, intervals: [] },
 };
 
 const VALENTINA_SCHEDULE: WeeklySchedule = {
-  mon: { enabled: false },
-  tue: { enabled: true,  startTime: '10:00', endTime: '19:00' },
-  wed: { enabled: true,  startTime: '10:00', endTime: '19:00' },
-  thu: { enabled: true,  startTime: '10:00', endTime: '19:00' },
-  fri: { enabled: true,  startTime: '10:00', endTime: '19:00' },
-  sat: { enabled: true,  startTime: '10:00', endTime: '19:00' },
-  sun: { enabled: false },
+  mon: { enabled: false, intervals: [] },
+  tue: { enabled: true,  intervals: [{ startTime: '10:00', endTime: '13:00' }, { startTime: '14:00', endTime: '19:00' }] },
+  wed: { enabled: true,  intervals: [{ startTime: '10:00', endTime: '13:00' }, { startTime: '14:00', endTime: '19:00' }] },
+  thu: { enabled: true,  intervals: [{ startTime: '10:00', endTime: '13:00' }, { startTime: '14:00', endTime: '19:00' }] },
+  fri: { enabled: true,  intervals: [{ startTime: '10:00', endTime: '13:00' }, { startTime: '14:00', endTime: '19:00' }] },
+  sat: { enabled: true,  intervals: [{ startTime: '10:00', endTime: '19:00' }] },
+  sun: { enabled: false, intervals: [] },
 };
 
 // Mon/Wed/Fri 07:00–15:00 (clamped to 08:00 by calendar grid), Tue/Thu 12:00–20:00
 const ANDRES_SCHEDULE: WeeklySchedule = {
-  mon: { enabled: true,  startTime: '07:00', endTime: '15:00' },
-  tue: { enabled: true,  startTime: '12:00', endTime: '20:00' },
-  wed: { enabled: true,  startTime: '07:00', endTime: '15:00' },
-  thu: { enabled: true,  startTime: '12:00', endTime: '20:00' },
-  fri: { enabled: true,  startTime: '07:00', endTime: '15:00' },
-  sat: { enabled: false },
-  sun: { enabled: false },
+  mon: { enabled: true,  intervals: [{ startTime: '07:00', endTime: '15:00' }] },
+  tue: { enabled: true,  intervals: [{ startTime: '12:00', endTime: '20:00' }] },
+  wed: { enabled: true,  intervals: [{ startTime: '07:00', endTime: '15:00' }] },
+  thu: { enabled: true,  intervals: [{ startTime: '12:00', endTime: '20:00' }] },
+  fri: { enabled: true,  intervals: [{ startTime: '07:00', endTime: '15:00' }] },
+  sat: { enabled: false, intervals: [] },
+  sun: { enabled: false, intervals: [] },
 };
 
 export const PROFESSIONALS: Professional[] = [
@@ -52,8 +52,8 @@ export const PROFESSIONALS: Professional[] = [
     role: 'Estilista · Dueña',
     color: '#FF2947',
     initials: 'CV',
-    commissionRate: 0.45,
     weeklySchedule: CAMILA_SCHEDULE,
+    serviceIds: ['s1', 's2', 's3', 's4'],
   },
   {
     id: 'p2',
@@ -61,8 +61,8 @@ export const PROFESSIONALS: Professional[] = [
     role: 'Colorista',
     color: '#7C3AED',
     initials: 'VR',
-    commissionRate: 0.40,
     weeklySchedule: VALENTINA_SCHEDULE,
+    serviceIds: ['s1', 's3', 's4'],
   },
   {
     id: 'p3',
@@ -70,17 +70,17 @@ export const PROFESSIONALS: Professional[] = [
     role: 'Manicura y Pedicura',
     color: '#2563EB',
     initials: 'AM',
-    commissionRate: 0.35,
     weeklySchedule: ANDRES_SCHEDULE,
+    serviceIds: ['s5'],
   },
 ];
 
 export const SERVICES: Service[] = [
-  { id: 's1', name: 'Corte de dama', duration: 60, price: 45000, requiresDeposit: false },
-  { id: 's2', name: 'Corte caballero', duration: 45, price: 30000, requiresDeposit: false },
-  { id: 's3', name: 'Balayage', duration: 180, price: 220000, requiresDeposit: true },
-  { id: 's4', name: 'Tinte raíz', duration: 90, price: 95000, requiresDeposit: false },
-  { id: 's5', name: 'Manicure', duration: 45, price: 38000, requiresDeposit: false },
+  { id: 's1', name: 'Corte de dama', duration: 60, price: 45000, requiresDeposit: false, commissionPercent: 40 },
+  { id: 's2', name: 'Corte caballero', duration: 45, price: 30000, requiresDeposit: false, commissionPercent: 40 },
+  { id: 's3', name: 'Balayage', duration: 180, price: 220000, requiresDeposit: true, commissionPercent: 35 },
+  { id: 's4', name: 'Tinte raíz', duration: 90, price: 95000, requiresDeposit: false, commissionPercent: 35 },
+  { id: 's5', name: 'Manicure', duration: 45, price: 38000, requiresDeposit: false, commissionPercent: 50 },
 ];
 
 // Today: 2026-07-16 (Thursday). Wed 15 and Fri 17 also have appointments for a live week strip.
@@ -765,7 +765,7 @@ export const SALES_HISTORY = [
   { id: 'v12', appointmentId: null, professionalId: 'p1', serviceId: 's2', date: '2026-07-10', amount: 30000, tip: 0, paymentMethod: 'datafono' as const },
 ];
 
-// Seed sale records. Commission = serviceValue × commissionRate (rounded). Tip excluded from commission.
+// Seed sale records. Commission = serviceValue × service.commissionPercent (rounded). Tip excluded from commission.
 // Covers today (7/16), yesterday (7/15), this week (7/14), and earlier in July for Mes view.
 export const INITIAL_SALE_RECORDS: SaleRecord[] = [
   // Today 2026-07-16

@@ -40,10 +40,14 @@ export type PaymentMethod = 'datafono' | 'qr' | 'link' | 'anticipado';
 
 export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
+export interface WorkingInterval {
+  startTime: string;
+  endTime: string;
+}
+
 export interface WorkingDay {
   enabled: boolean;
-  startTime?: string;
-  endTime?: string;
+  intervals: WorkingInterval[];
 }
 
 export type WeeklySchedule = Record<Weekday, WorkingDay>;
@@ -54,9 +58,9 @@ export interface Professional {
   role: string;
   color: string;
   initials: string;
-  commissionRate: number;
   active?: boolean;
   weeklySchedule: WeeklySchedule;
+  serviceIds: string[];
 }
 
 export interface Service {
@@ -66,6 +70,7 @@ export interface Service {
   price: number;
   requiresDeposit: boolean;
   active?: boolean;
+  commissionPercent: number;
 }
 
 export interface Branch {
