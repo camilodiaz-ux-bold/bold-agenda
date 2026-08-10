@@ -2,20 +2,21 @@ import { useState, useCallback } from 'react';
 import {
   ArrowLeft, CheckCircle2, MapPin, Clock, CreditCard, Link2,
   ChevronRight, Smartphone, CalendarOff, Star, Search, Plus,
-  Minus, X, Scissors, Sparkles, Leaf, Navigation, Copy, Phone,
+  Minus, X, Navigation, Copy, Phone,
   Users,
 } from 'lucide-react';
 import { formatCOP, formatDuration } from '../data/appointments';
-import { BOOKING_BRANCHES, type BookingBranch, type BookingService, type BookingProfessional } from '../data/bookingData';
+import { BOOKING_BRANCHES, type BookingBranch, type BookingProfessional } from '../data/bookingData';
 import {
   store, getAvailableSlots, resolveProf as resolveStoreProf,
   addMinutes, PROTOTYPE_TODAY,
 } from '../store/prototypeStore';
 import type { Service, Appointment, Client } from '../types';
+import { getServiceIcon, getServiceColor } from '../lib/serviceVisuals';
 
 type BookingStep = 'branch-select' | 'landing' | 'professional' | 'datetime' | 'clientinfo' | 'payment' | 'confirmed';
 
-type SelectedItems = Record<string, { service: BookingService; qty: number }>;
+type SelectedItems = Record<string, { service: Service; qty: number }>;
 
 const WEEKDAY_SHORT = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
@@ -65,17 +66,9 @@ function StarRow({ rating, size = 12 }: { rating: number; size?: number }) {
   );
 }
 
-const CATEGORY_META: Record<string, { bg: string; color: string; Icon: typeof Scissors }> = {
-  Corte: { bg: '#EEF0FB', color: '#121e6c', Icon: Scissors },
-  Color: { bg: '#F5F3FF', color: '#7C3AED', Icon: Sparkles },
-  Tratamientos: { bg: '#F0FDF4', color: '#15803D', Icon: Leaf },
-  Uñas: { bg: '#FFF0F3', color: '#FF2947', Icon: Star },
-  Barbería: { bg: '#FFFBEB', color: '#B45309', Icon: Scissors },
-};
-
-function ServiceCategoryIcon({ category, size = 20, boxSize = 48 }: { category: string; size?: number; boxSize?: number }) {
-  const meta = CATEGORY_META[category] ?? { bg: '#f7f8fb', color: '#606060', Icon: Star };
-  const { bg, color, Icon } = meta;
+function ServiceIconBadge({ service, size = 20, boxSize = 48 }: { service: Service; size?: number; boxSize?: number }) {
+  const Icon = getServiceIcon(service.icon);
+  const { color, bg } = getServiceColor(service.color);
   return (
     <div
       className="flex items-center justify-center rounded-2xl shrink-0"
@@ -118,7 +111,7 @@ export function BookingSite() {
   const [activeTab, setActiveTab] = useState<'servicios' | 'detalles' | 'resenas'>('servicios');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
-  const [serviceDetail, setServiceDetail] = useState<BookingService | null>(null);
+  const [serviceDetail, setServiceDetail] = useState<Service | null>(null);
   const [showNavSheet, setShowNavSheet] = useState(false);
   const [selectedItems, setSelectedItems] = useState<SelectedItems>({});
   const [copyMsg, setCopyMsg] = useState(false);
@@ -138,30 +131,30 @@ export function BookingSite() {
 
   const days = getNextDays(14);
 
+  // Services are a global catalog configured in Ajustes → Servicios — the same
+  // Service entity drives both the admin app and this public catalog.
+  const services = storeState.services.filter(s => s.active !== false);
+
   // Derived
   const totalItems = Object.values(selectedItems).reduce((s, { qty }) => s + qty, 0);
   const totalPrice = Object.values(selectedItems).reduce((s, { service, qty }) => s + service.price * qty, 0);
 
   // First service for downstream booking slot calc (prototype simplification)
   const firstItem = Object.values(selectedItems)[0];
-  const selectedServiceForFlow: Service | null = firstItem
-    ? { id: firstItem.service.id, name: firstItem.service.name, duration: firstItem.service.duration, price: firstItem.service.price, requiresDeposit: firstItem.service.requiresDeposit, commissionPercent: 0 }
-    : null;
+  const selectedServiceForFlow: Service | null = firstItem ? firstItem.service : null;
 
-  const branchCategories = selectedBranch
-    ? ['Todos', ...Array.from(new Set(selectedBranch.services.map(s => s.category)))]
-    : [];
+  const branchCategories = ['Todos', ...Array.from(new Set(services.map(s => s.category)))];
 
-  const filteredServices = selectedBranch?.services.filter(svc => {
+  const filteredServices = services.filter(svc => {
     const matchesSearch = !searchQuery || svc.name.toLowerCase().includes(searchQuery.toLowerCase()) || svc.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === 'Todos' || svc.category === activeCategory;
     return matchesSearch && matchesCategory;
-  }) ?? [];
+  });
 
   const resolvedProf = selectedBranch?.professionals.find(p => p.id === resolvedProfId)
     ?? storeState.professionals.find(p => p.id === resolvedProfId);
 
-  function addService(svc: BookingService) {
+  function addService(svc: Service) {
     setSelectedItems(prev => ({
       ...prev,
       [svc.id]: { service: svc, qty: (prev[svc.id]?.qty ?? 0) + 1 },
@@ -391,7 +384,7 @@ export function BookingSite() {
                       <p className="text-xs text-[#606060]">{branch.hours}</p>
                     </div>
                     <div className="flex items-center justify-between mt-3">
-                      <span className="text-xs text-[#969696]">{branch.services.length} servicios disponibles</span>
+                      <span className="text-xs text-[#969696]">{services.length} servicios disponibles</span>
                       <div className="flex items-center gap-1 text-[#FF2947] text-xs font-bold">
                         Ver servicios <ChevronRight size={14} color="#FF2947" strokeWidth={2.5} />
                       </div>
@@ -439,7 +432,7 @@ export function BookingSite() {
               <div className="flex gap-0 border border-gray-100 rounded-2xl overflow-hidden mb-4">
                 {[
                   { value: selectedBranch.rating.toFixed(1), label: 'Calificación' },
-                  { value: String(selectedBranch.services.length), label: 'Servicios' },
+                  { value: String(services.length), label: 'Servicios' },
                   { value: String(selectedBranch.reviewCount), label: 'Reseñas' },
                 ].map(({ value, label }, i, arr) => (
                   <div key={label} className="flex-1 flex flex-col items-center py-3"
@@ -540,7 +533,7 @@ export function BookingSite() {
                             }}
                           >
                             <div className="flex items-start gap-3 px-4 pt-4 pb-3">
-                              <ServiceCategoryIcon category={svc.category} size={22} boxSize={52} />
+                              <ServiceIconBadge service={svc} size={22} boxSize={52} />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-[#1e1e1e] leading-snug">{svc.name}</p>
                                 <p className="text-xs text-[#969696] mt-0.5 leading-snug line-clamp-2">{svc.description}</p>
@@ -747,7 +740,7 @@ export function BookingSite() {
                 <div key={service.id} className="flex items-center justify-between bg-white rounded-xl px-3 py-2.5"
                   style={{ border: '1.5px solid #f0f0f4' }}>
                   <div className="flex items-center gap-2 min-w-0">
-                    <ServiceCategoryIcon category={service.category} size={14} boxSize={28} />
+                    <ServiceIconBadge service={service} size={14} boxSize={28} />
                     <span className="text-sm font-semibold text-[#121e6c] truncate">{service.name}</span>
                     {qty > 1 && <span className="text-xs text-[#FF2947] font-bold shrink-0">×{qty}</span>}
                   </div>
@@ -1040,12 +1033,12 @@ export function BookingSite() {
 
             <div className="flex-1 overflow-y-auto px-5 pb-2 pt-3">
               {/* Icon */}
-              <ServiceCategoryIcon category={serviceDetail.category} size={28} boxSize={72} />
+              <ServiceIconBadge service={serviceDetail} size={28} boxSize={72} />
 
               {/* Name + category */}
               <h2 className="text-xl font-black text-[#121e6c] mt-4 mb-1 leading-tight">{serviceDetail.name}</h2>
               <span className="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full mb-4"
-                style={{ backgroundColor: CATEGORY_META[serviceDetail.category]?.bg ?? '#f7f8fb', color: CATEGORY_META[serviceDetail.category]?.color ?? '#606060' }}>
+                style={{ backgroundColor: getServiceColor(serviceDetail.color).bg, color: getServiceColor(serviceDetail.color).color }}>
                 {serviceDetail.category}
               </span>
 

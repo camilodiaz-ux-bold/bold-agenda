@@ -66,6 +66,10 @@ export interface Professional {
 export interface Service {
   id: string;
   name: string;
+  description: string;
+  category: string;
+  icon: string;
+  color: string;
   duration: number;
   price: number;
   requiresDeposit: boolean;

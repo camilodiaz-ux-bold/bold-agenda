@@ -1,13 +1,3 @@
-export interface BookingService {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  duration: number;
-  price: number;
-  requiresDeposit: boolean;
-}
-
 export interface BookingProfessional {
   id: string;
   name: string;
@@ -45,7 +35,6 @@ export interface BookingBranch {
   rating: number;
   reviewCount: number;
   description: string;
-  services: BookingService[];
   professionals: BookingProfessional[];
   reviews: BookingReview[];
 }
@@ -67,53 +56,6 @@ export const BOOKING_BRANCHES: BookingBranch[] = [
     reviewCount: 128,
     description:
       'Salón especializado en colorimetría, cortes personalizados y cuidado del cabello. Atención personalizada con productos L\'Oréal y Schwarzkopf. Equipo certificado y más de 7 años de experiencia.',
-    services: [
-      {
-        id: 'n-s1', name: 'Corte de dama', category: 'Corte',
-        description: 'Corte personalizado adaptado a tu estructura facial y tipo de cabello. Incluye lavado, corte y secado básico.',
-        duration: 60, price: 45000, requiresDeposit: false,
-      },
-      {
-        id: 'n-s2', name: 'Corte + flequillo', category: 'Corte',
-        description: 'Renovación completa con corte base y diseño de flequillo a tu medida. Consulta de forma facial incluida.',
-        duration: 75, price: 55000, requiresDeposit: false,
-      },
-      {
-        id: 'n-s3', name: 'Balayage', category: 'Color',
-        description: 'Técnica de iluminación manual que crea un degradado natural y luminoso. Resultado suave, de bajo mantenimiento y aspecto muy saludable.',
-        duration: 180, price: 220000, requiresDeposit: true,
-      },
-      {
-        id: 'n-s4', name: 'Tinte raíz completo', category: 'Color',
-        description: 'Coloración permanente con marcas profesionales L\'Oréal o Revlon. Cobertura total de canas y resultado uniforme duradero.',
-        duration: 90, price: 95000, requiresDeposit: false,
-      },
-      {
-        id: 'n-s5', name: 'Mechas californianas', category: 'Color',
-        description: 'Mechas integradas para un look natural y luminoso. Ideal para dar movimiento y dimensión. Duran hasta 4 meses.',
-        duration: 150, price: 180000, requiresDeposit: true,
-      },
-      {
-        id: 'n-s6', name: 'Alisado kerátina', category: 'Tratamientos',
-        description: 'Tratamiento de larga duración que elimina el frizz, sella la cutícula y deja el cabello liso por hasta 4 meses.',
-        duration: 180, price: 250000, requiresDeposit: true,
-      },
-      {
-        id: 'n-s7', name: 'Hidratación profunda', category: 'Tratamientos',
-        description: 'Máscara nutritiva con sellado de cutícula y brillo intenso. Restaura la suavidad y deja el cabello visiblemente más sano.',
-        duration: 60, price: 75000, requiresDeposit: false,
-      },
-      {
-        id: 'n-s8', name: 'Manicure clásico', category: 'Uñas',
-        description: 'Limpieza, forma y pintado de uñas naturales con esmalte de larga duración. Incluye exfoliación de manos.',
-        duration: 45, price: 38000, requiresDeposit: false,
-      },
-      {
-        id: 'n-s9', name: 'Manicure semipermanente', category: 'Uñas',
-        description: 'Aplicación de gel UV de alto brillo. Dura hasta 3 semanas sin astillarse ni perder el color. Amplia paleta de colores.',
-        duration: 60, price: 55000, requiresDeposit: false,
-      },
-    ],
     professionals: [
       {
         id: 'np1', name: 'Camila Vargas', role: 'Estilista · Dueña',
@@ -178,43 +120,6 @@ export const BOOKING_BRANCHES: BookingBranch[] = [
     reviewCount: 84,
     description:
       'Salón unisex en el corazón de Chapinero, especializado en cortes modernos y barbería de precisión. Ambiente urbano con técnica europea. Referente en la zona para cortes masculinos impecables.',
-    services: [
-      {
-        id: 'c-s1', name: 'Corte de dama', category: 'Corte',
-        description: 'Corte personalizado con técnicas modernas. Incluye lavado, corte y secado básico con productos de alta gama.',
-        duration: 60, price: 42000, requiresDeposit: false,
-      },
-      {
-        id: 'c-s2', name: 'Corte caballero premium', category: 'Corte',
-        description: 'Corte moderno con navajas y tijeras de precisión. Lavado, corte, producto de finalización y look impecable.',
-        duration: 45, price: 32000, requiresDeposit: false,
-      },
-      {
-        id: 'c-s3', name: 'Corte + barba', category: 'Barbería',
-        description: 'El combo completo: corte de cabello más arreglo de barba con navaja caliente y aceites premium de acabado.',
-        duration: 60, price: 48000, requiresDeposit: false,
-      },
-      {
-        id: 'c-s4', name: 'Arreglo de barba', category: 'Barbería',
-        description: 'Perfilado y arreglo de barba con navaja caliente. Incluye bálsamo hidratante, aceite de acabado y forma perfecta.',
-        duration: 30, price: 25000, requiresDeposit: false,
-      },
-      {
-        id: 'c-s5', name: 'Afeitado clásico navaja', category: 'Barbería',
-        description: 'Ritual de afeitado tradicional: toalla caliente, gel espumoso, navaja de filo y aftershave hidratante premium.',
-        duration: 45, price: 35000, requiresDeposit: false,
-      },
-      {
-        id: 'c-s6', name: 'Tinte raíz completo', category: 'Color',
-        description: 'Coloración permanente de raíz a raíz con productos profesionales. Cobertura total de canas y resultado uniforme.',
-        duration: 90, price: 90000, requiresDeposit: false,
-      },
-      {
-        id: 'c-s7', name: 'Manicure clásico', category: 'Uñas',
-        description: 'Limpieza, forma y pintado de uñas naturales. Incluye exfoliación de manos y aplicación de crema nutritiva.',
-        duration: 45, price: 35000, requiresDeposit: false,
-      },
-    ],
     professionals: [
       {
         id: 'cp1', name: 'Sebastián Torres', role: 'Barbero · Estilista',

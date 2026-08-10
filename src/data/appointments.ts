@@ -76,11 +76,31 @@ export const PROFESSIONALS: Professional[] = [
 ];
 
 export const SERVICES: Service[] = [
-  { id: 's1', name: 'Corte de dama', duration: 60, price: 45000, requiresDeposit: false, commissionPercent: 40 },
-  { id: 's2', name: 'Corte caballero', duration: 45, price: 30000, requiresDeposit: false, commissionPercent: 40 },
-  { id: 's3', name: 'Balayage', duration: 180, price: 220000, requiresDeposit: true, commissionPercent: 35 },
-  { id: 's4', name: 'Tinte raíz', duration: 90, price: 95000, requiresDeposit: false, commissionPercent: 35 },
-  { id: 's5', name: 'Manicure', duration: 45, price: 38000, requiresDeposit: false, commissionPercent: 50 },
+  {
+    id: 's1', name: 'Corte de dama', duration: 60, price: 45000, requiresDeposit: false, commissionPercent: 40,
+    description: 'Corte personalizado adaptado a tu estructura facial y tipo de cabello. Incluye lavado, corte y secado básico.',
+    category: 'Corte', icon: 'scissors', color: 'navy',
+  },
+  {
+    id: 's2', name: 'Corte caballero', duration: 45, price: 30000, requiresDeposit: false, commissionPercent: 40,
+    description: 'Corte personalizado adaptado a tu estructura facial y tipo de cabello.',
+    category: 'Corte', icon: 'scissors', color: 'navy',
+  },
+  {
+    id: 's3', name: 'Balayage', duration: 180, price: 220000, requiresDeposit: true, commissionPercent: 35,
+    description: 'Técnica de iluminación manual que crea un degradado natural y luminoso. Resultado suave y de bajo mantenimiento.',
+    category: 'Color', icon: 'sparkles', color: 'morado',
+  },
+  {
+    id: 's4', name: 'Tinte raíz', duration: 90, price: 95000, requiresDeposit: false, commissionPercent: 35,
+    description: 'Coloración permanente con cobertura total de canas y retoque de raíz. Resultado uniforme y duradero.',
+    category: 'Color', icon: 'palette', color: 'morado',
+  },
+  {
+    id: 's5', name: 'Manicure', duration: 45, price: 38000, requiresDeposit: false, commissionPercent: 50,
+    description: 'Manicure clásico con limpieza, forma y esmaltado de larga duración. Incluye exfoliación de manos.',
+    category: 'Uñas', icon: 'star', color: 'coral',
+  },
 ];
 
 // Today: 2026-07-16 (Thursday). Wed 15 and Fri 17 also have appointments for a live week strip.

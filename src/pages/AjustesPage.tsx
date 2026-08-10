@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import {
   Bell, ChevronDown, Briefcase, Users, ShoppingBag, Shield, ChevronRight,
   Check, AlertTriangle, RotateCcw, ToggleLeft, ToggleRight,
@@ -9,6 +9,10 @@ import type { Role, Professional, Service, BusinessProfile, BookingPolicy, Appoi
 import { getWeekday, DEFAULT_WEEKLY_SCHEDULE } from '../lib/availability';
 import { store, PROTOTYPE_TODAY } from '../store/prototypeStore';
 import { timeToMin, minToTime } from '../lib/calendarMath';
+import {
+  SERVICE_ICON_OPTIONS, SERVICE_COLORS, SERVICE_CATEGORIES,
+  getServiceIcon, getServiceColor,
+} from '../lib/serviceVisuals';
 
 interface Props {
   role: Role;
@@ -21,6 +25,7 @@ interface Props {
   onUpdateServices: (svcs: Service[]) => void;
   onUpdateBusinessProfile: (bp: BusinessProfile) => void;
   onUpdateBookingPolicy: (bp: BookingPolicy) => void;
+  onSecondLevelChange?: (active: boolean) => void;
   onReset: () => void;
 }
 
@@ -44,11 +49,17 @@ function aptCount(appointments: Appointment[], filter: (a: Appointment) => boole
 export function AjustesPage({
   role, professionals, services, businessProfile, bookingPolicy,
   appointments, onUpdateProfessionals, onUpdateServices,
-  onUpdateBusinessProfile, onUpdateBookingPolicy, onReset,
+  onUpdateBusinessProfile, onUpdateBookingPolicy, onSecondLevelChange, onReset,
 }: Props) {
   const [detail, setDetail] = useState<DetailView>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const isAdmin = role === 'admin';
+
+  useEffect(() => {
+    const isSecondLevel = detail?.screen === 'equipo-prof' || detail?.screen === 'servicios-svc';
+    onSecondLevelChange?.(isSecondLevel);
+    return () => onSecondLevelChange?.(false);
+  }, [detail?.screen, onSecondLevelChange]);
 
   // ── Perfil detail ──────────────────────────────────────────────────────
   if (detail?.screen === 'perfil') {
@@ -74,7 +85,6 @@ export function AjustesPage({
         onSave={(updated) => {
           const next = professionals.map(p => p.id === updated.id ? updated : p);
           onUpdateProfessionals(next);
-          setDetail({ screen: 'equipo' });
         }}
         onBack={() => setDetail({ screen: 'equipo' })}
       />
@@ -130,7 +140,6 @@ export function AjustesPage({
         onSave={(updated) => {
           const next = services.map(s => s.id === updated.id ? updated : s);
           onUpdateServices(next);
-          setDetail({ screen: 'servicios' });
         }}
         onBack={() => setDetail({ screen: 'servicios' })}
       />
@@ -495,6 +504,17 @@ function countScheduleConflicts(
   }).length;
 }
 
+function serviceIdsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sa = [...a].sort();
+  const sb = [...b].sort();
+  return sa.every((v, i) => v === sb[i]);
+}
+
+function scheduleEqual(a: WeeklySchedule, b: WeeklySchedule): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 // ── Prof detail screen ────────────────────────────────────────────────────────
 
 function ProfDetail({ prof, services, appointments, isAdmin, onSave, onBack }: {
@@ -514,6 +534,35 @@ function ProfDetail({ prof, services, appointments, isAdmin, onSave, onBack }: {
   const [scheduleConflicts, setScheduleConflicts] = useState(0);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const count = aptCount(appointments, a => a.professionalId === prof.id);
+  const servicesDirty = !serviceIdsEqual(servicesDraft, serviceIds);
+  const scheduleDirty = !scheduleEqual(draft, weeklySchedule);
+
+  function handleToggleActive() {
+    const next = !active;
+    setActive(next);
+    onSave({ ...prof, active: next, weeklySchedule, serviceIds });
+  }
+
+  function handleSaveServices() {
+    setServiceIds(servicesDraft);
+    onSave({ ...prof, active, weeklySchedule, serviceIds: servicesDraft });
+    setShowServicesEdit(false);
+  }
+
+  function handleSaveSchedule() {
+    let err: string | null = null;
+    for (const { key, name } of DAYS_ES) {
+      const dayErr = validateDayIntervals(draft[key]);
+      if (dayErr) { err = `${name}: ${dayErr}`; break; }
+    }
+    if (err) { setScheduleError(err); return; }
+    setScheduleError(null);
+    const conflicts = countScheduleConflicts(prof.id, draft, appointments);
+    setScheduleConflicts(conflicts);
+    setWeeklySchedule(draft);
+    onSave({ ...prof, active, weeklySchedule: draft, serviceIds });
+    setShowScheduleEdit(false);
+  }
 
   function toggleDay(key: Weekday) {
     setDraft(d => {
@@ -560,9 +609,9 @@ function ProfDetail({ prof, services, appointments, isAdmin, onSave, onBack }: {
         <div className="flex items-center gap-3 bg-[#f7f8fb] rounded-2xl px-4 py-3">
           <div
             className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
-            style={{ backgroundColor: '#F7F8FB', opacity: active ? 1 : 0.4 }}
+            style={{ backgroundColor: '#FFFFFF', opacity: active ? 1 : 0.4 }}
           >
-            <span className="text-[14px] font-normal leading-[20px]" style={{ color: '#3E4983' }}>{prof.initials}</span>
+            <span className="text-[14px] font-normal leading-[20px]" style={{ color: '#121e6c' }}>{prof.initials}</span>
           </div>
           <div>
             <p className="text-sm font-bold text-[#1e1e1e]">{prof.name}</p>
@@ -584,7 +633,7 @@ function ProfDetail({ prof, services, appointments, isAdmin, onSave, onBack }: {
                 {active ? 'Aparece en agenda y reservas' : 'Oculta en agenda y reservas'}
               </p>
             </div>
-            <button onClick={() => setActive(!active)} className="shrink-0 ml-3 transition-all active:opacity-70">
+            <button onClick={handleToggleActive} className="shrink-0 ml-3 transition-all active:opacity-70">
               {active
                 ? <ToggleRight size={28} color="#121e6c" strokeWidth={1.8} />
                 : <ToggleLeft size={28} color="#969696" strokeWidth={1.8} />}
@@ -637,8 +686,9 @@ function ProfDetail({ prof, services, appointments, isAdmin, onSave, onBack }: {
                   Cancelar
                 </button>
                 <button
-                  onClick={() => { setServiceIds(servicesDraft); setShowServicesEdit(false); }}
-                  className="flex-1 h-9 rounded-full text-xs font-semibold text-white active:opacity-80 transition-opacity"
+                  onClick={handleSaveServices}
+                  disabled={!servicesDirty}
+                  className="flex-1 h-9 rounded-full text-xs font-semibold text-white transition-opacity disabled:opacity-40 active:opacity-80"
                   style={{ backgroundColor: '#121e6c' }}
                 >
                   Guardar
@@ -760,20 +810,9 @@ function ProfDetail({ prof, services, appointments, isAdmin, onSave, onBack }: {
                   Cancelar
                 </button>
                 <button
-                  onClick={() => {
-                    let err: string | null = null;
-                    for (const { key, name } of DAYS_ES) {
-                      const dayErr = validateDayIntervals(draft[key]);
-                      if (dayErr) { err = `${name}: ${dayErr}`; break; }
-                    }
-                    if (err) { setScheduleError(err); return; }
-                    setScheduleError(null);
-                    const conflicts = countScheduleConflicts(prof.id, draft, appointments);
-                    setScheduleConflicts(conflicts);
-                    setWeeklySchedule(draft);
-                    setShowScheduleEdit(false);
-                  }}
-                  className="flex-1 h-9 rounded-full text-xs font-semibold text-white active:opacity-80 transition-opacity"
+                  onClick={handleSaveSchedule}
+                  disabled={!scheduleDirty}
+                  className="flex-1 h-9 rounded-full text-xs font-semibold text-white transition-opacity disabled:opacity-40 active:opacity-80"
                   style={{ backgroundColor: '#121e6c' }}
                 >
                   Guardar cambios
@@ -792,55 +831,119 @@ function ProfDetail({ prof, services, appointments, isAdmin, onSave, onBack }: {
           </div>
         )}
       </div>
-
-      {isAdmin && (
-        <div className="shrink-0 px-4 pt-3 pb-6 border-t border-gray-100">
-          <button
-            onClick={() => onSave({ ...prof, active, weeklySchedule, serviceIds } as Professional)}
-            className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
-            style={{ backgroundColor: '#FF2947' }}
-          >
-            Guardar
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
 // ── Service detail screen ─────────────────────────────────────────────────────
 
+const DURATION_OPTIONS: number[] = [15, 30, 45, 60, 75, 90, 105, 120, 150, 180, 210, 240, 300];
+
 function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
   svc: Service; appointments: Appointment[]; isAdmin: boolean;
   onSave: (s: Service) => void; onBack: () => void;
 }) {
+  const [name, setName] = useState(svc.name);
+  const [description, setDescription] = useState(svc.description ?? '');
+  const [duration, setDuration] = useState(svc.duration);
   const [price, setPrice] = useState(String(svc.price));
   const [commissionPercent, setCommissionPercent] = useState(String(svc.commissionPercent));
   const [requiresDeposit, setRequiresDeposit] = useState(svc.requiresDeposit);
   const [active, setActive] = useState((svc as any).active !== false);
+  const [category, setCategory] = useState(svc.category ?? SERVICE_CATEGORIES[0]);
+  const [icon, setIcon] = useState(svc.icon ?? SERVICE_ICON_OPTIONS[0].key);
+  const [color, setColor] = useState(svc.color ?? Object.keys(SERVICE_COLORS)[0]);
   const count = aptCount(appointments, a => a.serviceId === svc.id);
 
+  const parsedPrice = parseInt(price.replace(/\D/g, ''), 10);
+  const parsedCommission = parseInt(commissionPercent.replace(/\D/g, ''), 10);
+
+  const candidate: Service = {
+    ...svc,
+    name,
+    description,
+    duration,
+    price: isNaN(parsedPrice) ? svc.price : parsedPrice,
+    commissionPercent: isNaN(parsedCommission) ? svc.commissionPercent : Math.min(100, parsedCommission),
+    requiresDeposit,
+    active,
+    category,
+    icon,
+    color,
+  };
+  // Normalize the original the same way local state defaults optional fields,
+  // so an untouched form (e.g. active undefined → true) doesn't read as dirty.
+  const originalNormalized: Service = { ...svc, active: (svc as any).active !== false };
+  const dirty = JSON.stringify(candidate) !== JSON.stringify(originalNormalized);
+
   function handleSave() {
-    const parsedPrice = parseInt(price.replace(/\D/g, ''), 10);
-    const parsedCommission = parseInt(commissionPercent.replace(/\D/g, ''), 10);
-    onSave({
-      ...svc,
-      price: isNaN(parsedPrice) ? svc.price : parsedPrice,
-      commissionPercent: isNaN(parsedCommission) ? svc.commissionPercent : Math.min(100, parsedCommission),
-      requiresDeposit,
-      active,
-    });
+    onSave(candidate);
   }
+
+  function handleBack() {
+    if (dirty && !window.confirm('Tienes cambios sin guardar. ¿Quieres salir sin guardarlos?')) return;
+    onBack();
+  }
+
+  const PreviewIcon = getServiceIcon(icon);
+  const previewColor = getServiceColor(color);
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
-      <DetailHeader title={svc.name} onBack={onBack} />
+      <DetailHeader title={svc.name} onBack={handleBack} />
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
-        {/* Info card */}
-        <div className="bg-[#f7f8fb] rounded-2xl px-4 py-3 flex flex-col gap-1">
-          <p className="text-sm font-semibold text-[#1e1e1e]">{svc.name}</p>
-          <p className="text-xs text-[#969696]">{formatDuration(svc.duration)}</p>
-          {count > 0 && <p className="text-[10px] text-[#b0b5c8]">{count} cita{count > 1 ? 's' : ''} activa{count > 1 ? 's' : ''}</p>}
+        {count > 0 && (
+          <p className="text-[10px] text-[#b0b5c8]">{count} cita{count > 1 ? 's' : ''} activa{count > 1 ? 's' : ''}</p>
+        )}
+
+        {/* Name */}
+        <div className="flex flex-col gap-1">
+          <label className={LABEL_CLZ}>Nombre</label>
+          {isAdmin ? (
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className={`${INPUT_CLZ} h-10`}
+              style={INPUT_STYLE}
+            />
+          ) : (
+            <p className="text-sm font-semibold text-[#1e1e1e] bg-[#f7f8fb] rounded-xl px-3 py-2.5">{name}</p>
+          )}
+        </div>
+
+        {/* Description */}
+        <div className="flex flex-col gap-1">
+          <label className={LABEL_CLZ}>Descripción</label>
+          {isAdmin ? (
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={3}
+              placeholder="Describe el servicio para el catálogo público…"
+              className={`${INPUT_CLZ} py-2.5 resize-none leading-relaxed`}
+              style={INPUT_STYLE}
+            />
+          ) : (
+            <p className="text-sm text-[#1e1e1e] bg-[#f7f8fb] rounded-xl px-3 py-2.5 leading-relaxed">{description || '—'}</p>
+          )}
+        </div>
+
+        {/* Duration */}
+        <div className="flex flex-col gap-1">
+          <label className={LABEL_CLZ}>Duración</label>
+          {isAdmin ? (
+            <select
+              value={duration}
+              onChange={e => setDuration(Number(e.target.value))}
+              className={`${INPUT_CLZ} h-10`}
+              style={INPUT_STYLE}
+            >
+              {DURATION_OPTIONS.map(d => <option key={d} value={d}>{formatDuration(d)}</option>)}
+            </select>
+          ) : (
+            <p className="text-sm font-semibold text-[#1e1e1e] bg-[#f7f8fb] rounded-xl px-3 py-2.5">{formatDuration(duration)}</p>
+          )}
         </div>
 
         {/* Price */}
@@ -914,13 +1017,98 @@ function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
             </button>
           </div>
         )}
+
+        {/* Category */}
+        <div className="flex flex-col gap-2">
+          <label className={LABEL_CLZ}>Categoría</label>
+          <div className="flex gap-2 flex-wrap">
+            {SERVICE_CATEGORIES.map(cat => {
+              const isActive = category === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => isAdmin && setCategory(cat)}
+                  disabled={!isAdmin}
+                  className="h-9 px-3.5 rounded-full text-xs font-semibold border transition-all active:opacity-70 disabled:opacity-60"
+                  style={{
+                    backgroundColor: isActive ? '#121e6c' : '#fff',
+                    color: isActive ? '#fff' : '#606060',
+                    borderColor: isActive ? '#121e6c' : '#d2d4e1',
+                  }}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Icon + color preview */}
+        <div className="flex items-center gap-3 bg-[#f7f8fb] rounded-2xl px-4 py-3">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: previewColor.bg }}
+          >
+            <PreviewIcon size={22} color={previewColor.color} strokeWidth={1.8} />
+          </div>
+          <p className="text-xs text-[#969696]">Así se verá en el catálogo público</p>
+        </div>
+
+        {/* Icon picker */}
+        <div className="flex flex-col gap-2">
+          <label className={LABEL_CLZ}>Icono</label>
+          <div className="flex gap-2 flex-wrap">
+            {SERVICE_ICON_OPTIONS.map(({ key, label }) => {
+              const Icon = getServiceIcon(key);
+              const isActive = icon === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => isAdmin && setIcon(key)}
+                  disabled={!isAdmin}
+                  aria-label={label}
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center border-2 transition-all active:opacity-70 disabled:opacity-60"
+                  style={{
+                    borderColor: isActive ? '#121e6c' : '#d2d4e1',
+                    backgroundColor: isActive ? '#EEF0FB' : '#fff',
+                  }}
+                >
+                  <Icon size={18} color={isActive ? '#121e6c' : '#606060'} strokeWidth={1.8} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Color picker */}
+        <div className="flex flex-col gap-2">
+          <label className={LABEL_CLZ}>Color</label>
+          <div className="flex gap-2 flex-wrap">
+            {Object.entries(SERVICE_COLORS).map(([key, meta]) => {
+              const isActive = color === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => isAdmin && setColor(key)}
+                  disabled={!isAdmin}
+                  aria-label={meta.label}
+                  className="w-11 h-11 rounded-full flex items-center justify-center border-2 transition-all active:opacity-70 disabled:opacity-60"
+                  style={{ borderColor: isActive ? meta.color : 'transparent' }}
+                >
+                  <span className="w-7 h-7 rounded-full" style={{ backgroundColor: meta.color }} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {isAdmin && (
         <div className="shrink-0 px-4 pt-3 pb-6 border-t border-gray-100">
           <button
             onClick={handleSave}
-            className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
+            disabled={!dirty}
+            className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
             style={{ backgroundColor: '#FF2947' }}
           >
             Guardar cambios

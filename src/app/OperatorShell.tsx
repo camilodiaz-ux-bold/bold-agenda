@@ -29,6 +29,7 @@ export function OperatorShell() {
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [role] = useState<Role>('admin');
   const [viewScope, setViewScope] = useState<'team' | 'mine'>('team');
+  const [ajustesSecondLevel, setAjustesSecondLevel] = useState(false);
   const [showNewAppt, setShowNewAppt] = useState(false);
   const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const [newApptSlot, setNewApptSlot] = useState<{ date: string; time: string; professionalId?: string } | null>(null);
@@ -206,6 +207,7 @@ export function OperatorShell() {
             onUpdateServices={(svcs) => { setServices(svcs); persist({ services: svcs }); }}
             onUpdateBusinessProfile={(bp) => { setBusinessProfile(bp); persist({ businessProfile: bp }); }}
             onUpdateBookingPolicy={(bp) => { setBookingPolicy(bp); persist({ bookingPolicy: bp }); }}
+            onSecondLevelChange={setAjustesSecondLevel}
             onReset={() => {
               store.reset();
               const fresh = store.get();
@@ -260,7 +262,9 @@ export function OperatorShell() {
         </>
       )}
 
-      <BottomNav active={section} onChange={(s) => { setSection(s); closeDrawer(); setFabMenuOpen(false); }} />
+      {!ajustesSecondLevel && (
+        <BottomNav active={section} onChange={(s) => { setSection(s); closeDrawer(); setFabMenuOpen(false); }} />
+      )}
 
       {drawer && (
         <Drawer title={drawer.title} onClose={closeDrawer} height={drawer.height}>
