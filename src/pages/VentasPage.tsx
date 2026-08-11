@@ -1,6 +1,6 @@
 import { useState, useMemo, type ReactNode } from 'react';
 import { Bell, ChevronDown, ChevronLeft, ChevronRight, X, Calendar, CreditCard, Link, Clock, QrCode, EyeOff } from 'lucide-react';
-import { formatCOP, PROFESSIONALS, SERVICES, HISTORICAL_SALE_RECORDS } from '../data/appointments';
+import { formatCOP, PROFESSIONALS, HISTORICAL_SALE_RECORDS } from '../data/appointments';
 import { SaleDetailDrawer } from '../components/SaleDetailDrawer';
 import { PROTOTYPE_TODAY } from '../store/prototypeStore';
 import type { SaleRecord, Role, Branch } from '../types';
@@ -424,7 +424,9 @@ export function VentasPage({ role, salesRecords, activeBranchId, branches, onOpe
         ) : (
           <div className="flex flex-col gap-3 pb-28">
             {filtered.map(record => {
-              const svc = SERVICES.find(s => s.id === record.serviceId);
+              const serviceLabel = record.items.length > 1
+                ? `${record.items[0].serviceName} +${record.items.length - 1}`
+                : record.items[0]?.serviceName ?? '—';
               const prof = PROFESSIONALS.find(p => p.id === record.professionalId);
               const Icon = PM_ICON[record.paymentMethod] ?? CreditCard;
               return (
@@ -456,7 +458,7 @@ export function VentasPage({ role, salesRecords, activeBranchId, branches, onOpe
                     {/* Level 2-5: key-value rows */}
                     <div className="flex flex-col gap-1">
                       {([
-                        ['Servicio', svc?.name ?? '—'],
+                        [record.items.length > 1 ? 'Servicios' : 'Servicio', serviceLabel],
                         ['Método de cobro', PM_LABELS[record.paymentMethod] ?? record.paymentMethod],
                         ['Fecha y hora', `${formatSaleDate(record.completedAt)} · ${record.completedAt.slice(11, 16)}`],
                         ['Profesional', prof?.name.split(' ')[0] ?? '—'],

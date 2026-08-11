@@ -153,6 +153,7 @@ export function OperatorShell() {
             activeBranchId={activeBranchId}
             branches={BRANCHES}
             clients={clients}
+            services={services}
             onBranchChange={handleBranchChange}
             onUpdateAppointment={updateAppointment}
             onAddSaleRecord={addSaleRecord}

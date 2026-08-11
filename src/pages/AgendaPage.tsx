@@ -23,6 +23,7 @@ interface Props {
   activeBranchId: string;
   branches: Branch[];
   clients?: Client[];
+  services?: Service[];
   onBranchChange: (id: string) => void;
   onUpdateAppointment: (updated: Appointment) => void;
   onAddSaleRecord: (sale: SaleRecord) => void;
@@ -88,7 +89,7 @@ const ALL_WEEKS = buildAllWeeks();
 
 export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
-  activeBranchId, branches, clients = [],
+  activeBranchId, branches, clients = [], services = SERVICES,
   onBranchChange, onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
   onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled,
 }: Props) {
@@ -216,7 +217,6 @@ export function AgendaPage({
 
   function handleClosure(result: ClosureResult) {
     const apt = appointments.find(a => a.id === result.appointmentId);
-    const svc = apt ? SERVICES.find(s => s.id === apt.serviceId) : null;
     const prof = apt ? PROFESSIONALS.find(p => p.id === apt.professionalId) : null;
     if (apt) {
       onUpdateAppointment({
@@ -227,19 +227,19 @@ export function AgendaPage({
         tip: result.tip > 0 ? result.tip : apt.tip,
       });
     }
-    if (result.outcome === 'completada' && apt && svc && prof) {
+    if (result.outcome === 'completada' && apt && prof && result.items.length > 0) {
       onAddSaleRecord({
         id: `sr-${Date.now()}`,
         appointmentId: result.appointmentId,
         clientName: apt.clientName,
-        serviceId: svc.id,
         professionalId: prof.id,
-        serviceValue: apt.originalPrice ?? svc.price,
+        items: result.items,
+        serviceValue: result.subtotal,
         tip: result.tip,
-        total: (apt.originalPrice ?? svc.price) + result.tip,
+        total: result.subtotal + result.tip,
         paymentMethod: result.paymentMethod ?? 'anticipado',
-        paymentStatus: result.paymentMethod ? 'pagado' : 'pagado-anticipado',
-        commission: Math.round((apt.originalPrice ?? svc.price) * (svc.commissionPercent / 100)),
+        paymentStatus: result.saldoPendiente > 0 ? 'pagado' : 'pagado-anticipado',
+        commission: result.items.reduce((s, i) => s + i.commissionAmount, 0),
         completedAt: new Date().toISOString(),
       });
     }
@@ -248,7 +248,7 @@ export function AgendaPage({
   function openClosure(apt: Appointment, prof: ReturnType<typeof PROFESSIONALS.find>, svc: Service) {
     if (!prof || !svc) return;
     onOpenDrawer(
-      <ServiceClosureDrawer appointment={apt} professional={prof} service={svc}
+      <ServiceClosureDrawer appointment={apt} professional={prof} service={svc} services={services}
         onClose={onCloseDrawer} onComplete={handleClosure}
         onReschedule={() => { onCloseDrawer(); setTimeout(() => onOpenEdit(apt), 320); }}
       />, 'Cierre del servicio', '78%'

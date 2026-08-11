@@ -1,6 +1,6 @@
 import { Calendar, Clock } from 'lucide-react';
 import type { SaleRecord } from '../types';
-import { PROFESSIONALS, SERVICES, formatCOP } from '../data/appointments';
+import { PROFESSIONALS, formatCOP } from '../data/appointments';
 import { StatusBadge } from './StatusBadge';
 
 interface Props {
@@ -26,7 +26,6 @@ function formatFullDate(dateStr: string): string {
 
 export function SaleDetailDrawer({ record }: Props) {
   const prof = PROFESSIONALS.find(p => p.id === record.professionalId);
-  const svc = SERVICES.find(s => s.id === record.serviceId);
   const dateStr = record.completedAt.slice(0, 10);
   const timeStr = record.completedAt.slice(11, 16);
 
@@ -56,19 +55,21 @@ export function SaleDetailDrawer({ record }: Props) {
           <p className="text-sm font-bold text-[#1e1e1e]">{record.clientName}</p>
         </div>
 
-        {/* Servicio + financial */}
+        {/* Servicios + financial */}
         <div>
-          <p className={SECTION_LABEL}>Servicio</p>
+          <p className={SECTION_LABEL}>{record.items.length > 1 ? 'Servicios' : 'Servicio'}</p>
           <div className="bg-[#f7f8fb] rounded-xl px-3 py-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-[#1e1e1e]">{svc?.name ?? '—'}</p>
-              <p className="text-sm font-bold text-[#121e6c] tabular-nums">{formatCOP(record.serviceValue)}</p>
+            <div className="flex flex-col gap-1.5">
+              {record.items.map((item, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-[#1e1e1e]">{item.serviceName}</p>
+                  <p className="text-sm font-bold text-[#121e6c] tabular-nums">{formatCOP(item.price)}</p>
+                </div>
+              ))}
             </div>
             <div className="h-px bg-gray-200 mt-2.5 mb-2" />
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[#606060]">
-                Comisión ({svc ? svc.commissionPercent : '—'}%)
-              </span>
+              <span className="text-xs text-[#606060]">Comisión total</span>
               <span className="text-sm font-bold tabular-nums" style={{ color: '#FF2947' }}>
                 {formatCOP(record.commission)}
               </span>

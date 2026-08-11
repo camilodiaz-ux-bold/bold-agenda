@@ -139,17 +139,26 @@ export interface Client {
   notes?: string;
 }
 
+export interface SaleLineItem {
+  serviceId: string;
+  serviceName: string;
+  price: number;
+  commissionPercent: number;
+  commissionAmount: number;
+  origin: 'agendado' | 'agregado';
+}
+
 export interface SaleRecord {
   id: string;
   appointmentId: string | null;
   clientName?: string;
-  serviceId: string;
   professionalId: string;
-  serviceValue: number;
+  items: SaleLineItem[];
+  serviceValue: number; // subtotal — sum of items[].price
   tip: number;
-  total: number;
+  total: number; // serviceValue + tip
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
-  commission: number;
+  commission: number; // sum of items[].commissionAmount
   completedAt: string; // ISO datetime
 }
