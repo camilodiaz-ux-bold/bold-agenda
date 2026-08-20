@@ -143,7 +143,7 @@ export function BookingSite() {
   const firstItem = Object.values(selectedItems)[0];
   const selectedServiceForFlow: Service | null = firstItem ? firstItem.service : null;
 
-  const branchCategories = ['Todos', ...Array.from(new Set(services.map(s => s.category)))];
+  const branchCategories = ['Todos', ...Array.from(new Set(services.map(s => s.category).filter(Boolean)))];
 
   const filteredServices = services.filter(svc => {
     const matchesSearch = !searchQuery || svc.name.toLowerCase().includes(searchQuery.toLowerCase()) || svc.description.toLowerCase().includes(searchQuery.toLowerCase());

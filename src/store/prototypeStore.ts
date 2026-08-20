@@ -7,6 +7,7 @@ import type {
   AvailabilityBlock, BookingPolicy, BusinessProfile,
 } from '../types';
 import { getSlotsFromSchedule } from '../lib/availability';
+import { normalizeServiceCategory } from '../lib/serviceVisuals';
 
 export interface PrototypeState {
   appointments: Appointment[];
@@ -22,6 +23,13 @@ export interface PrototypeState {
 
 const STORAGE_KEY = 'bold_agenda_v5';
 
+// Guards against stale/hand-edited persisted data (blank, mistyped-case, or
+// otherwise inconsistent `category` values) so every service always resolves
+// to a valid, canonical category before it reaches any UI.
+function normalizeServices(services: Service[] | undefined | null): Service[] {
+  return (services ?? []).map(s => ({ ...s, category: normalizeServiceCategory(s.category) }));
+}
+
 function seedState(): PrototypeState {
   return {
     appointments: JSON.parse(JSON.stringify(APPOINTMENTS)),
@@ -29,7 +37,7 @@ function seedState(): PrototypeState {
     saleRecords: JSON.parse(JSON.stringify(INITIAL_SALE_RECORDS)),
     availabilityBlocks: JSON.parse(JSON.stringify(SEED_AVAILABILITY_BLOCKS)),
     professionals: JSON.parse(JSON.stringify(PROFESSIONALS)),
-    services: JSON.parse(JSON.stringify(SERVICES)),
+    services: normalizeServices(JSON.parse(JSON.stringify(SERVICES))),
     businessProfile: { ...SEED_BUSINESS_PROFILE },
     bookingPolicy: { ...SEED_BOOKING_POLICY },
     activeBranchId: 'norte',
@@ -44,6 +52,7 @@ function load(): PrototypeState {
     if (raw) {
       const data = JSON.parse(raw) as PrototypeState;
       if (!data.activeBranchId) data.activeBranchId = 'norte';
+      data.services = normalizeServices(data.services);
       return data;
     }
   } catch { /* storage unavailable */ }

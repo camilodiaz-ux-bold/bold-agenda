@@ -53,7 +53,7 @@ export const PROFESSIONALS: Professional[] = [
     color: '#FF2947',
     initials: 'CV',
     weeklySchedule: CAMILA_SCHEDULE,
-    serviceIds: ['s1', 's2', 's3', 's4'],
+    serviceIds: ['s1', 's2', 's3', 's4', 's7', 's8'],
   },
   {
     id: 'p2',
@@ -62,7 +62,7 @@ export const PROFESSIONALS: Professional[] = [
     color: '#7C3AED',
     initials: 'VR',
     weeklySchedule: VALENTINA_SCHEDULE,
-    serviceIds: ['s1', 's3', 's4'],
+    serviceIds: ['s1', 's3', 's4', 's6'],
   },
   {
     id: 'p3',
@@ -71,7 +71,7 @@ export const PROFESSIONALS: Professional[] = [
     color: '#2563EB',
     initials: 'AM',
     weeklySchedule: ANDRES_SCHEDULE,
-    serviceIds: ['s5'],
+    serviceIds: ['s5', 's9'],
   },
 ];
 
@@ -92,13 +92,33 @@ export const SERVICES: Service[] = [
     category: 'Color', icon: 'sparkles', color: 'morado',
   },
   {
-    id: 's4', name: 'Tinte raíz', duration: 90, price: 95000, requiresDeposit: false, commissionPercent: 35,
+    id: 's4', name: 'Tinte raíz completo', duration: 90, price: 95000, requiresDeposit: false, commissionPercent: 35,
     description: 'Coloración permanente con cobertura total de canas y retoque de raíz. Resultado uniforme y duradero.',
     category: 'Color', icon: 'palette', color: 'morado',
   },
   {
-    id: 's5', name: 'Manicure', duration: 45, price: 38000, requiresDeposit: false, commissionPercent: 50,
+    id: 's6', name: 'Mechas californianas', duration: 150, price: 180000, requiresDeposit: true, commissionPercent: 35,
+    description: 'Iluminación en mechas concentrada en medios y puntas, con efecto degradado natural tipo sun-kissed.',
+    category: 'Color', icon: 'sparkles', color: 'morado',
+  },
+  {
+    id: 's7', name: 'Alisado keratina', duration: 120, price: 150000, requiresDeposit: true, commissionPercent: 35,
+    description: 'Tratamiento alisador con keratina que reduce el frizz y sella la cutícula del cabello. Resultado liso y brillante.',
+    category: 'Tratamientos', icon: 'leaf', color: 'verde',
+  },
+  {
+    id: 's8', name: 'Hidratación profunda', duration: 45, price: 60000, requiresDeposit: false, commissionPercent: 40,
+    description: 'Mascarilla de hidratación intensiva que restaura la fibra capilar y devuelve brillo y suavidad.',
+    category: 'Tratamientos', icon: 'droplet', color: 'teal',
+  },
+  {
+    id: 's5', name: 'Manicure clásico', duration: 45, price: 38000, requiresDeposit: false, commissionPercent: 50,
     description: 'Manicure clásico con limpieza, forma y esmaltado de larga duración. Incluye exfoliación de manos.',
+    category: 'Uñas', icon: 'star', color: 'coral',
+  },
+  {
+    id: 's9', name: 'Manicure semipermanente', duration: 60, price: 55000, requiresDeposit: false, commissionPercent: 50,
+    description: 'Esmaltado semipermanente de larga duración con acabado brillante que no se despinta ni opaca.',
     category: 'Uñas', icon: 'star', color: 'coral',
   },
 ];

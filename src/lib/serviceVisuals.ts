@@ -30,6 +30,19 @@ export const SERVICE_COLORS: Record<string, { label: string; color: string; bg: 
 
 export const SERVICE_CATEGORIES: string[] = ['Corte', 'Color', 'Tratamientos', 'Uñas'];
 
+// Fallback bucket for services with a missing/blank category, so the filter
+// chip always has a visible label instead of rendering empty.
+export const UNCATEGORIZED_LABEL = 'Otros';
+
+/** Normalizes a raw category value against SERVICE_CATEGORIES (case/whitespace
+ * insensitive) so persisted or hand-edited data can't desync from the canonical casing. */
+export function normalizeServiceCategory(raw: string | null | undefined): string {
+  const trimmed = (raw ?? '').trim();
+  if (!trimmed) return UNCATEGORIZED_LABEL;
+  const canonical = SERVICE_CATEGORIES.find(c => c.toLowerCase() === trimmed.toLowerCase());
+  return canonical ?? trimmed;
+}
+
 export function getServiceIcon(key: string): LucideIcon {
   return SERVICE_ICONS[key] ?? Star;
 }
