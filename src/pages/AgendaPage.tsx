@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
-import { Bell, ChevronDown, Users, User, Check } from 'lucide-react';
+import { Bell, Users, User, Check } from 'lucide-react';
 import { PROFESSIONALS, SERVICES } from '../data/appointments';
 import { AppointmentBlock } from '../components/AppointmentBlock';
 import { BlockedTimeBlock } from '../components/BlockedTimeBlock';
@@ -66,6 +66,20 @@ function isSameWeek(a: string, b: string): boolean {
   return getMondayStr(a) === getMondayStr(b);
 }
 
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function formatWeekMonthYear(week: string[]): string {
+  const [fy, fm] = week[0].split('-').map(Number);
+  const [ly, lm] = week[week.length - 1].split('-').map(Number);
+  const firstMonth = capitalize(new Date(fy, fm - 1, 1).toLocaleDateString('es-CO', { month: 'long' }));
+  const lastMonth = capitalize(new Date(ly, lm - 1, 1).toLocaleDateString('es-CO', { month: 'long' }));
+  if (fy === ly && fm === lm) return `${firstMonth} ${fy}`;
+  if (fy === ly) return `${firstMonth} – ${lastMonth} ${fy}`;
+  return `${firstMonth} ${fy} – ${lastMonth} ${ly}`;
+}
+
 function formatDateHeader(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
@@ -89,19 +103,17 @@ const ALL_WEEKS = buildAllWeeks();
 
 export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
-  activeBranchId, branches, clients = [], services = SERVICES,
-  onBranchChange, onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
+  activeBranchId, clients = [], services = SERVICES,
+  onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
   onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
   const [profFilter, setProfFilter] = useState<string>('all');
-  const [showBranchSheet, setShowBranchSheet] = useState(false);
   const [showViewSheet, setShowViewSheet] = useState(false);
   const [viewProfId] = useState(STAFF_PROF_ID);
 
   const isAdmin = role === 'admin';
   const isTeam = isAdmin && viewScope === 'team';
-  const activeBranch = branches.find(b => b.id === activeBranchId);
 
   useEffect(() => {
     if (jumpToDate) {
@@ -113,6 +125,11 @@ export function AgendaPage({
   const selectedWeekIdx = useMemo(
     () => ALL_WEEKS.findIndex(week => isSameWeek(week[0], selectedDate)),
     [selectedDate]
+  );
+
+  const weekMonthLabel = useMemo(
+    () => formatWeekMonthYear(ALL_WEEKS[selectedWeekIdx] ?? ALL_WEEKS[CENTER_WEEK_IDX]),
+    [selectedWeekIdx]
   );
 
   // ── Refs para scroll de tira semanal ──────────────────────────────────────
@@ -289,18 +306,6 @@ export function AgendaPage({
       <div className="px-4 pt-10 pb-4 shrink-0">
         <div className="relative flex items-center" style={{ height: '36px' }}>
           <span className="text-[16px] font-bold text-[#121e6c] leading-[20px]">Agenda</span>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <button
-              onClick={() => setShowBranchSheet(true)}
-              className="pointer-events-auto flex items-center gap-[2px] active:opacity-70 transition-opacity"
-              style={{ maxWidth: '180px' }}
-            >
-              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate">
-                {activeBranch?.name ?? 'Salón Camila Norte'}
-              </span>
-              <ChevronDown size={16} color="#1e1e1e" strokeWidth={2.5} className="shrink-0" />
-            </button>
-          </div>
           <button
             className="absolute right-0 w-6 h-6 flex items-center justify-center transition-opacity active:opacity-60"
             aria-label="Notificaciones"
@@ -308,6 +313,11 @@ export function AgendaPage({
             <Bell size={24} color="#121e6c" strokeWidth={1.8} />
           </button>
         </div>
+
+        {/* Mes / año */}
+        <p className="mt-3 text-[13px] font-semibold text-[#121e6c] leading-[16px]">
+          {weekMonthLabel}
+        </p>
 
         {/* Tira semanal */}
         <div
@@ -485,34 +495,6 @@ export function AgendaPage({
 
         </CalendarGrid>
       </div>
-      )}
-
-      {/* ── Sheet de sucursal ────────────────────────────────────────────── */}
-      {showBranchSheet && (
-        <div className="absolute inset-0" style={{ zIndex: 50 }}>
-          <div className="absolute inset-0 bg-black/30" onClick={() => setShowBranchSheet(false)} />
-          <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl px-5 pt-4 pb-10">
-            <div className="w-9 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Cambiar sucursal</p>
-            {branches.map(branch => (
-              <button
-                key={branch.id}
-                onClick={() => { onBranchChange(branch.id); setShowBranchSheet(false); }}
-                className="w-full flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 active:opacity-70"
-              >
-                <div className="flex-1 text-left">
-                  <p className="text-sm font-semibold" style={{ color: activeBranchId === branch.id ? '#121e6c' : '#1e1e1e' }}>
-                    {branch.name}
-                  </p>
-                  <p className="text-xs text-[#969696]">{branch.address} · {branch.neighborhood}</p>
-                </div>
-                {activeBranchId === branch.id && (
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#FF2947' }} />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
       )}
 
       {/* ── Sheet de selección de vista ──────────────────────────────────── */}
