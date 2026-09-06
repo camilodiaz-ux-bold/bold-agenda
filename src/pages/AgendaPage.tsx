@@ -5,7 +5,7 @@ import { AppointmentBlock } from '../components/AppointmentBlock';
 import { BlockedTimeBlock } from '../components/BlockedTimeBlock';
 import { CalendarGrid } from '../components/CalendarGrid';
 import { TeamDayView } from '../components/TeamDayView';
-import { AppointmentDetailDrawer } from '../components/AppointmentDetailDrawer';
+import { AppointmentDetailScreen } from '../components/AppointmentDetailScreen';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
 import {
   timeToPx, cardTop, cardHeight, durationToPx, CARD_MIN_H,
@@ -24,6 +24,7 @@ interface Props {
   branches: Branch[];
   clients?: Client[];
   services?: Service[];
+  saleRecords?: SaleRecord[];
   onBranchChange: (id: string) => void;
   onUpdateAppointment: (updated: Appointment) => void;
   onAddSaleRecord: (sale: SaleRecord) => void;
@@ -34,6 +35,7 @@ interface Props {
   onNewApptAtSlot?: (date: string, time: string, professionalId?: string) => void;
   jumpToDate?: string;
   onJumpHandled: () => void;
+  onSecondLevelChange?: (isSecondLevel: boolean) => void;
 }
 
 const DEMO_NOW = '13:30';
@@ -103,14 +105,15 @@ const ALL_WEEKS = buildAllWeeks();
 
 export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
-  activeBranchId, clients = [], services = SERVICES,
+  activeBranchId, clients = [], services = SERVICES, saleRecords = [],
   onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
-  onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled,
+  onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled, onSecondLevelChange,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
   const [profFilter, setProfFilter] = useState<string>('all');
   const [showViewSheet, setShowViewSheet] = useState(false);
   const [viewProfId] = useState(STAFF_PROF_ID);
+  const [detailAptId, setDetailAptId] = useState<string | null>(null);
 
   const isAdmin = role === 'admin';
   const isTeam = isAdmin && viewScope === 'team';
@@ -121,6 +124,26 @@ export function AgendaPage({
       onJumpHandled();
     }
   }, [jumpToDate]);
+
+  useEffect(() => {
+    onSecondLevelChange?.(detailAptId !== null);
+    return () => onSecondLevelChange?.(false);
+  }, [detailAptId, onSecondLevelChange]);
+
+  const detailAppointment = useMemo(
+    () => detailAptId ? appointments.find(a => a.id === detailAptId) ?? null : null,
+    [detailAptId, appointments]
+  );
+  const detailProfessional = detailAppointment
+    ? PROFESSIONALS.find(p => p.id === detailAppointment.professionalId)
+    : undefined;
+  const detailService = detailAppointment
+    ? SERVICES.find(s => s.id === detailAppointment.serviceId)
+    : undefined;
+  const detailSaleRecord = useMemo(() => {
+    if (!detailAppointment || detailAppointment.status !== 'completada') return undefined;
+    return saleRecords.find(sr => sr.appointmentId === detailAppointment.id);
+  }, [detailAppointment, saleRecords]);
 
   const selectedWeekIdx = useMemo(
     () => ALL_WEEKS.findIndex(week => isSameWeek(week[0], selectedDate)),
@@ -283,20 +306,11 @@ export function AgendaPage({
   }
 
   function openDetail(apt: Appointment) {
-    const prof = PROFESSIONALS.find(p => p.id === apt.professionalId)!;
-    const svc = SERVICES.find(s => s.id === apt.serviceId)!;
-    onOpenDrawer(
-      <AppointmentDetailDrawer appointment={apt} professional={prof} service={svc}
-        clients={clients}
-        onClosure={() => openClosure(apt, prof, svc)}
-        onEdit={() => { onCloseDrawer(); setTimeout(() => onOpenEdit(apt), 320); }}
-        onViewClient={onCloseDrawer}
-        onAssignClient={(client) => {
-          onUpdateAppointment({ ...apt, clientName: client.name, clientPhone: client.phone, clientCedula: client.cedula });
-          onCloseDrawer();
-        }}
-      />, undefined, '88%'
-    );
+    setDetailAptId(apt.id);
+  }
+
+  function closeDetail() {
+    setDetailAptId(null);
   }
 
   function handleViewSelect(scope: 'team' | 'mine', profId?: string) {
@@ -307,6 +321,27 @@ export function AgendaPage({
       setProfFilter(profId ?? 'all');
     }
     setShowViewSheet(false);
+  }
+
+  if (detailAppointment && detailProfessional && detailService) {
+    return (
+      <AppointmentDetailScreen
+        appointment={detailAppointment}
+        professional={detailProfessional}
+        service={detailService}
+        services={services}
+        saleRecord={detailSaleRecord}
+        clients={clients}
+        onBack={closeDetail}
+        onClosure={() => openClosure(detailAppointment, detailProfessional, detailService)}
+        onEdit={() => onOpenEdit(detailAppointment)}
+        onAssignClient={(client) => {
+          onUpdateAppointment({
+            ...detailAppointment, clientName: client.name, clientPhone: client.phone, clientCedula: client.cedula,
+          });
+        }}
+      />
+    );
   }
 
   return (

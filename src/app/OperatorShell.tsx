@@ -30,6 +30,7 @@ export function OperatorShell() {
   const [role] = useState<Role>('admin');
   const [viewScope, setViewScope] = useState<'team' | 'mine'>('team');
   const [ajustesSecondLevel, setAjustesSecondLevel] = useState(false);
+  const [agendaSecondLevel, setAgendaSecondLevel] = useState(false);
   const [showNewAppt, setShowNewAppt] = useState(false);
   const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const [newApptSlot, setNewApptSlot] = useState<{ date: string; time: string; professionalId?: string } | null>(null);
@@ -154,6 +155,7 @@ export function OperatorShell() {
             branches={BRANCHES}
             clients={clients}
             services={services}
+            saleRecords={salesRecords}
             onBranchChange={handleBranchChange}
             onUpdateAppointment={updateAppointment}
             onAddSaleRecord={addSaleRecord}
@@ -164,6 +166,7 @@ export function OperatorShell() {
             onNewApptAtSlot={(date, time, professionalId) => { setNewApptSlot({ date, time, professionalId }); setShowNewAppt(true); }}
             jumpToDate={agendaJumpDate}
             onJumpHandled={() => setAgendaJumpDate(undefined)}
+            onSecondLevelChange={setAgendaSecondLevel}
           />
         )}
         {section === 'ventas' && (
@@ -227,7 +230,7 @@ export function OperatorShell() {
       </div>
 
       {/* FAB — speed-dial con "Nueva cita" y "Bloquear agenda" */}
-      {section === 'agenda' && (
+      {section === 'agenda' && !agendaSecondLevel && (
         <>
           {fabMenuOpen && (
             <div
@@ -263,7 +266,7 @@ export function OperatorShell() {
         </>
       )}
 
-      {!ajustesSecondLevel && (
+      {!ajustesSecondLevel && !agendaSecondLevel && (
         <BottomNav active={section} onChange={(s) => { setSection(s); closeDrawer(); setFabMenuOpen(false); }} />
       )}
 
