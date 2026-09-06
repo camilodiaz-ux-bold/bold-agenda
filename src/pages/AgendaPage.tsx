@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
-import { Bell, Users, User, Check } from 'lucide-react';
+import { Bell, Users, User, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PROFESSIONALS, SERVICES } from '../data/appointments';
 import { AppointmentBlock } from '../components/AppointmentBlock';
 import { BlockedTimeBlock } from '../components/BlockedTimeBlock';
@@ -156,6 +156,11 @@ export function AgendaPage({
     return () => clearTimeout(t);
   }, [selectedWeekIdx]);
 
+  function sameWeekdayIn(week: string[], referenceDate: string): string {
+    const dow = new Date(referenceDate + 'T12:00:00').getDay();
+    return week.find(d => new Date(d + 'T12:00:00').getDay() === dow) ?? week[1];
+  }
+
   function handleStripScroll() {
     if (ignoreScrollRef.current) return;
     clearTimeout(scrollTimerRef.current);
@@ -166,10 +171,15 @@ export function AgendaPage({
       if (weekIdx === selectedWeekIdx) return;
       const week = ALL_WEEKS[weekIdx];
       if (!week) return;
-      const dow = new Date(selectedDate + 'T12:00:00').getDay();
-      const sameDay = week.find(d => new Date(d + 'T12:00:00').getDay() === dow) ?? week[1];
-      setSelectedDate(sameDay);
+      setSelectedDate(sameWeekdayIn(week, selectedDate));
     }, 150);
+  }
+
+  function goToAdjacentWeek(delta: number) {
+    const targetIdx = Math.max(0, Math.min(TOTAL_WEEKS - 1, selectedWeekIdx + delta));
+    const week = ALL_WEEKS[targetIdx];
+    if (!week || targetIdx === selectedWeekIdx) return;
+    setSelectedDate(sameWeekdayIn(week, selectedDate));
   }
 
   // ── Ref para scroll automático del calendario ─────────────────────────────
@@ -319,42 +329,58 @@ export function AgendaPage({
           {weekMonthLabel}
         </p>
 
-        {/* Tira semanal */}
-        <div
-          ref={stripRef}
-          onScroll={handleStripScroll}
-          className="flex overflow-x-auto -mx-4 mt-3"
-          style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}
-        >
-          {ALL_WEEKS.map((week, wi) => (
-            <div
-              key={wi}
-              className="flex shrink-0"
-              style={{ minWidth: '100%', scrollSnapAlign: 'start', padding: '0 16px' }}
-            >
-              {week.map((dateStr, di) => {
-                const isSelected = dateStr === selectedDate;
-                const hasDot = branchApts.some(a => a.date === dateStr && !['cancelada', 'cancelada-tarde'].includes(a.status));
-                const label = WEEK_LABELS[di];
-                const dayNum = parseInt(dateStr.split('-')[2], 10);
-                return (
-                  <button
-                    key={dateStr}
-                    onClick={() => setSelectedDate(dateStr)}
-                    className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-full transition-all active:opacity-70"
-                    style={{ backgroundColor: isSelected ? '#121e6c' : 'transparent' }}
-                  >
-                    <span className="text-[10px] font-normal leading-none"
-                      style={{ color: isSelected ? 'rgba(255,255,255,0.7)' : '#121e6c' }}>{label}</span>
-                    <span className="text-[13px] font-bold leading-none"
-                      style={{ color: isSelected ? '#fff' : '#121e6c' }}>{dayNum}</span>
-                    <div className="w-1 h-1 rounded-full"
-                      style={{ backgroundColor: hasDot ? (isSelected ? 'rgba(255,255,255,0.5)' : '#121e6c') : 'transparent' }} />
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+        {/* Tira semanal + navegación de semana */}
+        <div className="flex items-center mt-3">
+          <button
+            onClick={() => goToAdjacentWeek(-1)}
+            aria-label="Semana anterior"
+            className="shrink-0 w-11 h-11 flex items-center justify-center active:opacity-60 transition-opacity"
+          >
+            <ChevronLeft size={20} color="#121e6c" strokeWidth={2.4} />
+          </button>
+          <div
+            ref={stripRef}
+            onScroll={handleStripScroll}
+            className="flex-1 min-w-0 flex overflow-x-auto"
+            style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}
+          >
+            {ALL_WEEKS.map((week, wi) => (
+              <div
+                key={wi}
+                className="flex shrink-0 w-full"
+                style={{ scrollSnapAlign: 'start' }}
+              >
+                {week.map((dateStr, di) => {
+                  const isSelected = dateStr === selectedDate;
+                  const hasDot = branchApts.some(a => a.date === dateStr && !['cancelada', 'cancelada-tarde'].includes(a.status));
+                  const label = WEEK_LABELS[di];
+                  const dayNum = parseInt(dateStr.split('-')[2], 10);
+                  return (
+                    <button
+                      key={dateStr}
+                      onClick={() => setSelectedDate(dateStr)}
+                      className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-full transition-all active:opacity-70"
+                      style={{ backgroundColor: isSelected ? '#121e6c' : 'transparent' }}
+                    >
+                      <span className="text-[10px] font-normal leading-none"
+                        style={{ color: isSelected ? 'rgba(255,255,255,0.7)' : '#121e6c' }}>{label}</span>
+                      <span className="text-[13px] font-bold leading-none"
+                        style={{ color: isSelected ? '#fff' : '#121e6c' }}>{dayNum}</span>
+                      <div className="w-1 h-1 rounded-full"
+                        style={{ backgroundColor: hasDot ? (isSelected ? 'rgba(255,255,255,0.5)' : '#121e6c') : 'transparent' }} />
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => goToAdjacentWeek(1)}
+            aria-label="Semana siguiente"
+            className="shrink-0 w-11 h-11 flex items-center justify-center active:opacity-60 transition-opacity"
+          >
+            <ChevronRight size={20} color="#121e6c" strokeWidth={2.4} />
+          </button>
         </div>
       </div>
 
