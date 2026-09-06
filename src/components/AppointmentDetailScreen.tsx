@@ -278,7 +278,7 @@ export function AppointmentDetailScreen({
         {isEditable && (
           <button
             onClick={onEdit}
-            className="w-full bg-white rounded-2xl py-3 flex items-center justify-center active:opacity-70 transition-opacity"
+            className="w-full bg-white rounded-2xl px-3 py-3 flex items-center justify-center active:opacity-70 transition-opacity"
           >
             <span className="text-[14px] font-bold text-[#121e6c]">Editar cita</span>
           </button>
