@@ -372,23 +372,17 @@ export function AgendaPage({
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="px-4 pt-10 pb-4 shrink-0">
-        <div className="relative flex items-center" style={{ height: '36px' }}>
+        <div className="flex items-center" style={{ height: '36px' }}>
           <span className="text-[16px] font-bold text-[#121e6c] leading-[20px]">Agenda</span>
-          <button
-            className="absolute right-0 w-6 h-6 flex items-center justify-center transition-opacity active:opacity-60"
-            aria-label="Notificaciones"
-          >
-            <Bell size={24} color="#121e6c" strokeWidth={1.8} />
-          </button>
         </div>
 
         {/* Mes / año */}
-        <p className="mt-3 text-[13px] font-semibold text-[#121e6c] leading-[16px]">
+        <p className="mt-3 text-[13px] font-semibold text-[#121e6c] leading-[16px] text-center">
           {weekMonthLabel}
         </p>
 
         {/* Tira semanal + navegación de semana */}
-        <div className="flex items-center mt-3">
+        <div className="flex items-center gap-2 mt-3">
           <button
             onClick={() => goToAdjacentWeek(-1)}
             aria-label="Semana anterior"

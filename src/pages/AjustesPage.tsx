@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react';
 import {
-  Bell, ChevronDown, Briefcase, Users, ShoppingBag, Shield, ChevronRight,
+  Briefcase, Users, ShoppingBag, Shield, ChevronRight,
   Check, AlertTriangle, RotateCcw, ToggleLeft, ToggleRight,
   ArrowLeft,
 } from 'lucide-react';
@@ -238,22 +238,8 @@ export function AjustesPage({
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="px-4 pt-10 pb-4">
-        <div className="relative flex items-center" style={{ height: '36px' }}>
+        <div className="flex items-center" style={{ height: '36px' }}>
           <span className="text-[16px] font-bold text-[#121e6c] leading-[20px]">Ajustes</span>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="flex items-center gap-[2px]" style={{ maxWidth: '180px' }}>
-              <span className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px] truncate">
-                Salón Camila Norte
-              </span>
-              <ChevronDown size={16} color="#1e1e1e" strokeWidth={2.5} className="shrink-0" />
-            </div>
-          </div>
-          <button
-            className="absolute right-0 w-6 h-6 flex items-center justify-center transition-opacity active:opacity-60"
-            aria-label="Notificaciones"
-          >
-            <Bell size={24} color="#121e6c" strokeWidth={1.8} />
-          </button>
         </div>
       </div>
 
