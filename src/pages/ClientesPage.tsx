@@ -1,6 +1,6 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { Bell, ChevronDown, ChevronRight, Search, UserPlus, Users } from 'lucide-react';
-import { ClientDetailDrawer } from '../components/ClientDetailDrawer';
+import { ClientDetailScreen } from '../components/ClientDetailScreen';
 import type { Client, Appointment, SaleRecord, Professional, Service, Role } from '../types';
 
 interface Props {
@@ -14,15 +14,24 @@ interface Props {
   onOpenDrawer: (content: ReactNode, title?: string, height?: string) => void;
   onCloseDrawer: () => void;
   onOpenEdit: (apt: Appointment) => void;
+  onSecondLevelChange?: (isSecondLevel: boolean) => void;
 }
 
 const STAFF_PROF_ID = 'p1';
 
 export function ClientesPage({
-  role, clients, appointments, professionals, services,
-  onUpdateClient, onOpenDrawer, onCloseDrawer, onOpenEdit,
+  role, clients, appointments, salesRecords, professionals, services,
+  onUpdateClient, onOpenEdit, onSecondLevelChange,
 }: Props) {
   const [query, setQuery] = useState('');
+  const [detailClientId, setDetailClientId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onSecondLevelChange?.(detailClientId !== null);
+    return () => onSecondLevelChange?.(false);
+  }, [detailClientId, onSecondLevelChange]);
+
+  const detailClient = detailClientId ? clients.find(c => c.id === detailClientId) ?? null : null;
 
   const visibleClients = useMemo(() => {
     let base = clients;
@@ -53,19 +62,22 @@ export function ClientesPage({
   }, [clients, role, appointments, query]);
 
   function openClientDetail(client: Client) {
-    onOpenDrawer(
-      <ClientDetailDrawer
-        client={client}
+    setDetailClientId(client.id);
+  }
+
+  if (detailClient) {
+    return (
+      <ClientDetailScreen
+        client={detailClient}
         appointments={appointments}
         services={services}
         professionals={professionals}
+        saleRecords={salesRecords}
         role={role}
-        onSave={(updated) => { onUpdateClient(updated); }}
+        onBack={() => setDetailClientId(null)}
+        onSave={onUpdateClient}
         onOpenEdit={onOpenEdit}
-        onClose={onCloseDrawer}
-      />,
-      client.name,
-      '92%'
+      />
     );
   }
 

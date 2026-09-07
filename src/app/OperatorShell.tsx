@@ -31,6 +31,7 @@ export function OperatorShell() {
   const [viewScope, setViewScope] = useState<'team' | 'mine'>('team');
   const [ajustesSecondLevel, setAjustesSecondLevel] = useState(false);
   const [agendaSecondLevel, setAgendaSecondLevel] = useState(false);
+  const [clientesSecondLevel, setClientesSecondLevel] = useState(false);
   const [showNewAppt, setShowNewAppt] = useState(false);
   const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const [newApptSlot, setNewApptSlot] = useState<{ date: string; time: string; professionalId?: string } | null>(null);
@@ -62,6 +63,14 @@ export function OperatorShell() {
     setAppointments(prev => {
       const next = prev.map(a => a.id === updated.id ? updated : a);
       persist({ appointments: next });
+      return next;
+    });
+  }
+
+  function updateClient(updated: Client) {
+    setClients(prev => {
+      const next = prev.map(c => c.id === updated.id ? updated : c);
+      persist({ clients: next });
       return next;
     });
   }
@@ -158,6 +167,7 @@ export function OperatorShell() {
             saleRecords={salesRecords}
             onBranchChange={handleBranchChange}
             onUpdateAppointment={updateAppointment}
+            onUpdateClient={updateClient}
             onAddSaleRecord={addSaleRecord}
             onOpenDrawer={openDrawer}
             onCloseDrawer={closeDrawer}
@@ -187,16 +197,11 @@ export function OperatorShell() {
             salesRecords={salesRecords}
             professionals={professionals}
             services={services}
-            onUpdateClient={(c) => {
-              setClients(prev => {
-                const next = prev.map(x => x.id === c.id ? c : x);
-                persist({ clients: next });
-                return next;
-              });
-            }}
+            onUpdateClient={updateClient}
             onOpenDrawer={openDrawer}
             onCloseDrawer={closeDrawer}
             onOpenEdit={openEditDrawer}
+            onSecondLevelChange={setClientesSecondLevel}
           />
         )}
         {section === 'ajustes' && (
@@ -266,7 +271,7 @@ export function OperatorShell() {
         </>
       )}
 
-      {!ajustesSecondLevel && !agendaSecondLevel && (
+      {!ajustesSecondLevel && !agendaSecondLevel && !clientesSecondLevel && (
         <BottomNav active={section} onChange={(s) => { setSection(s); closeDrawer(); setFabMenuOpen(false); }} />
       )}
 

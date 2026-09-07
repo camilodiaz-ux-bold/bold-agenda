@@ -16,6 +16,7 @@ interface Props {
   onClosure: () => void;
   onEdit: () => void;
   onAssignClient?: (client: Client) => void;
+  onViewClientProfile?: (client: Client) => void;
 }
 
 const SECTION_LABEL = 'text-[12px] font-normal text-[#3e4983] leading-4';
@@ -52,7 +53,7 @@ function addMinutes(time: string, minutes: number): string {
 
 export function AppointmentDetailScreen({
   appointment, professional, service, services, saleRecord, clients = [],
-  onBack, onClosure, onEdit, onAssignClient,
+  onBack, onClosure, onEdit, onAssignClient, onViewClientProfile,
 }: Props) {
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
@@ -61,6 +62,12 @@ export function AppointmentDetailScreen({
   const isCloseable = appointment.status === 'confirmada';
   const isEditable = appointment.status === 'confirmada' || appointment.status === 'reprogramada';
   const hasClient = Boolean(appointment.clientName);
+  // The appointment only stores denormalized client fields (no clientId), so
+  // resolve the real Client record — the profile screen only makes sense to
+  // open when one actually exists.
+  const matchedClient = hasClient
+    ? clients.find(c => c.phone === appointment.clientPhone || c.cedula === appointment.clientCedula)
+    : undefined;
 
   // A closed appointment may carry more than one performed service (added during
   // cierre del servicio) — use the frozen sale record when it exists, never
@@ -174,9 +181,15 @@ export function AppointmentDetailScreen({
               <div className="flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-3">
                   <p className={FIELD_LABEL}>Nombre</p>
-                  <button onClick={onBack} className="shrink-0 rounded-full px-2 py-1" style={{ backgroundColor: '#F1F2F6' }}>
-                    <span className="text-[12px] font-medium text-[#121e6c]">Ver perfil</span>
-                  </button>
+                  {matchedClient && onViewClientProfile && (
+                    <button
+                      onClick={() => onViewClientProfile(matchedClient)}
+                      className="shrink-0 rounded-full px-2 py-1"
+                      style={{ backgroundColor: '#F1F2F6' }}
+                    >
+                      <span className="text-[12px] font-medium text-[#121e6c]">Ver perfil</span>
+                    </button>
+                  )}
                 </div>
                 <p className={FIELD_VALUE}>{appointment.clientName}</p>
               </div>

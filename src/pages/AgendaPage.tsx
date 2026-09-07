@@ -6,6 +6,7 @@ import { BlockedTimeBlock } from '../components/BlockedTimeBlock';
 import { CalendarGrid } from '../components/CalendarGrid';
 import { TeamDayView } from '../components/TeamDayView';
 import { AppointmentDetailScreen } from '../components/AppointmentDetailScreen';
+import { ClientDetailScreen } from '../components/ClientDetailScreen';
 import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
 import {
   timeToPx, cardTop, cardHeight, durationToPx, CARD_MIN_H,
@@ -27,6 +28,7 @@ interface Props {
   saleRecords?: SaleRecord[];
   onBranchChange: (id: string) => void;
   onUpdateAppointment: (updated: Appointment) => void;
+  onUpdateClient?: (client: Client) => void;
   onAddSaleRecord: (sale: SaleRecord) => void;
   onOpenDrawer: (content: ReactNode, title?: string, height?: string) => void;
   onCloseDrawer: () => void;
@@ -106,7 +108,7 @@ const ALL_WEEKS = buildAllWeeks();
 export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
   activeBranchId, clients = [], services = SERVICES, saleRecords = [],
-  onUpdateAppointment, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
+  onUpdateAppointment, onUpdateClient, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
   onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled, onSecondLevelChange,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
@@ -114,6 +116,7 @@ export function AgendaPage({
   const [showViewSheet, setShowViewSheet] = useState(false);
   const [viewProfId] = useState(STAFF_PROF_ID);
   const [detailAptId, setDetailAptId] = useState<string | null>(null);
+  const [viewingClientId, setViewingClientId] = useState<string | null>(null);
 
   const isAdmin = role === 'admin';
   const isTeam = isAdmin && viewScope === 'team';
@@ -311,6 +314,7 @@ export function AgendaPage({
 
   function closeDetail() {
     setDetailAptId(null);
+    setViewingClientId(null);
   }
 
   function handleViewSelect(scope: 'team' | 'mine', profId?: string) {
@@ -324,6 +328,24 @@ export function AgendaPage({
   }
 
   if (detailAppointment && detailProfessional && detailService) {
+    const viewingClient = viewingClientId ? clients.find(c => c.id === viewingClientId) ?? null : null;
+
+    if (viewingClient) {
+      return (
+        <ClientDetailScreen
+          client={viewingClient}
+          appointments={appointments}
+          services={services}
+          professionals={PROFESSIONALS}
+          saleRecords={saleRecords}
+          role={role}
+          onBack={() => setViewingClientId(null)}
+          onSave={(updated) => onUpdateClient?.(updated)}
+          onOpenEdit={onOpenEdit}
+        />
+      );
+    }
+
     return (
       <AppointmentDetailScreen
         appointment={detailAppointment}
@@ -340,6 +362,7 @@ export function AgendaPage({
             ...detailAppointment, clientName: client.name, clientPhone: client.phone, clientCedula: client.cedula,
           });
         }}
+        onViewClientProfile={(client) => setViewingClientId(client.id)}
       />
     );
   }
