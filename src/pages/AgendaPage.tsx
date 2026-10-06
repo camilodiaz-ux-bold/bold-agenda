@@ -7,13 +7,14 @@ import { CalendarGrid } from '../components/CalendarGrid';
 import { TeamDayView } from '../components/TeamDayView';
 import { AppointmentDetailScreen } from '../components/AppointmentDetailScreen';
 import { ClientDetailScreen } from '../components/ClientDetailScreen';
-import { ServiceClosureDrawer, type ClosureResult } from '../components/ServiceClosureDrawer';
+import { ServiceClosureDrawer } from '../components/ServiceClosureDrawer';
+import type { ClosureResult } from '../lib/closure';
 import {
   timeToPx, cardTop, cardHeight, durationToPx, CARD_MIN_H,
   HOUR_H, CAL_START_H, CAL_END_H, timeToMin, layoutEvents, type CalEvent,
 } from '../lib/calendarMath';
 import { PROTOTYPE_TODAY } from '../store/prototypeStore';
-import type { Appointment, Service, SaleRecord, Role, AvailabilityBlock, Branch, Client } from '../types';
+import type { Appointment, Service, SaleRecord, Role, AvailabilityBlock, Branch, Client, PaymentMethod } from '../types';
 
 interface Props {
   role: Role;
@@ -29,8 +30,9 @@ interface Props {
   onBranchChange: (id: string) => void;
   onUpdateAppointment: (updated: Appointment) => void;
   onUpdateClient?: (client: Client) => void;
-  onAddSaleRecord: (sale: SaleRecord) => void;
-  onOpenDrawer: (content: ReactNode, title?: string, height?: string) => void;
+  onCommitClosure: (result: ClosureResult) => void;
+  onPaymentPending: (appointmentId: string, method: PaymentMethod) => void;
+  onOpenDrawer: (content: ReactNode, title?: string, height?: string, canClose?: () => boolean) => void;
   onCloseDrawer: () => void;
   onOpenEdit: (apt: Appointment) => void;
   onOpenAvailability: (showProfSelector: boolean) => void;
@@ -108,7 +110,7 @@ const ALL_WEEKS = buildAllWeeks();
 export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
   activeBranchId, clients = [], services = SERVICES, saleRecords = [],
-  onUpdateAppointment, onUpdateClient, onAddSaleRecord, onOpenDrawer, onCloseDrawer, onOpenEdit,
+  onUpdateAppointment, onUpdateClient, onCommitClosure, onPaymentPending, onOpenDrawer, onCloseDrawer, onOpenEdit,
   onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled, onSecondLevelChange,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
@@ -144,7 +146,7 @@ export function AgendaPage({
     ? SERVICES.find(s => s.id === detailAppointment.serviceId)
     : undefined;
   const detailSaleRecord = useMemo(() => {
-    if (!detailAppointment || detailAppointment.status !== 'completada') return undefined;
+    if (!detailAppointment || (detailAppointment.status !== 'completada' && detailAppointment.status !== 'no-show')) return undefined;
     return saleRecords.find(sr => sr.appointmentId === detailAppointment.id);
   }, [detailAppointment, saleRecords]);
 
@@ -268,43 +270,20 @@ export function AgendaPage({
     onNewApptAtSlot?.(selectedDate, time, activeProfId);
   }
 
-  function handleClosure(result: ClosureResult) {
-    const apt = appointments.find(a => a.id === result.appointmentId);
-    const prof = apt ? PROFESSIONALS.find(p => p.id === apt.professionalId) : null;
-    if (apt) {
-      onUpdateAppointment({
-        ...apt,
-        status: result.outcome === 'no-show' ? 'no-show' : 'completada',
-        paymentStatus: result.paymentMethod ? 'pagado' : apt.paymentStatus,
-        paymentMethod: result.paymentMethod ?? apt.paymentMethod,
-        tip: result.tip > 0 ? result.tip : apt.tip,
-      });
-    }
-    if (result.outcome === 'completada' && apt && prof && result.items.length > 0) {
-      onAddSaleRecord({
-        id: `sr-${Date.now()}`,
-        appointmentId: result.appointmentId,
-        clientName: apt.clientName,
-        professionalId: prof.id,
-        items: result.items,
-        serviceValue: result.subtotal,
-        tip: result.tip,
-        total: result.subtotal + result.tip,
-        paymentMethod: result.paymentMethod ?? 'anticipado',
-        paymentStatus: result.saldoPendiente > 0 ? 'pagado' : 'pagado-anticipado',
-        commission: result.items.reduce((s, i) => s + i.commissionAmount, 0),
-        completedAt: new Date().toISOString(),
-      });
-    }
-  }
+  const closureBusyRef = useRef(false);
 
   function openClosure(apt: Appointment, prof: ReturnType<typeof PROFESSIONALS.find>, svc: Service) {
     if (!prof || !svc) return;
+    closureBusyRef.current = false;
+    const currentSvc = services.find(s => s.id === svc.id) ?? svc;
     onOpenDrawer(
-      <ServiceClosureDrawer appointment={apt} professional={prof} service={svc} services={services}
-        onClose={onCloseDrawer} onComplete={handleClosure}
+      <ServiceClosureDrawer appointment={apt} professional={prof} service={currentSvc} services={services} clients={clients}
+        onClose={onCloseDrawer}
+        onComplete={onCommitClosure}
+        onPaymentPending={onPaymentPending}
+        onBusyChange={busy => { closureBusyRef.current = busy; }}
         onReschedule={() => { onCloseDrawer(); setTimeout(() => onOpenEdit(apt), 320); }}
-      />, 'Cierre del servicio', '78%'
+      />, 'Cierre del servicio', '85%', () => !closureBusyRef.current
     );
   }
 

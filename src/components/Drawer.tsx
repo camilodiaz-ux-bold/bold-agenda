@@ -6,9 +6,10 @@ interface Props {
   onClose: () => void;
   children: ReactNode;
   height?: string;
+  canClose?: () => boolean;
 }
 
-export function Drawer({ title, onClose, children, height = '90%' }: Props) {
+export function Drawer({ title, onClose, children, height = '90%', canClose }: Props) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export function Drawer({ title, onClose, children, height = '90%' }: Props) {
   }, []);
 
   const handleClose = () => {
+    if (canClose && !canClose()) return;
     setVisible(false);
     setTimeout(onClose, 280);
   };

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import type { AppointmentStatus, PaymentStatus } from '../types';
 
-type BadgeStatus = AppointmentStatus | PaymentStatus;
+type BadgeStatus = AppointmentStatus | PaymentStatus | 'prepago-retenido';
 
 interface Config {
   label: string;
@@ -29,14 +29,14 @@ const CONFIGS: Record<string, Config> = {
     subtleColor: '#3E4983',
   },
   completada: {
-    label: 'Completada',
+    label: 'Finalizada',
     Icon: CheckCircle2,
     bg: '#F4FDF9',
     color: '#1B8959',
     subtleColor: '#1B8959',
   },
   'no-show': {
-    label: 'No llegó',
+    label: 'No asistió',
     Icon: UserX,
     bg: '#FFF1F2',
     color: '#BE123C',
@@ -55,6 +55,20 @@ const CONFIGS: Record<string, Config> = {
     bg: '#F3F3F3',
     color: '#1E1E1E',
     subtleColor: '#969696',
+  },
+  'pago-pendiente': {
+    label: 'Pendiente',
+    Icon: Clock,
+    bg: '#FFF8EB',
+    color: '#B45309',
+    subtleColor: '#B45309',
+  },
+  'prepago-retenido': {
+    label: 'Prepago retenido',
+    Icon: CreditCard,
+    bg: '#F7F8FB',
+    color: '#3E4983',
+    subtleColor: '#3E4983',
   },
   pagado: {
     label: 'Pagado',

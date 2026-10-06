@@ -27,7 +27,7 @@ const PM_LABELS: Record<string, string> = {
   datafono: 'Datáfono',
   qr: 'QR Pago',
   link: 'Link de pago',
-  anticipado: 'Pago anticipado',
+  anticipado: 'Prepago',
 };
 
 function Divider() {
@@ -60,6 +60,7 @@ export function AppointmentDetailScreen({
 
   const endTime = addMinutes(appointment.startTime, service.duration);
   const isCloseable = appointment.status === 'confirmada';
+  const isPaymentPending = isCloseable && appointment.paymentStatus === 'pago-pendiente';
   const isEditable = appointment.status === 'confirmada' || appointment.status === 'reprogramada';
   const hasClient = Boolean(appointment.clientName);
   // The appointment only stores denormalized client fields (no clientId), so
@@ -105,7 +106,20 @@ export function AppointmentDetailScreen({
           <X size={22} color="#121e6c" strokeWidth={2} />
         </button>
       }
-      footer={isCloseable ? (
+      footer={isPaymentPending ? (
+        <div className="flex flex-col items-center gap-2">
+          <button
+            disabled
+            className="w-full h-12 rounded-full flex items-center justify-center font-bold text-sm text-white opacity-40"
+            style={{ backgroundColor: '#FF2947' }}
+          >
+            Cerrar servicio
+          </button>
+          <p className="text-[12px] text-center" style={{ color: '#B45309' }}>
+            El pago todavía está siendo confirmado.
+          </p>
+        </div>
+      ) : isCloseable ? (
         <button
           onClick={onClosure}
           className="w-full h-12 rounded-full flex items-center justify-center font-bold text-sm text-white transition-all active:scale-[0.98]"
@@ -240,20 +254,25 @@ export function AppointmentDetailScreen({
             <div className="flex flex-col gap-2">
               <div className="flex items-start justify-between gap-3">
                 <p className={FIELD_LABEL}>Tipo de pago</p>
-                <StatusBadge status={appointment.paymentStatus} size="md" />
+                {appointment.status === 'no-show' && appointment.paymentStatus !== 'pagado-anticipado'
+                  ? <span className="text-[12px] font-semibold" style={{ color: '#606060' }}>Sin cobro</span>
+                  : <StatusBadge
+                      status={appointment.status === 'no-show' ? 'prepago-retenido' : appointment.paymentStatus}
+                      size="md"
+                    />}
               </div>
-              {appointment.paymentMethod && (
+              {appointment.paymentMethod && appointment.status !== 'no-show' && (
                 <p className={FIELD_VALUE}>{PM_LABELS[appointment.paymentMethod] ?? appointment.paymentMethod}</p>
               )}
             </div>
 
-            {appointment.status !== 'no-show' && (
+            {(appointment.status !== 'no-show' || saleRecord) && (
               <>
                 <Divider />
                 <div className="flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-3">
                     <p className={FIELD_LABEL}>
-                      {isMulti ? 'Comisión total' : (appointment.status === 'completada' ? 'Tu comisión' : 'Comisión estimada')}
+                      {isMulti ? 'Comisión total' : (appointment.status === 'completada' || saleRecord ? 'Tu comisión' : 'Comisión estimada')}
                       {!isMulti && (
                         <span className="ml-1 font-normal" style={{ color: '#b0b5c8' }}>({service.commissionPercent}%)</span>
                       )}

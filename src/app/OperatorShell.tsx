@@ -10,14 +10,16 @@ import { AjustesPage } from '../pages/AjustesPage';
 import { NewAppointmentScreen } from '../pages/NewAppointmentScreen';
 import { AvailabilityDrawer } from '../components/AvailabilityDrawer';
 import { EditAppointmentDrawer } from '../components/EditAppointmentDrawer';
-import type { OperatorSection, Role, SaleRecord, Appointment, AvailabilityBlock, Client } from '../types';
-import { store } from '../store/prototypeStore';
+import type { OperatorSection, Role, SaleRecord, Appointment, AvailabilityBlock, Client, PaymentMethod } from '../types';
+import { store, PROTOTYPE_TODAY } from '../store/prototypeStore';
+import { applyClosure, type ClosureResult } from '../lib/closure';
 import { BRANCHES } from '../data/appointments';
 
 interface DrawerState {
   title?: string;
   content: ReactNode;
   height?: string;
+  canClose?: () => boolean;
 }
 
 const STAFF_PROF_ID = 'p1';
@@ -56,7 +58,8 @@ export function OperatorShell() {
     persist({ activeBranchId: id });
   }
 
-  const openDrawer = (content: ReactNode, title?: string, height?: string) => setDrawer({ content, title, height });
+  const openDrawer = (content: ReactNode, title?: string, height?: string, canClose?: () => boolean) =>
+    setDrawer({ content, title, height, canClose });
   const closeDrawer = () => setDrawer(null);
 
   function updateAppointment(updated: Appointment) {
@@ -75,12 +78,26 @@ export function OperatorShell() {
     });
   }
 
-  function addSaleRecord(sale: SaleRecord) {
-    setSalesRecords(prev => {
-      const next = [...prev, sale];
-      persist({ saleRecords: next });
-      return next;
-    });
+  // Único punto de escritura del cierre: cita + venta + historial del cliente, un solo persist.
+  function commitClosure(result: ClosureResult) {
+    const s = store.get();
+    const next = applyClosure(
+      { appointments: s.appointments, clients: s.clients, saleRecords: s.saleRecords },
+      result,
+      { date: PROTOTYPE_TODAY, iso: `${PROTOTYPE_TODAY}T13:30:${String(new Date().getSeconds()).padStart(2, '0')}` },
+    );
+    if (!next) return;
+    persist(next);
+    setAppointments(next.appointments);
+    setClients(next.clients);
+    setSalesRecords(next.saleRecords);
+  }
+
+  function markPaymentPending(appointmentId: string, method: PaymentMethod) {
+    const next = store.get().appointments.map(a =>
+      a.id === appointmentId ? { ...a, paymentStatus: 'pago-pendiente' as const, paymentMethod: method } : a);
+    persist({ appointments: next });
+    setAppointments(next);
   }
 
   function addAvailabilityBlock(block: AvailabilityBlock) {
@@ -168,7 +185,8 @@ export function OperatorShell() {
             onBranchChange={handleBranchChange}
             onUpdateAppointment={updateAppointment}
             onUpdateClient={updateClient}
-            onAddSaleRecord={addSaleRecord}
+            onCommitClosure={commitClosure}
+            onPaymentPending={markPaymentPending}
             onOpenDrawer={openDrawer}
             onCloseDrawer={closeDrawer}
             onOpenEdit={openEditDrawer}
@@ -276,7 +294,7 @@ export function OperatorShell() {
       )}
 
       {drawer && (
-        <Drawer title={drawer.title} onClose={closeDrawer} height={drawer.height}>
+        <Drawer title={drawer.title} onClose={closeDrawer} height={drawer.height} canClose={drawer.canClose}>
           {drawer.content}
         </Drawer>
       )}

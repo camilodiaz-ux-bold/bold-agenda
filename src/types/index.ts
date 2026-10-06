@@ -35,7 +35,8 @@ export type OperatorSection = 'agenda' | 'ventas' | 'clientes' | 'ajustes';
 export type Role = 'admin' | 'staff';
 
 export type AppointmentStatus = 'confirmada' | 'completada' | 'no-show' | 'reprogramada' | 'cancelada' | 'cancelada-tarde';
-export type PaymentStatus = 'pendiente' | 'pagado' | 'pagado-anticipado' | 'reembolsado';
+// 'pendiente' = Por cobrar; 'pago-pendiente' = cobro enviado, aún sin confirmar.
+export type PaymentStatus = 'pendiente' | 'pago-pendiente' | 'pagado' | 'pagado-anticipado' | 'reembolsado';
 export type PaymentMethod = 'datafono' | 'qr' | 'link' | 'anticipado';
 
 export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
@@ -146,6 +147,7 @@ export interface SaleLineItem {
   commissionPercent: number;
   commissionAmount: number;
   origin: 'agendado' | 'agregado';
+  prepaid?: boolean;
 }
 
 export interface SaleRecord {
@@ -161,4 +163,10 @@ export interface SaleRecord {
   paymentStatus: PaymentStatus;
   commission: number; // sum of items[].commissionAmount
   completedAt: string; // ISO datetime
+  kind?: 'servicio' | 'no-show';
+  prepaid?: number; // monto ya recibido antes del cierre
+  charged?: number; // monto cobrado en el cierre (saldo + propina)
+  closureRef?: string;
+  paymentRef?: string;
+  note?: string;
 }
