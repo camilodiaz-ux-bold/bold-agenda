@@ -1,4 +1,4 @@
-import type { Appointment, Client, PaymentMethod, SaleLineItem, SaleRecord, Service } from '../types';
+import type { Appointment, Client, ClosureResult, Payment, SaleLineItem, SaleRecord, Service } from '../types';
 
 export type TipPreset = 0 | 5 | 10 | 'custom';
 
@@ -53,19 +53,7 @@ export function calcTip(subtotal: number, preset: TipPreset, customRaw: string):
   return { amount: Math.round((subtotal * preset) / 100), error: null };
 }
 
-export interface ClosureResult {
-  closureRef: string;
-  appointmentId: string;
-  outcome: 'completada' | 'no-show';
-  items: SaleLineItem[];
-  subtotal: number;
-  prepaid: number;
-  tip: number;
-  charged: number;
-  paymentMethod?: PaymentMethod;
-  paymentRef?: string;
-  client?: { client: Client; isNew: boolean };
-}
+export type { ClosureResult };
 
 export interface ClosureSlice {
   appointments: Appointment[];
@@ -113,15 +101,34 @@ export function applyClosure(
     ? { clientName: r.client.client.name, clientPhone: r.client.client.phone, clientCedula: r.client.client.cedula }
     : {};
 
+  // Historia financiera: el prepago existente se conserva con su referencia original.
+  const prepay = apt.payments?.find(p => p.kind === 'prepago');
+  const payments: Payment[] = [];
+  if (r.prepaid > 0) {
+    payments.push(prepay ?? {
+      id: `pay-prepago-${apt.id}`, kind: 'prepago', method: 'anticipado',
+      amount: r.prepaid, status: 'confirmado', reference: `prepago-${apt.id}`,
+    });
+  }
+  if (completed && r.charged > 0 && r.paymentRef) {
+    payments.push({
+      id: r.paymentRef, kind: 'saldo', method: r.paymentMethod ?? 'anticipado',
+      amount: r.charged, status: 'confirmado', reference: r.paymentRef,
+    });
+  }
+  const failedAttempts = (apt.payments ?? []).filter(p => p.status === 'no-confirmado');
+
+  const { pendingClosure: _drop, ...aptBase } = apt;
   const nextApt: Appointment = completed
     ? {
-        ...apt, ...assoc,
+        ...aptBase, ...assoc,
         status: 'completada',
         paymentStatus: 'pagado',
         paymentMethod: r.paymentMethod ?? 'anticipado',
         tip: r.tip,
+        payments: [...failedAttempts, ...payments],
       }
-    : { ...apt, status: 'no-show' };
+    : { ...aptBase, status: 'no-show' };
 
   const sale: SaleRecord | null = completed || r.prepaid > 0
     ? {
@@ -142,6 +149,7 @@ export function applyClosure(
         charged: r.charged,
         closureRef: r.closureRef,
         paymentRef: r.paymentRef,
+        payments,
         ...(completed ? {} : { note: 'No-show' }),
       }
     : null;
@@ -150,5 +158,53 @@ export function applyClosure(
     appointments: state.appointments.map(a => a.id === apt.id ? nextApt : a),
     clients,
     saleRecords: sale ? [...state.saleRecords, sale] : state.saleRecords,
+  };
+}
+
+/** Cobro del saldo respondió Pendiente: la cita sigue abierta y se guarda el draft para reconciliar. */
+export function markPaymentPending(state: ClosureSlice, r: ClosureResult): ClosureSlice | null {
+  const apt = state.appointments.find(a => a.id === r.appointmentId);
+  if (!apt || apt.status === 'completada' || apt.status === 'no-show') return null;
+  if (apt.pendingClosure || !r.paymentRef || !r.paymentMethod) return null;
+
+  const payments: Payment[] = [...(apt.payments ?? [])];
+  if (r.prepaid > 0 && !payments.some(p => p.kind === 'prepago')) {
+    payments.push({
+      id: `pay-prepago-${apt.id}`, kind: 'prepago', method: 'anticipado',
+      amount: r.prepaid, status: 'confirmado', reference: `prepago-${apt.id}`,
+    });
+  }
+  payments.push({
+    id: r.paymentRef, kind: 'saldo', method: r.paymentMethod,
+    amount: r.charged, status: 'pendiente', reference: r.paymentRef,
+  });
+
+  return {
+    ...state,
+    appointments: state.appointments.map(a => a.id === apt.id
+      ? { ...a, paymentStatus: 'pago-pendiente', payments, pendingClosure: r }
+      : a),
+  };
+}
+
+/** Simula la respuesta tardía de Bold POS para un cobro Pendiente. */
+export function resolvePendingPayment(
+  state: ClosureSlice, appointmentId: string, outcome: 'confirmado' | 'vencido',
+  when: { date: string; iso: string },
+): ClosureSlice | null {
+  const apt = state.appointments.find(a => a.id === appointmentId);
+  if (!apt || apt.paymentStatus !== 'pago-pendiente' || !apt.pendingClosure) return null;
+
+  if (outcome === 'confirmado') return applyClosure(state, apt.pendingClosure, when);
+
+  const payments = (apt.payments ?? []).map(p =>
+    p.kind === 'saldo' && p.status === 'pendiente' ? { ...p, status: 'no-confirmado' as const } : p);
+  const hasPrepay = payments.some(p => p.kind === 'prepago' && p.status === 'confirmado');
+  const { pendingClosure: _drop, ...rest } = apt;
+  return {
+    ...state,
+    appointments: state.appointments.map(a => a.id === apt.id
+      ? { ...rest, paymentStatus: hasPrepay ? 'pagado-anticipado' : 'pendiente', payments }
+      : a),
   };
 }

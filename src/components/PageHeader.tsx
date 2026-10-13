@@ -5,6 +5,8 @@ interface Props {
   title: string;
   subtitle?: string;
   onBack?: () => void;
+  /** Keeps the back button in place but inert (e.g. while a payment is in flight). */
+  backDisabled?: boolean;
   onClose?: () => void;
   rightAction?: ReactNode;
   border?: boolean;
@@ -14,7 +16,7 @@ interface Props {
   bg?: string;
 }
 
-export function PageHeader({ title, subtitle, onBack, onClose, rightAction, border = false, centerTitle = false, bg = '#ffffff' }: Props) {
+export function PageHeader({ title, subtitle, onBack, backDisabled = false, onClose, rightAction, border = false, centerTitle = false, bg = '#ffffff' }: Props) {
   return (
     <header
       className={`px-4 pt-4 pb-3 flex items-center gap-2 flex-shrink-0${border ? ' border-b border-gray-100' : ''}`}
@@ -23,7 +25,8 @@ export function PageHeader({ title, subtitle, onBack, onClose, rightAction, bord
       {onBack && (
         <button
           onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center -ml-2 shrink-0 transition-opacity active:opacity-60"
+          disabled={backDisabled}
+          className="w-10 h-10 flex items-center justify-center -ml-2 shrink-0 transition-opacity active:opacity-60 disabled:opacity-30"
         >
           <ArrowLeft size={22} color="#121e6c" strokeWidth={2} />
         </button>

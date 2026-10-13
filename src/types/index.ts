@@ -85,6 +85,29 @@ export interface Branch {
   neighborhood: string;
 }
 
+export interface Payment {
+  id: string;
+  kind: 'prepago' | 'saldo';
+  method: PaymentMethod;
+  amount: number;
+  status: 'confirmado' | 'pendiente' | 'no-confirmado';
+  reference: string;
+}
+
+export interface ClosureResult {
+  closureRef: string;
+  appointmentId: string;
+  outcome: 'completada' | 'no-show';
+  items: SaleLineItem[];
+  subtotal: number;
+  prepaid: number;
+  tip: number;
+  charged: number;
+  paymentMethod?: PaymentMethod;
+  paymentRef?: string;
+  client?: { client: Client; isNew: boolean };
+}
+
 export interface Appointment {
   id: string;
   professionalId: string;
@@ -102,6 +125,8 @@ export interface Appointment {
   policySnapshot?: { cancellationWindowHours: number };
   originalPrice?: number;
   branchId?: string;
+  payments?: Payment[];
+  pendingClosure?: ClosureResult; // draft del cierre mientras el cobro está Pendiente
 }
 
 export interface AvailabilityBlock {
@@ -168,5 +193,6 @@ export interface SaleRecord {
   charged?: number; // monto cobrado en el cierre (saldo + propina)
   closureRef?: string;
   paymentRef?: string;
+  payments?: Payment[];
   note?: string;
 }

@@ -3,7 +3,8 @@ import { PageHeader } from './PageHeader';
 
 interface Props {
   title: string;
-  onBack: () => void;
+  onBack?: () => void;
+  backDisabled?: boolean;
   rightAction?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -15,10 +16,10 @@ interface Props {
  * actions, navigation. Reuse this for future detail screens (cliente, profesional,
  * servicio, venta) instead of stacking more content into a Drawer.
  */
-export function DetailPageShell({ title, onBack, rightAction, children, footer }: Props) {
+export function DetailPageShell({ title, onBack, backDisabled, rightAction, children, footer }: Props) {
   return (
     <div className="relative flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
-      <PageHeader title={title} onBack={onBack} rightAction={rightAction} centerTitle bg="#F7F8FB" />
+      <PageHeader title={title} onBack={onBack} backDisabled={backDisabled} rightAction={rightAction} centerTitle bg="#F7F8FB" />
       <div
         className="flex-1 overflow-y-auto min-h-0 px-4 pt-4"
         style={{ paddingBottom: footer ? 'calc(104px + env(safe-area-inset-bottom))' : '24px' }}

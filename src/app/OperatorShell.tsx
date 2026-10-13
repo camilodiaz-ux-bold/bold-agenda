@@ -10,9 +10,9 @@ import { AjustesPage } from '../pages/AjustesPage';
 import { NewAppointmentScreen } from '../pages/NewAppointmentScreen';
 import { AvailabilityDrawer } from '../components/AvailabilityDrawer';
 import { EditAppointmentDrawer } from '../components/EditAppointmentDrawer';
-import type { OperatorSection, Role, SaleRecord, Appointment, AvailabilityBlock, Client, PaymentMethod } from '../types';
+import type { OperatorSection, Role, SaleRecord, Appointment, AvailabilityBlock, Client } from '../types';
 import { store, PROTOTYPE_TODAY } from '../store/prototypeStore';
-import { applyClosure, type ClosureResult } from '../lib/closure';
+import { applyClosure, markPaymentPending as markPending, resolvePendingPayment, type ClosureResult } from '../lib/closure';
 import { BRANCHES } from '../data/appointments';
 
 interface DrawerState {
@@ -79,13 +79,11 @@ export function OperatorShell() {
   }
 
   // Único punto de escritura del cierre: cita + venta + historial del cliente, un solo persist.
-  function commitClosure(result: ClosureResult) {
-    const s = store.get();
-    const next = applyClosure(
-      { appointments: s.appointments, clients: s.clients, saleRecords: s.saleRecords },
-      result,
-      { date: PROTOTYPE_TODAY, iso: `${PROTOTYPE_TODAY}T13:30:${String(new Date().getSeconds()).padStart(2, '0')}` },
-    );
+  function closureWhen() {
+    return { date: PROTOTYPE_TODAY, iso: `${PROTOTYPE_TODAY}T13:30:${String(new Date().getSeconds()).padStart(2, '0')}` };
+  }
+
+  function applySlice(next: { appointments: Appointment[]; clients: Client[]; saleRecords: SaleRecord[] } | null) {
     if (!next) return;
     persist(next);
     setAppointments(next.appointments);
@@ -93,11 +91,21 @@ export function OperatorShell() {
     setSalesRecords(next.saleRecords);
   }
 
-  function markPaymentPending(appointmentId: string, method: PaymentMethod) {
-    const next = store.get().appointments.map(a =>
-      a.id === appointmentId ? { ...a, paymentStatus: 'pago-pendiente' as const, paymentMethod: method } : a);
-    persist({ appointments: next });
-    setAppointments(next);
+  function currentSlice() {
+    const s = store.get();
+    return { appointments: s.appointments, clients: s.clients, saleRecords: s.saleRecords };
+  }
+
+  function commitClosure(result: ClosureResult) {
+    applySlice(applyClosure(currentSlice(), result, closureWhen()));
+  }
+
+  function markPaymentPending(result: ClosureResult) {
+    applySlice(markPending(currentSlice(), result));
+  }
+
+  function resolvePending(appointmentId: string, outcome: 'confirmado' | 'vencido') {
+    applySlice(resolvePendingPayment(currentSlice(), appointmentId, outcome, closureWhen()));
   }
 
   function addAvailabilityBlock(block: AvailabilityBlock) {
@@ -187,8 +195,7 @@ export function OperatorShell() {
             onUpdateClient={updateClient}
             onCommitClosure={commitClosure}
             onPaymentPending={markPaymentPending}
-            onOpenDrawer={openDrawer}
-            onCloseDrawer={closeDrawer}
+            onResolvePending={resolvePending}
             onOpenEdit={openEditDrawer}
             onOpenAvailability={(showProfSelector) => openAvailabilityDrawer(showProfSelector)}
             onNewApptAtSlot={(date, time, professionalId) => { setNewApptSlot({ date, time, professionalId }); setShowNewAppt(true); }}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, UserPlus, Search } from 'lucide-react';
+import { X, UserPlus, Search, Clock } from 'lucide-react';
 import type { Appointment, Professional, Service, Client, SaleRecord } from '../types';
 import { StatusBadge } from './StatusBadge';
 import { DetailPageShell } from './DetailPageShell';
@@ -17,6 +17,7 @@ interface Props {
   onEdit: () => void;
   onAssignClient?: (client: Client) => void;
   onViewClientProfile?: (client: Client) => void;
+  onResolvePending?: (outcome: 'confirmado' | 'vencido') => void;
 }
 
 const SECTION_LABEL = 'text-[12px] font-normal text-[#3e4983] leading-4';
@@ -53,7 +54,7 @@ function addMinutes(time: string, minutes: number): string {
 
 export function AppointmentDetailScreen({
   appointment, professional, service, services, saleRecord, clients = [],
-  onBack, onClosure, onEdit, onAssignClient, onViewClientProfile,
+  onBack, onClosure, onEdit, onAssignClient, onViewClientProfile, onResolvePending,
 }: Props) {
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
@@ -107,17 +108,35 @@ export function AppointmentDetailScreen({
         </button>
       }
       footer={isPaymentPending ? (
-        <div className="flex flex-col items-center gap-2">
-          <button
-            disabled
-            className="w-full h-12 rounded-full flex items-center justify-center font-bold text-sm text-white opacity-40"
-            style={{ backgroundColor: '#FF2947' }}
-          >
-            Cerrar servicio
-          </button>
-          <p className="text-[12px] text-center" style={{ color: '#B45309' }}>
-            El pago todavía está siendo confirmado.
-          </p>
+        <div className="flex flex-col gap-3">
+          <div className="rounded-2xl px-4 py-3 flex items-start gap-3" style={{ backgroundColor: '#FFF8EB' }}>
+            <Clock size={18} color="#B45309" strokeWidth={2} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[14px] font-bold" style={{ color: '#B45309' }}>Pago pendiente</p>
+              <p className="text-[12px] mt-0.5" style={{ color: '#92400E' }}>Estamos esperando confirmación del pago.</p>
+            </div>
+          </div>
+          {onResolvePending && (
+            <div className="rounded-xl border border-dashed border-[#d2d4e1] px-3 py-2 flex flex-col gap-2">
+              <p className="text-[10px] font-semibold text-[#b0b5c8] uppercase tracking-widest">Prototipo · pago pendiente</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onResolvePending('confirmado')}
+                  className="flex-1 h-8 rounded-full text-[11px] font-semibold text-white active:opacity-70"
+                  style={{ backgroundColor: '#121e6c' }}
+                >
+                  Confirmar pago
+                </button>
+                <button
+                  onClick={() => onResolvePending('vencido')}
+                  className="flex-1 h-8 rounded-full text-[11px] font-semibold text-[#606060] border active:opacity-70"
+                  style={{ borderColor: '#d2d4e1' }}
+                >
+                  Simular vencimiento
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : isCloseable ? (
         <button
@@ -264,6 +283,16 @@ export function AppointmentDetailScreen({
               {appointment.paymentMethod && appointment.status !== 'no-show' && (
                 <p className={FIELD_VALUE}>{PM_LABELS[appointment.paymentMethod] ?? appointment.paymentMethod}</p>
               )}
+              {appointment.payments?.filter(p => p.status !== 'no-confirmado').map(p => (
+                <div key={p.id} className="flex items-center justify-between">
+                  <span className="text-[12px]" style={{ color: '#606060' }}>
+                    {p.kind === 'prepago' ? 'Prepago' : 'Saldo'} · {PM_LABELS[p.method] ?? p.method}
+                  </span>
+                  <span className="text-[12px] font-semibold tabular-nums" style={{ color: p.status === 'pendiente' ? '#B45309' : '#15803D' }}>
+                    {formatCOP(p.amount)}{p.status === 'pendiente' ? ' · Pendiente' : ''}
+                  </span>
+                </div>
+              ))}
             </div>
 
             {(appointment.status !== 'no-show' || saleRecord) && (

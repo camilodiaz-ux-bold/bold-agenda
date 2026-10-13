@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Bell, Users, User, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PROFESSIONALS, SERVICES } from '../data/appointments';
 import { AppointmentBlock } from '../components/AppointmentBlock';
@@ -7,14 +7,14 @@ import { CalendarGrid } from '../components/CalendarGrid';
 import { TeamDayView } from '../components/TeamDayView';
 import { AppointmentDetailScreen } from '../components/AppointmentDetailScreen';
 import { ClientDetailScreen } from '../components/ClientDetailScreen';
-import { ServiceClosureDrawer } from '../components/ServiceClosureDrawer';
-import type { ClosureResult } from '../lib/closure';
+import { ServiceClosureScreen } from '../components/ServiceClosureScreen';
+import type { ClosureResult } from '../types';
 import {
   timeToPx, cardTop, cardHeight, durationToPx, CARD_MIN_H,
   HOUR_H, CAL_START_H, CAL_END_H, timeToMin, layoutEvents, type CalEvent,
 } from '../lib/calendarMath';
 import { PROTOTYPE_TODAY } from '../store/prototypeStore';
-import type { Appointment, Service, SaleRecord, Role, AvailabilityBlock, Branch, Client, PaymentMethod } from '../types';
+import type { Appointment, Service, SaleRecord, Role, AvailabilityBlock, Branch, Client } from '../types';
 
 interface Props {
   role: Role;
@@ -31,9 +31,8 @@ interface Props {
   onUpdateAppointment: (updated: Appointment) => void;
   onUpdateClient?: (client: Client) => void;
   onCommitClosure: (result: ClosureResult) => void;
-  onPaymentPending: (appointmentId: string, method: PaymentMethod) => void;
-  onOpenDrawer: (content: ReactNode, title?: string, height?: string, canClose?: () => boolean) => void;
-  onCloseDrawer: () => void;
+  onPaymentPending: (result: ClosureResult) => void;
+  onResolvePending: (appointmentId: string, outcome: 'confirmado' | 'vencido') => void;
   onOpenEdit: (apt: Appointment) => void;
   onOpenAvailability: (showProfSelector: boolean) => void;
   onNewApptAtSlot?: (date: string, time: string, professionalId?: string) => void;
@@ -110,7 +109,7 @@ const ALL_WEEKS = buildAllWeeks();
 export function AgendaPage({
   role, viewScope, onViewScopeChange, appointments, availabilityBlocks,
   activeBranchId, clients = [], services = SERVICES, saleRecords = [],
-  onUpdateAppointment, onUpdateClient, onCommitClosure, onPaymentPending, onOpenDrawer, onCloseDrawer, onOpenEdit,
+  onUpdateAppointment, onUpdateClient, onCommitClosure, onPaymentPending, onResolvePending, onOpenEdit,
   onOpenAvailability, onNewApptAtSlot, jumpToDate, onJumpHandled, onSecondLevelChange,
 }: Props) {
   const [selectedDate, setSelectedDate] = useState(PROTOTYPE_TODAY);
@@ -118,6 +117,7 @@ export function AgendaPage({
   const [showViewSheet, setShowViewSheet] = useState(false);
   const [viewProfId] = useState(STAFF_PROF_ID);
   const [detailAptId, setDetailAptId] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
   const [viewingClientId, setViewingClientId] = useState<string | null>(null);
 
   const isAdmin = role === 'admin';
@@ -270,28 +270,12 @@ export function AgendaPage({
     onNewApptAtSlot?.(selectedDate, time, activeProfId);
   }
 
-  const closureBusyRef = useRef(false);
-
-  function openClosure(apt: Appointment, prof: ReturnType<typeof PROFESSIONALS.find>, svc: Service) {
-    if (!prof || !svc) return;
-    closureBusyRef.current = false;
-    const currentSvc = services.find(s => s.id === svc.id) ?? svc;
-    onOpenDrawer(
-      <ServiceClosureDrawer appointment={apt} professional={prof} service={currentSvc} services={services} clients={clients}
-        onClose={onCloseDrawer}
-        onComplete={onCommitClosure}
-        onPaymentPending={onPaymentPending}
-        onBusyChange={busy => { closureBusyRef.current = busy; }}
-        onReschedule={() => { onCloseDrawer(); setTimeout(() => onOpenEdit(apt), 320); }}
-      />, 'Cierre del servicio', '85%', () => !closureBusyRef.current
-    );
-  }
-
   function openDetail(apt: Appointment) {
     setDetailAptId(apt.id);
   }
 
   function closeDetail() {
+    setClosing(false);
     setDetailAptId(null);
     setViewingClientId(null);
   }
@@ -304,6 +288,23 @@ export function AgendaPage({
       setProfFilter(profId ?? 'all');
     }
     setShowViewSheet(false);
+  }
+
+  if (closing && detailAppointment && detailProfessional && detailService) {
+    return (
+      <ServiceClosureScreen
+        appointment={detailAppointment}
+        professional={detailProfessional}
+        service={services.find(s => s.id === detailService.id) ?? detailService}
+        services={services}
+        clients={clients}
+        onExit={() => setClosing(false)}
+        onFinish={closeDetail}
+        onComplete={onCommitClosure}
+        onPaymentPending={onPaymentPending}
+        onReschedule={() => { setClosing(false); onOpenEdit(detailAppointment); }}
+      />
+    );
   }
 
   if (detailAppointment && detailProfessional && detailService) {
@@ -334,7 +335,8 @@ export function AgendaPage({
         saleRecord={detailSaleRecord}
         clients={clients}
         onBack={closeDetail}
-        onClosure={() => openClosure(detailAppointment, detailProfessional, detailService)}
+        onClosure={() => setClosing(true)}
+        onResolvePending={outcome => onResolvePending(detailAppointment.id, outcome)}
         onEdit={() => onOpenEdit(detailAppointment)}
         onAssignClient={(client) => {
           onUpdateAppointment({
