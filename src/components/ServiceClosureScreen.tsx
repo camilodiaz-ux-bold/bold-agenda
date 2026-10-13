@@ -124,10 +124,13 @@ export function ServiceClosureScreen({
   }
 
   // "Completada" ya no es un paso: es el resultado de continuar desde la pantalla principal.
+  // Sin saldo no se pide método. Con saldo: si ya hay método en el draft se va directo
+  // a "Método de cobro"; si no, se abre el modal sobre esta misma pantalla.
   function handleContinue() {
     setOutcome('completada');
-    if (saldoPendiente > 0) setStep('payment');
-    else handleFinalize();
+    if (saldoPendiente <= 0) { handleFinalize(); return; }
+    if (paymentMethod) setStep('payment');
+    else setMethodModalOpen(true);
   }
 
   function buildCompletedResult(): ClosureResult {
@@ -217,9 +220,12 @@ export function ServiceClosureScreen({
     setStep('done');
   }
 
+  // Elegir método cierra el modal y, si venía de "Continuar al cobro", entra a "Método de cobro".
+  // Cerrar el modal sin elegir deja al usuario donde estaba (nunca una pantalla de cobro vacía).
   function selectMethod(m: PaymentMethod) {
     setPaymentMethod(m);
     setMethodModalOpen(false);
+    setStep('payment');
   }
 
   function handleTipPreset(p: TipPreset) {
@@ -461,7 +467,7 @@ export function ServiceClosureScreen({
             state={methodsState}
             onAdd={() => setMethodModalOpen(true)}
             onChange={() => setMethodModalOpen(true)}
-            onRemove={() => setPaymentMethod(null)}
+            onRemove={() => { setPaymentMethod(null); setStep('main'); }}
             onReload={reloadMethods}
           />
 
@@ -516,7 +522,7 @@ export function ServiceClosureScreen({
     <CheckoutStepLayout
       key={viewKey}
       title={title}
-      overlay={methodModalOpen && viewKey === 'payment' ? (
+      overlay={methodModalOpen && (viewKey === 'payment' || viewKey === 'main') ? (
         <PaymentMethodModal selected={paymentMethod} onSelect={selectMethod} onClose={() => setMethodModalOpen(false)} />
       ) : undefined}
       onBack={onBack}
