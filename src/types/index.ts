@@ -101,6 +101,8 @@ export interface Payment {
 export interface ClosureResult {
   closureRef: string;
   appointmentId: string;
+  /** Profesional elegido en el cierre; si falta se usa el de la cita. */
+  professionalId?: string;
   outcome: 'completada' | 'no-show';
   items: SaleLineItem[];
   subtotal: number;

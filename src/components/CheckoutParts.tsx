@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { CheckCircle2, UserPlus, X, Search, ChevronRight, Loader2, ChevronDown } from 'lucide-react';
-import type { SaleLineItem, Client, Service } from '../types';
+import { Check, CheckCircle2, UserPlus, X, Search, ChevronRight, Loader2, ChevronDown } from 'lucide-react';
+import type { SaleLineItem, Client, Service, Professional } from '../types';
 import { formatCOP } from '../data/appointments';
 
 // Tokens compartidos con Detalle de la cita (mismo lenguaje full-screen).
@@ -302,6 +302,47 @@ export function ClientPicker({ clients, onSelect, onClear }: {
             <p className="text-[14px] text-[#969696] py-4 text-center">Sin resultados para "{query}"</p>
           )}
         </div>
+      </Section>
+    </div>
+  );
+}
+
+// ── Selector de profesional (pantalla completa) ─────────────────────────────
+export function ProfessionalPicker({ professionals, selectedId, onSelect }: {
+  professionals: Professional[];
+  selectedId: string;
+  onSelect: (p: Professional) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const list = professionals
+    .filter(p => p.active !== false)
+    .filter(p => !q || p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q));
+  return (
+    <div className="flex flex-col gap-4">
+      <SearchField value={query} onChange={setQuery} placeholder="Buscar profesional" />
+      <Section label="Profesionales">
+        {list.length === 0 ? (
+          <p className="text-[14px] text-[#969696] text-center py-4">Sin resultados para "{query}"</p>
+        ) : (
+          <div className="bg-white rounded-2xl px-4 flex flex-col">
+            {list.map((p, i) => (
+              <div key={p.id}>
+                {i > 0 && <Divider />}
+                <button onClick={() => onSelect(p)} className="flex items-center gap-3 py-3 text-left w-full active:opacity-70">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#F7F8FB' }}>
+                    <span className="text-[14px]" style={{ color: '#3E4983' }}>{p.initials}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-bold text-[#121e6c] truncate">{p.name}</p>
+                    <p className="text-[12px]" style={{ color: '#6C759F' }}>{p.role}</p>
+                  </div>
+                  {p.id === selectedId && <Check size={16} color="#121e6c" strokeWidth={2.5} />}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
     </div>
   );

@@ -9,7 +9,7 @@ import {
 import { CheckoutStepLayout } from './CheckoutStepLayout';
 import {
   Section, Field, ActionButton, PrimaryButton, ServiceLine, TotalsSummary,
-  CheckoutStatusScreen, ClientPicker, ServicePicker, PrototypePanel, type MockResult,
+  CheckoutStatusScreen, ClientPicker, ProfessionalPicker, ServicePicker, PrototypePanel, type MockResult,
 } from './CheckoutParts';
 import { PaymentSummary, TipControl, PaymentMethodsSection } from './PaymentSetup';
 import { PaymentMethodModal, paymentMethodLabel } from './PaymentMethodModal';
@@ -19,6 +19,7 @@ interface Props {
   professional: Professional;
   service: Service;
   services: Service[];
+  professionals: Professional[];
   clients: Client[];
   defaultTipPercent?: number;
   /** Abandona el checkout y vuelve a Detalle de la cita (también tras pago pendiente). */
@@ -30,8 +31,8 @@ interface Props {
   onReschedule: () => void;
 }
 
-type Step = 'outcome' | 'items' | 'payment' | 'noshow-confirm' | 'done';
-type Overlay = 'client' | 'service' | null;
+type Step = 'main' | 'payment' | 'noshow-confirm' | 'done';
+type Overlay = 'client' | 'professional' | 'service' | null;
 type Outcome = 'completada' | 'no-show';
 type PayState = 'idle' | 'processing' | 'pending' | 'declined' | 'register-failed';
 type MethodsState = 'ok' | 'loading' | 'error';
@@ -51,10 +52,10 @@ function timeRange(start: string, minutes: number): string {
 }
 
 export function ServiceClosureScreen({
-  appointment, professional, service, services, clients, defaultTipPercent = 0,
+  appointment, professional, service, services, professionals, clients, defaultTipPercent = 0,
   onExit, onFinish, onComplete, onPaymentPending, onReschedule,
 }: Props) {
-  const [step, setStep] = useState<Step>('outcome');
+  const [step, setStep] = useState<Step>('main');
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
@@ -63,6 +64,7 @@ export function ServiceClosureScreen({
     makeLineItem(service, appointment.originalPrice ?? service.price, 'agendado', isPrepaid),
   ]);
   const [draftClient, setDraftClient] = useState<DraftClient | null>(null);
+  const [activeProfessional, setActiveProfessional] = useState<Professional>(professional);
 
   // La propina arranca APAGADA. El preset es el que se aplica al encenderla:
   // el default configurado si existe; si no, 10%.
@@ -116,16 +118,23 @@ export function ServiceClosureScreen({
     setItems(prev => canRemoveLine(prev, idx) ? prev.filter((_, i) => i !== idx) : prev);
   }
 
-  function handleOutcomeSelect(o: Outcome | 'reprogramar') {
-    if (o === 'reprogramar') { onReschedule(); return; }
-    setOutcome(o);
-    setStep(o === 'no-show' ? 'noshow-confirm' : 'items');
+  function handleNoShow() {
+    setOutcome('no-show');
+    setStep('noshow-confirm');
+  }
+
+  // "Completada" ya no es un paso: es el resultado de continuar desde la pantalla principal.
+  function handleContinue() {
+    setOutcome('completada');
+    if (saldoPendiente > 0) setStep('payment');
+    else handleFinalize();
   }
 
   function buildCompletedResult(): ClosureResult {
     return {
       closureRef: closureRef.current,
       appointmentId: appointment.id,
+      professionalId: activeProfessional.id,
       outcome: 'completada',
       items,
       subtotal,
@@ -197,6 +206,7 @@ export function ServiceClosureScreen({
     onComplete({
       closureRef: closureRef.current,
       appointmentId: appointment.id,
+      professionalId: activeProfessional.id,
       outcome: 'no-show',
       items: prepaidLines,
       subtotal: retained,
@@ -240,13 +250,15 @@ export function ServiceClosureScreen({
     return d ? formatDuration(d) : undefined;
   };
 
-  // Campo Cliente: selector solo si la cita no trae cliente propio.
+  // Cliente y Profesional abren selectores de pantalla completa; el cliente es opcional.
   const clientField = (
+    <Field label="Cliente" value={clientName} placeholder="Sin cliente asociado" onClick={() => setOverlay('client')} />
+  );
+  const professionalField = (
     <Field
-      label="Cliente"
-      value={clientName}
-      placeholder="Sin cliente asociado"
-      onClick={appointment.clientName ? undefined : () => setOverlay('client')}
+      label="Profesional"
+      value={activeProfessional.name.split(' ')[0]}
+      onClick={() => setOverlay('professional')}
     />
   );
 
@@ -261,7 +273,9 @@ export function ServiceClosureScreen({
 
   if (overlay === 'client') {
     viewKey = 'overlay-client';
+    title = 'Seleccionar cliente';
     onBack = () => setOverlay(null);
+    onClose = undefined; // en un selector solo se vuelve; la X perdería el draft
     ctaSummary = undefined;
     body = (
       <ClientPicker
@@ -270,18 +284,33 @@ export function ServiceClosureScreen({
         onSelect={(client, isNew) => { setDraftClient({ client, isNew }); setOverlay(null); }}
       />
     );
+  } else if (overlay === 'professional') {
+    viewKey = 'overlay-professional';
+    title = 'Seleccionar profesional';
+    onBack = () => setOverlay(null);
+    onClose = undefined; // en un selector solo se vuelve; la X perdería el draft
+    ctaSummary = undefined;
+    body = (
+      <ProfessionalPicker
+        professionals={professionals}
+        selectedId={activeProfessional.id}
+        onSelect={p => { setActiveProfessional(p); setOverlay(null); }}
+      />
+    );
   } else if (overlay === 'service') {
     viewKey = 'overlay-service';
+    title = 'Agregar servicio';
     onBack = () => setOverlay(null);
+    onClose = undefined; // en un selector solo se vuelve; la X perdería el draft
     ctaSummary = undefined;
     body = <ServicePicker services={services} onSelect={addServiceItem} />;
-  } else if (step === 'outcome') {
+  } else if (step === 'main') {
     body = (
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             {clientField}
-            <Field label="Profesional" value={professional.name.split(' ')[0]} />
+            {professionalField}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Fecha" value={formatShortDate(appointment.date)} />
@@ -290,43 +319,11 @@ export function ServiceClosureScreen({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <ActionButton onClick={() => handleOutcomeSelect('reprogramar')}>Reprogramar</ActionButton>
-          <ActionButton onClick={() => handleOutcomeSelect('no-show')}>Cliente no llegó</ActionButton>
+          <ActionButton onClick={onReschedule}>Reprogramar</ActionButton>
+          <ActionButton onClick={handleNoShow}>Cliente no llegó</ActionButton>
         </div>
 
         <Section label="Servicios de la cita">
-          <div className="flex flex-col gap-2">
-            {items.map((item, idx) => <ServiceLine key={idx} item={item} detail={durationOf(item)} />)}
-          </div>
-        </Section>
-      </div>
-    );
-    cta = <PrimaryButton onClick={() => handleOutcomeSelect('completada')}>Completada</PrimaryButton>;
-  } else if (step === 'noshow-confirm') {
-    const retained = items.filter(i => i.prepaid).reduce((s, i) => s + i.price, 0);
-    onBack = () => setStep('outcome');
-    ctaSummary = undefined;
-    body = (
-      <div className="flex flex-col gap-6">
-        <CheckoutStatusScreen
-          tone="danger"
-          icon={<UserX size={28} strokeWidth={2} />}
-          title={appointment.clientName ? `${appointment.clientName} no se presentó` : 'El cliente no se presentó'}
-          description={retained > 0
-            ? `El prepago de ${formatCOP(retained)} queda retenido según la política de cancelación.`
-            : 'No se generará ningún cobro.'}
-        />
-        <ActionButton onClick={() => setStep('outcome')}>Volver</ActionButton>
-      </div>
-    );
-    cta = <PrimaryButton onClick={handleConfirmNoShow}>Confirmar no-show</PrimaryButton>;
-  } else if (step === 'items') {
-    onBack = () => setStep('outcome');
-    body = (
-      <div className="flex flex-col gap-8">
-        {clientField}
-
-        <Section label="Servicios realizados">
           <div className="flex flex-col gap-2">
             {items.map((item, idx) => (
               <ServiceLine
@@ -349,10 +346,28 @@ export function ServiceClosureScreen({
       </div>
     );
     cta = (
-      <PrimaryButton onClick={() => saldoPendiente > 0 ? setStep('payment') : handleFinalize()}>
+      <PrimaryButton onClick={handleContinue}>
         {saldoPendiente > 0 ? 'Continuar al cobro' : 'Finalizar servicio'}
       </PrimaryButton>
     );
+  } else if (step === 'noshow-confirm') {
+    const retained = items.filter(i => i.prepaid).reduce((s, i) => s + i.price, 0);
+    onBack = () => setStep('main');
+    ctaSummary = undefined;
+    body = (
+      <div className="flex flex-col gap-6">
+        <CheckoutStatusScreen
+          tone="danger"
+          icon={<UserX size={28} strokeWidth={2} />}
+          title={appointment.clientName ? `${appointment.clientName} no se presentó` : 'El cliente no se presentó'}
+          description={retained > 0
+            ? `El prepago de ${formatCOP(retained)} queda retenido según la política de cancelación.`
+            : 'No se generará ningún cobro.'}
+        />
+        <ActionButton onClick={() => setStep('main')}>Volver</ActionButton>
+      </div>
+    );
+    cta = <PrimaryButton onClick={handleConfirmNoShow}>Confirmar no-show</PrimaryButton>;
   } else if (step === 'payment') {
     ctaSummary = undefined;
     if (payState === 'processing') {
@@ -417,7 +432,7 @@ export function ServiceClosureScreen({
     } else {
       const canCharge = Boolean(paymentMethod) && !tipError && methodsState === 'ok';
       title = 'Método de cobro';
-      onBack = () => setStep('items');
+      onBack = () => setStep('main');
       onClose = undefined;
       ctaSummary = summary;
       body = (

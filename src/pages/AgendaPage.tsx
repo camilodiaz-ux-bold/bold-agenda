@@ -297,6 +297,7 @@ export function AgendaPage({
         professional={detailProfessional}
         service={services.find(s => s.id === detailService.id) ?? detailService}
         services={services}
+        professionals={PROFESSIONALS}
         clients={clients}
         onExit={() => setClosing(false)}
         onFinish={closeDetail}

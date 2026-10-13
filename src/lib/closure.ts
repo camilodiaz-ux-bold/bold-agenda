@@ -135,7 +135,7 @@ export function applyClosure(
         id: `sr-${r.closureRef}`,
         appointmentId: apt.id,
         clientName: nextApt.clientName,
-        professionalId: apt.professionalId,
+        professionalId: r.professionalId ?? apt.professionalId,
         items: r.items,
         serviceValue: r.subtotal,
         tip: r.tip,
