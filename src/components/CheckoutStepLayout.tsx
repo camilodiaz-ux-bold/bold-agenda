@@ -2,6 +2,10 @@ import type { ReactNode } from 'react';
 import { ChevronLeft, X } from 'lucide-react';
 
 interface Props {
+  /** Título del header. Por defecto "Cerrar servicio". */
+  title?: string;
+  /** Capa modal puntual (p. ej. selector de método), anclada a esta superficie. */
+  overlay?: ReactNode;
   /** Sin onBack el botón no se muestra (estados terminales). */
   onBack?: () => void;
   backDisabled?: boolean;
@@ -20,9 +24,9 @@ interface Props {
  * header de segundo nivel, contenido con scroll y barra inferior anclada.
  * La barra es hermana del scroll (no flota encima), así que nunca tapa contenido.
  */
-export function CheckoutStepLayout({ onBack, backDisabled, onClose, closeDisabled, summary, cta, children }: Props) {
+export function CheckoutStepLayout({ title = 'Cerrar servicio', overlay, onBack, backDisabled, onClose, closeDisabled, summary, cta, children }: Props) {
   return (
-    <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
+    <div className="relative flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
       <header className="flex items-center gap-2 px-3 pt-4 pb-4 shrink-0">
         <div className="w-6 h-6 shrink-0">
           {onBack && (
@@ -36,7 +40,7 @@ export function CheckoutStepLayout({ onBack, backDisabled, onClose, closeDisable
             </button>
           )}
         </div>
-        <h1 className="flex-1 min-w-0 text-center text-[16px] leading-5 font-semibold text-[#121e6c] truncate">Cerrar servicio</h1>
+        <h1 className="flex-1 min-w-0 text-center text-[16px] leading-5 font-semibold text-[#121e6c] truncate">{title}</h1>
         <div className="w-6 h-6 shrink-0">
           {onClose && (
             <button
@@ -67,6 +71,7 @@ export function CheckoutStepLayout({ onBack, backDisabled, onClose, closeDisable
           <div className={summary ? 'w-[174px] shrink-0' : 'w-full'}>{cta}</div>
         </div>
       )}
+      {overlay}
     </div>
   );
 }

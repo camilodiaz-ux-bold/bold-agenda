@@ -37,7 +37,11 @@ export type Role = 'admin' | 'staff';
 export type AppointmentStatus = 'confirmada' | 'completada' | 'no-show' | 'reprogramada' | 'cancelada' | 'cancelada-tarde';
 // 'pendiente' = Por cobrar; 'pago-pendiente' = cobro enviado, aún sin confirmar.
 export type PaymentStatus = 'pendiente' | 'pago-pendiente' | 'pagado' | 'pagado-anticipado' | 'reembolsado';
-export type PaymentMethod = 'datafono' | 'qr' | 'link' | 'anticipado';
+export type PaymentMethod =
+  | 'datafono' | 'qr' | 'link' | 'anticipado'
+  // Catálogo de Bold POS (selección de prototipo en el checkout)
+  | 'efectivo' | 'nequi' | 'daviplata' | 'credibanco' | 'redeban' | 'addi'
+  | 'sistecredito' | 'otro' | 'transferencia' | 'intercambio' | 'contra-entrega';
 
 export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 

@@ -25,6 +25,17 @@ const FIELD_LABEL = 'text-[12px] font-bold text-[#121e6c] leading-4';
 const FIELD_VALUE = 'text-[14px] text-[#1e1e1e] leading-5';
 
 const PM_LABELS: Record<string, string> = {
+  efectivo: 'Efectivo',
+  nequi: 'Nequi',
+  daviplata: 'Daviplata',
+  credibanco: 'Credibanco',
+  redeban: 'Redeban',
+  addi: 'Addi',
+  sistecredito: 'Sistecrédito',
+  otro: 'Otro',
+  transferencia: 'Transferencia bancaria',
+  intercambio: 'Intercambio',
+  'contra-entrega': 'Pago contra entrega',
   datafono: 'Datáfono',
   qr: 'QR Pago',
   link: 'Link de pago',

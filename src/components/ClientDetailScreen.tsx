@@ -28,6 +28,17 @@ const PM_ICONS: Record<string, typeof CreditCard> = {
 };
 
 const PM_LABELS: Record<string, string> = {
+  efectivo: 'Efectivo',
+  nequi: 'Nequi',
+  daviplata: 'Daviplata',
+  credibanco: 'Credibanco',
+  redeban: 'Redeban',
+  addi: 'Addi',
+  sistecredito: 'Sistecrédito',
+  otro: 'Otro',
+  transferencia: 'Transferencia bancaria',
+  intercambio: 'Intercambio',
+  'contra-entrega': 'Pago contra entrega',
   datafono: 'Datáfono',
   qr: 'QR Pago',
   link: 'Link de pago',

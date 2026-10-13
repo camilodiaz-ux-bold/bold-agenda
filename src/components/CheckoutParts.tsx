@@ -1,9 +1,6 @@
-import { useState, type ComponentType, type ReactNode } from 'react';
-import {
-  CheckCircle2, CreditCard, Smartphone, Link2, Check, UserPlus, X, Search,
-  ChevronRight, Loader2, RefreshCw, ChevronDown,
-} from 'lucide-react';
-import type { PaymentMethod, SaleLineItem, Client, Service } from '../types';
+import { useState, type ReactNode } from 'react';
+import { CheckCircle2, UserPlus, X, Search, ChevronRight, Loader2, ChevronDown } from 'lucide-react';
+import type { SaleLineItem, Client, Service } from '../types';
 import { formatCOP } from '../data/appointments';
 
 // Tokens compartidos con Detalle de la cita (mismo lenguaje full-screen).
@@ -116,14 +113,7 @@ export function ServiceLine({ item, detail, onRemove }: {
 }
 
 // ── Totales ─────────────────────────────────────────────────────────────────
-export function TotalsSummary({ lines, total, prepaid, tip, balance }: {
-  /** Si se pasa, el resumen detalla cada servicio (paso Cobro); si no, solo el Total. */
-  lines?: SaleLineItem[];
-  total: number;
-  prepaid: number;
-  tip?: number;
-  balance: number;
-}) {
+export function TotalsSummary({ total, prepaid, balance }: { total: number; prepaid: number; balance: number }) {
   const row = (label: string, value: string, color = '#1e1e1e') => (
     <div className="flex items-center justify-between gap-3">
       <span className="text-[14px] text-[#606060]">{label}</span>
@@ -132,79 +122,14 @@ export function TotalsSummary({ lines, total, prepaid, tip, balance }: {
   );
   return (
     <Card className="gap-3">
-      {lines
-        ? lines.map((l, i) => <div key={i}>{row(l.serviceName, formatCOP(l.price))}</div>)
-        : row('Total', formatCOP(total))}
+      {row('Total', formatCOP(total))}
       {prepaid > 0 && row('Prepagado', `-${formatCOP(prepaid)}`, '#15803D')}
-      {tip !== undefined && tip > 0 && row('Propina', `+${formatCOP(tip)}`, '#15803D')}
       <Divider />
       <div className="flex items-center justify-between gap-3">
         <span className={FIELD_LABEL}>Saldo por cobrar</span>
         <span className="text-[16px] font-bold tabular-nums" style={{ color: '#121e6c' }}>{formatCOP(balance)}</span>
       </div>
     </Card>
-  );
-}
-
-// ── Método de pago ──────────────────────────────────────────────────────────
-type IconType = ComponentType<{ size: number; color: string; strokeWidth: number }>;
-
-// Mock de los medios de Bold POS.
-export const PAYMENT_OPTIONS: { method: PaymentMethod; label: string; Icon: IconType }[] = [
-  { method: 'datafono', label: 'Datáfono', Icon: CreditCard },
-  { method: 'qr', label: 'QR Pago', Icon: Smartphone },
-  { method: 'link', label: 'Link de pago', Icon: Link2 },
-];
-
-export function PaymentMethodSelector({ value, onChange, state, onReload }: {
-  value: PaymentMethod | null;
-  onChange: (m: PaymentMethod) => void;
-  state: 'ok' | 'loading' | 'error';
-  onReload: () => void;
-}) {
-  if (state === 'loading') {
-    return (
-      <Card className="items-center justify-center gap-2 py-6 flex-row">
-        <Loader2 size={18} color="#121e6c" className="animate-spin" />
-        <span className="text-[14px] text-[#969696]">Cargando medios de pago…</span>
-      </Card>
-    );
-  }
-  if (state === 'error') {
-    return (
-      <Card className="items-center gap-2 text-center">
-        <p className={FIELD_VALUE}>No pudimos cargar los medios de pago</p>
-        <button onClick={onReload} className="flex items-center gap-1.5 text-[14px] font-bold text-[#121e6c] active:opacity-60">
-          <RefreshCw size={14} color="#121e6c" strokeWidth={2.5} />
-          Reintentar
-        </button>
-      </Card>
-    );
-  }
-  return (
-    <div className="bg-white rounded-2xl px-4 flex flex-col">
-      {PAYMENT_OPTIONS.map(({ method, label, Icon }, i) => {
-        const active = value === method;
-        return (
-          <div key={method}>
-            {i > 0 && <Divider />}
-            <button
-              onClick={() => onChange(method)}
-              className="w-full flex items-center gap-3 py-4 text-left active:opacity-70"
-            >
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: active ? '#121e6c' : '#F7F8FB' }}
-              >
-                <Icon size={16} color={active ? '#fff' : '#3E4983'} strokeWidth={2} />
-              </div>
-              <span className="flex-1 text-[14px] font-semibold" style={{ color: active ? '#121e6c' : '#1e1e1e' }}>{label}</span>
-              {active && <Check size={16} color="#121e6c" strokeWidth={2.5} />}
-            </button>
-          </div>
-        );
-      })}
-    </div>
   );
 }
 

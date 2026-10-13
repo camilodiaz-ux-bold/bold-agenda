@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="logotipo/isotipo">
+<path id="iso" d="M3.20109 17.2081H28.8C28.1845 23.7018 22.6804 28.8 15.9995 28.8C9.31851 28.8 3.81554 23.7018 3.2 17.2081H3.20109ZM16.0005 3.2C9.32068 3.2 3.81662 8.30036 3.20109 14.794H28.8C28.1845 8.30036 22.6804 3.2 15.9995 3.2H16.0005Z" fill="url(#paint0_linear_0_23)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_23" x1="15.8941" y1="3.2" x2="15.8941" y2="28.8" gradientUnits="userSpaceOnUse">
+<stop offset="0.172326" stop-color="#EE424E"/>
+<stop offset="0.833333" stop-color="#121E6C"/>
+</linearGradient>
+</defs>
+</svg>

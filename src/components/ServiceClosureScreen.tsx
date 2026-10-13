@@ -8,10 +8,11 @@ import {
 } from '../lib/closure';
 import { CheckoutStepLayout } from './CheckoutStepLayout';
 import {
-  Card, Section, Field, ActionButton, PrimaryButton, ServiceLine, TotalsSummary,
-  PaymentMethodSelector, PAYMENT_OPTIONS, CheckoutStatusScreen, ClientPicker, ServicePicker,
-  PrototypePanel, type MockResult,
+  Section, Field, ActionButton, PrimaryButton, ServiceLine, TotalsSummary,
+  CheckoutStatusScreen, ClientPicker, ServicePicker, PrototypePanel, type MockResult,
 } from './CheckoutParts';
+import { PaymentSummary, TipControl, PaymentMethodsSection } from './PaymentSetup';
+import { PaymentMethodModal, paymentMethodLabel } from './PaymentMethodModal';
 
 interface Props {
   appointment: Appointment;
@@ -63,13 +64,17 @@ export function ServiceClosureScreen({
   ]);
   const [draftClient, setDraftClient] = useState<DraftClient | null>(null);
 
+  // La propina arranca APAGADA. El preset es el que se aplica al encenderla:
+  // el default configurado si existe; si no, 10%.
+  const [tipEnabled, setTipEnabled] = useState(false);
   const [tipPreset, setTipPreset] = useState<TipPreset>(() =>
-    defaultTipPercent === 5 || defaultTipPercent === 10 ? defaultTipPercent : defaultTipPercent > 0 ? 'custom' : 0);
+    defaultTipPercent === 5 || defaultTipPercent === 10 ? defaultTipPercent : defaultTipPercent > 0 ? 'custom' : 10);
   const [customTip, setCustomTip] = useState(() =>
     defaultTipPercent > 0 && defaultTipPercent !== 5 && defaultTipPercent !== 10
       ? String(Math.round(((appointment.originalPrice ?? service.price) * defaultTipPercent) / 100))
       : '');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [methodModalOpen, setMethodModalOpen] = useState(false);
 
   const [payState, setPayState] = useState<PayState>('idle');
   const [mock, setMock] = useState<MockResult>('confirmado');
@@ -95,11 +100,12 @@ export function ServiceClosureScreen({
   const hasClient = Boolean(clientName);
 
   const { subtotal, prepaid: prepagoAplicado, balance: saldoPendiente } = calcTotals(items);
-  const { amount: rawTip, error: tipError } = calcTip(subtotal, tipPreset, customTip);
-  const tipAmount = saldoPendiente > 0 && !tipError ? rawTip : 0;
+  const { amount: rawTip, error: rawTipError } = calcTip(subtotal, tipPreset, customTip);
+  const tipError = tipEnabled ? rawTipError : null;
+  const tipAmount = tipEnabled && saldoPendiente > 0 && !tipError ? rawTip : 0;
   const chargeNow = saldoPendiente + tipAmount;
   const commissionTotal = totalCommission(items);
-  const methodLabel = PAYMENT_OPTIONS.find(o => o.method === paymentMethod)?.label ?? '';
+  const methodLabel = paymentMethodLabel(paymentMethod);
 
   function addServiceItem(svc: Service) {
     setItems(prev => [...prev, makeLineItem(svc, svc.price, 'agregado')]);
@@ -201,6 +207,22 @@ export function ServiceClosureScreen({
     setStep('done');
   }
 
+  function selectMethod(m: PaymentMethod) {
+    setPaymentMethod(m);
+    setMethodModalOpen(false);
+  }
+
+  function handleTipPreset(p: TipPreset) {
+    // Al pasar a "Otra" el monto arranca en el valor que ya estaba calculado.
+    if (p === 'custom' && tipPreset !== 'custom') setCustomTip(String(rawTip));
+    setTipPreset(p);
+  }
+
+  function handleTipAmount(v: string) {
+    setTipPreset('custom');
+    setCustomTip(v);
+  }
+
   function reloadMethods() {
     setMethodsState('loading');
     later(700, () => setMethodsState('ok'));
@@ -235,6 +257,7 @@ export function ServiceClosureScreen({
   let onBack: (() => void) | undefined = onExit;
   let onClose: (() => void) | undefined = onExit;
   let viewKey: string = step;
+  let title: string | undefined;
 
   if (overlay === 'client') {
     viewKey = 'overlay-client';
@@ -387,61 +410,45 @@ export function ServiceClosureScreen({
             description="No se pudo procesar el pago. Reintenta con el mismo método o elige otro."
             note={methodLabel ? `Método: ${methodLabel} · ${formatCOP(chargeNow)}` : undefined}
           />
-          <ActionButton onClick={() => setPayState('idle')}>Cambiar método</ActionButton>
+          <ActionButton onClick={() => { setPayState('idle'); setMethodModalOpen(true); }}>Cambiar método</ActionButton>
         </div>
       );
       cta = <PrimaryButton onClick={handleCharge}>Reintentar</PrimaryButton>;
     } else {
       const canCharge = Boolean(paymentMethod) && !tipError && methodsState === 'ok';
+      title = 'Método de cobro';
       onBack = () => setStep('items');
+      onClose = undefined;
       ctaSummary = summary;
       body = (
-        <div className="flex flex-col gap-8">
-          <Section label="Resumen">
-            <TotalsSummary lines={items} total={subtotal} prepaid={prepagoAplicado} tip={tipAmount} balance={chargeNow} />
-          </Section>
+        <div className="flex flex-col gap-6">
+          <PaymentSummary
+            total={chargeNow}
+            subtotal={subtotal}
+            prepaid={prepagoAplicado}
+            tip={tipEnabled ? tipAmount : undefined}
+            tipLabel={tipEnabled && typeof tipPreset === 'number' ? `Propina ${tipPreset}%` : 'Propina'}
+          />
 
-          <Section label="Propina">
-            <Card className="gap-3">
-              <div className="flex gap-2">
-                {([0, 5, 10, 'custom'] as TipPreset[]).map(preset => {
-                  const active = tipPreset === preset;
-                  return (
-                    <button
-                      key={String(preset)}
-                      onClick={() => setTipPreset(preset)}
-                      className="flex-1 h-9 rounded-full text-[12px] font-semibold border transition-all active:opacity-70"
-                      style={{
-                        backgroundColor: active ? '#121e6c' : '#fff',
-                        color: active ? '#fff' : '#606060',
-                        borderColor: active ? '#121e6c' : '#d2d4e1',
-                      }}
-                    >
-                      {preset === 0 ? 'Sin propina' : preset === 'custom' ? 'Otra' : `${preset}%`}
-                    </button>
-                  );
-                })}
-              </div>
-              {tipPreset === 'custom' && (
-                <>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Ingresa el monto"
-                    value={customTip}
-                    onChange={e => setCustomTip(e.target.value)}
-                    className="w-full h-10 rounded-xl bg-[#f7f8fb] border px-3 text-[14px] text-[#1e1e1e] outline-none focus:border-[#121e6c]"
-                    style={{ borderColor: tipError ? '#BE123C' : '#d2d4e1' }}
-                  />
-                  {tipError && <p className="text-[12px] text-[#BE123C]">{tipError}</p>}
-                </>
-              )}
-            </Card>
-          </Section>
+          <TipControl
+            enabled={tipEnabled}
+            onToggle={setTipEnabled}
+            preset={tipPreset}
+            onPreset={handleTipPreset}
+            amountText={tipPreset === 'custom' ? customTip : String(rawTip)}
+            onAmountChange={handleTipAmount}
+            error={tipError}
+          />
 
-          <Section label="Método de pago">
-            <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} state={methodsState} onReload={reloadMethods} />
-          </Section>
+          <PaymentMethodsSection
+            method={paymentMethod}
+            amount={chargeNow}
+            state={methodsState}
+            onAdd={() => setMethodModalOpen(true)}
+            onChange={() => setMethodModalOpen(true)}
+            onRemove={() => setPaymentMethod(null)}
+            onReload={reloadMethods}
+          />
 
           <PrototypePanel mock={mock} onMock={setMock} onMethodsDown={simulateMethodsDown} />
         </div>
@@ -493,6 +500,10 @@ export function ServiceClosureScreen({
   return (
     <CheckoutStepLayout
       key={viewKey}
+      title={title}
+      overlay={methodModalOpen && viewKey === 'payment' ? (
+        <PaymentMethodModal selected={paymentMethod} onSelect={selectMethod} onClose={() => setMethodModalOpen(false)} />
+      ) : undefined}
       onBack={onBack}
       backDisabled={busy}
       onClose={onClose}
