@@ -5,10 +5,9 @@ import {
 } from 'lucide-react';
 import type { PaymentMethod, SaleLineItem, Client, Service } from '../types';
 import { formatCOP } from '../data/appointments';
-import { canRemoveLine } from '../lib/closure';
 
 // Tokens compartidos con Detalle de la cita (mismo lenguaje full-screen).
-export const SECTION_LABEL = 'text-[12px] font-normal text-[#3e4983] leading-4';
+export const SECTION_LABEL = 'text-[12px] font-normal text-[#606060] leading-4';
 export const FIELD_LABEL = 'text-[12px] font-bold text-[#121e6c] leading-4';
 export const FIELD_VALUE = 'text-[14px] text-[#1e1e1e] leading-5';
 
@@ -29,7 +28,46 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   return <div className={`bg-white rounded-2xl p-4 flex flex-col gap-4 ${className}`}>{children}</div>;
 }
 
-// ── CTA ─────────────────────────────────────────────────────────────────────
+// ── Campos y botones (frame Figma 29725:6812) ──────────────────────────────
+/** Campo de formulario: label 14 semibold + caja blanca 40px radio 12. Con onClick es un selector (chevron). */
+export function Field({ label, value, placeholder, onClick }: {
+  label: string; value?: string; placeholder?: string; onClick?: () => void;
+}) {
+  const content = (
+    <>
+      <span className={`flex-1 min-w-0 text-left truncate text-[14px] leading-5 font-medium ${value ? 'text-[#1e1e1e]' : 'italic text-[#b0b5c8] font-normal'}`}>
+        {value || placeholder}
+      </span>
+      {onClick && <ChevronDown size={24} color="#121e6c" strokeWidth={2} className="shrink-0" />}
+    </>
+  );
+  return (
+    <div className="flex flex-col gap-1 min-w-0">
+      <span className="text-[14px] leading-5 font-semibold text-[#121e6c]">{label}</span>
+      {onClick ? (
+        <button onClick={onClick} className="h-10 bg-white rounded-xl px-3 py-2 flex items-center gap-3 active:opacity-70">{content}</button>
+      ) : (
+        <div className="h-10 bg-white rounded-xl px-3 py-2 flex items-center gap-3">{content}</div>
+      )}
+    </div>
+  );
+}
+
+/** Botón de segundo nivel dentro del contenido (Figma "APP Button / Action"). */
+export function ActionButton({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full h-12 rounded-xl px-4 flex items-center justify-center gap-2 text-[14px] font-semibold text-[#121e6c] active:opacity-70 transition-opacity disabled:opacity-40"
+      style={{ backgroundColor: '#F1F2F6' }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** CTA de la barra inferior (coral, píldora, 48px). */
 export function PrimaryButton({ children, onClick, disabled, loading }: {
   children: ReactNode; onClick: () => void; disabled?: boolean; loading?: boolean;
 }) {
@@ -37,7 +75,7 @@ export function PrimaryButton({ children, onClick, disabled, loading }: {
     <button
       onClick={onClick}
       disabled={disabled || loading}
-      className="w-full h-12 rounded-full flex items-center justify-center gap-2 font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
+      className="w-full h-12 rounded-full px-4 flex items-center justify-center gap-2 font-bold text-[14px] leading-5 text-white whitespace-nowrap transition-all active:scale-[0.98] disabled:opacity-40"
       style={{ backgroundColor: '#FF2947' }}
     >
       {loading && <Loader2 size={16} color="white" className="animate-spin" />}
@@ -46,46 +84,33 @@ export function PrimaryButton({ children, onClick, disabled, loading }: {
   );
 }
 
-export function SecondaryButton({ children, onClick, tone = 'navy' }: {
-  children: ReactNode; onClick: () => void; tone?: 'navy' | 'muted';
+// ── Línea de servicio (Figma "APP Card / Ecommerce") ────────────────────────
+export function ServiceLine({ item, detail, onRemove }: {
+  item: SaleLineItem; detail?: string; onRemove?: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full h-12 bg-white rounded-full flex items-center justify-center gap-2 active:opacity-70 transition-opacity"
-    >
-      <span className="text-[14px] font-bold" style={{ color: tone === 'navy' ? '#121e6c' : '#606060' }}>{children}</span>
-    </button>
-  );
-}
-
-// ── Línea de servicio ───────────────────────────────────────────────────────
-export function ServiceLine({ items, index, onRemove }: {
-  items: SaleLineItem[]; index: number; onRemove: (idx: number) => void;
-}) {
-  const item = items[index];
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex-1 min-w-0 flex flex-col gap-2">
-        <p className={`${FIELD_LABEL} truncate`}>{item.serviceName}</p>
-        <p className={FIELD_VALUE}>
-          {item.origin === 'agendado' ? 'Agendado' : 'Agregado en la sesión'}
-          {item.prepaid ? ' · Prepagado' : ''}
-        </p>
-      </div>
-      <div className="flex items-center gap-3 shrink-0">
-        <span className="text-[12px] font-bold tabular-nums" style={{ color: '#121e6c' }}>{formatCOP(item.price)}</span>
-        {canRemoveLine(items, index) && (
+    <div className="bg-white rounded-2xl p-4 flex flex-col gap-1">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 text-[14px] leading-5 text-[#1e1e1e]">
+          <span className="truncate">{item.serviceName}{detail ? ` · ${detail}` : ''}</span>
+          <span className="font-bold shrink-0">x1</span>
+        </div>
+        <span className="text-[14px] leading-5 font-medium text-[#1e1e1e] tabular-nums shrink-0">{formatCOP(item.price)}</span>
+        {onRemove && (
           <button
-            onClick={() => onRemove(index)}
+            onClick={onRemove}
             aria-label={`Quitar ${item.serviceName}`}
-            className="w-7 h-7 rounded-full flex items-center justify-center transition-opacity active:opacity-60"
+            className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-opacity active:opacity-60"
             style={{ backgroundColor: '#FFF1F2' }}
           >
-            <X size={13} color="#BE123C" strokeWidth={2.5} />
+            <X size={12} color="#BE123C" strokeWidth={2.5} />
           </button>
         )}
       </div>
+      <p className="text-[12px] leading-4 text-[#606060]">
+        {item.origin === 'agendado' ? 'Agendado' : 'Agregado en la sesión'}
+        {item.prepaid ? ' · Prepagado' : ''}
+      </p>
     </div>
   );
 }
@@ -246,9 +271,11 @@ function SearchField({ value, onChange, placeholder }: { value: string; onChange
   );
 }
 
-export function ClientPicker({ clients, onSelect }: {
+export function ClientPicker({ clients, onSelect, onClear }: {
   clients: Client[];
   onSelect: (c: Client, isNew: boolean) => void;
+  /** Si hay un cliente elegido en el cierre, permite quitarlo. */
+  onClear?: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
@@ -320,6 +347,17 @@ export function ClientPicker({ clients, onSelect }: {
             </div>
             <span className="text-[14px] font-bold text-[#121e6c]">Crear nuevo cliente</span>
           </button>
+          {onClear && (
+            <>
+              <Divider />
+              <button onClick={onClear} className="flex items-center gap-3 py-4 text-left active:opacity-70">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#FFF1F2' }}>
+                  <X size={16} color="#BE123C" strokeWidth={2} />
+                </div>
+                <span className="text-[14px] font-bold text-[#BE123C]">Quitar cliente</span>
+              </button>
+            </>
+          )}
           {filtered.map(c => (
             <div key={c.id}>
               <Divider />

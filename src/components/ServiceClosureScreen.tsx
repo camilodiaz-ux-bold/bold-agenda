@@ -1,19 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import {
-  CheckCircle2, UserX, CalendarClock, UserPlus, Plus, X, ChevronRight,
-  Loader2, Clock, AlertTriangle, RefreshCw, XCircle,
-} from 'lucide-react';
+import { CheckCircle2, UserX, Plus, Loader2, Clock, AlertTriangle, XCircle } from 'lucide-react';
 import type { Appointment, Professional, Service, PaymentMethod, SaleLineItem, Client, ClosureResult } from '../types';
 import { formatCOP, formatDuration } from '../data/appointments';
 import {
   calcTip, calcTotals, canRemoveLine, makeLineItem, totalCommission,
   type TipPreset,
 } from '../lib/closure';
-import { DetailPageShell } from './DetailPageShell';
+import { CheckoutStepLayout } from './CheckoutStepLayout';
 import {
-  Card, Divider, Section, FIELD_LABEL, FIELD_VALUE, PrimaryButton, SecondaryButton,
-  ServiceLine, TotalsSummary, PaymentMethodSelector, PAYMENT_OPTIONS, CheckoutStatusScreen,
-  ClientPicker, ServicePicker, PrototypePanel, type MockResult,
+  Card, Section, Field, ActionButton, PrimaryButton, ServiceLine, TotalsSummary,
+  PaymentMethodSelector, PAYMENT_OPTIONS, CheckoutStatusScreen, ClientPicker, ServicePicker,
+  PrototypePanel, type MockResult,
 } from './CheckoutParts';
 
 interface Props {
@@ -40,6 +37,17 @@ type MethodsState = 'ok' | 'loading' | 'error';
 type DraftClient = { client: Client; isNew: boolean };
 
 const PROCESSING_MS = 1800;
+
+function formatShortDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function timeRange(start: string, minutes: number): string {
+  const [h, mn] = start.split(':').map(Number);
+  const end = h * 60 + mn + minutes;
+  return `${start} – ${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`;
+}
 
 export function ServiceClosureScreen({
   appointment, professional, service, services, clients, defaultTipPercent = 0,
@@ -203,165 +211,113 @@ export function ServiceClosureScreen({
     setMethodsState('error');
   }
 
-  // ── Bloques reutilizados entre pasos ────────────────────────────────────
-  const clientSection = (
-    <Section label="Cliente">
-      <Card className="gap-0">
-        {hasClient ? (
-          <div className="flex items-center justify-between gap-3">
-            <p className={`${FIELD_VALUE} font-bold truncate`}>{clientName}</p>
-            {draftClient && (
-              <button
-                onClick={() => setDraftClient(null)}
-                aria-label="Quitar cliente"
-                className="text-[12px] font-semibold shrink-0 active:opacity-60"
-                style={{ color: '#6C759F' }}
-              >
-                Quitar
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[14px] italic" style={{ color: '#b0b5c8' }}>Sin cliente asociado</p>
-            <button
-              onClick={() => setOverlay('client')}
-              className="flex items-center gap-1.5 text-[12px] font-semibold text-[#121e6c] shrink-0 active:opacity-70"
-            >
-              <UserPlus size={14} color="#121e6c" strokeWidth={2} />
-              Agregar cliente
-            </button>
-          </div>
-        )}
-      </Card>
-    </Section>
+  const serviceCount = `${items.length} ${items.length === 1 ? 'Servicio' : 'Servicios'}`;
+  const summary = { label: serviceCount, value: formatCOP(subtotal) };
+  const durationOf = (item: SaleLineItem) => {
+    const d = services.find(sv => sv.id === item.serviceId)?.duration ?? (item.serviceId === service.id ? service.duration : undefined);
+    return d ? formatDuration(d) : undefined;
+  };
+
+  // Campo Cliente: selector solo si la cita no trae cliente propio.
+  const clientField = (
+    <Field
+      label="Cliente"
+      value={clientName}
+      placeholder="Sin cliente asociado"
+      onClick={appointment.clientName ? undefined : () => setOverlay('client')}
+    />
   );
 
-  // ── Composición por estado: título, navegación, contenido, CTA ──────────
+  // ── Composición por estado: navegación, contenido, barra inferior ───────
   let body: ReactNode = null;
-  let footer: ReactNode;
+  let cta: ReactNode;
+  let ctaSummary: { label: string; value: string } | undefined = summary;
   let onBack: (() => void) | undefined = onExit;
-  let showClose = true;
+  let onClose: (() => void) | undefined = onExit;
   let viewKey: string = step;
 
   if (overlay === 'client') {
     viewKey = 'overlay-client';
     onBack = () => setOverlay(null);
+    ctaSummary = undefined;
     body = (
       <ClientPicker
         clients={clients}
+        onClear={draftClient ? () => { setDraftClient(null); setOverlay(null); } : undefined}
         onSelect={(client, isNew) => { setDraftClient({ client, isNew }); setOverlay(null); }}
       />
     );
   } else if (overlay === 'service') {
     viewKey = 'overlay-service';
     onBack = () => setOverlay(null);
+    ctaSummary = undefined;
     body = <ServicePicker services={services} onSelect={addServiceItem} />;
   } else if (step === 'outcome') {
     body = (
       <div className="flex flex-col gap-8">
-        <Section label="Cita">
-          <Card className="gap-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex flex-col gap-2">
-                <p className={`${FIELD_LABEL} truncate`}>{service.name}</p>
-                <p className={FIELD_VALUE}>{formatDuration(service.duration)} · {professional.name.split(' ')[0]}</p>
-              </div>
-              <p className="text-[12px] font-bold shrink-0 tabular-nums" style={{ color: '#121e6c' }}>
-                {formatCOP(appointment.originalPrice ?? service.price)}
-              </p>
-            </div>
-            <Divider />
-            <p className={appointment.clientName ? FIELD_VALUE : 'text-[14px] italic text-[#b0b5c8]'}>
-              {appointment.clientName ?? 'Sin cliente asociado'}
-            </p>
-          </Card>
-        </Section>
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            {clientField}
+            <Field label="Profesional" value={professional.name.split(' ')[0]} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Fecha" value={formatShortDate(appointment.date)} />
+            <Field label="Hora" value={timeRange(appointment.startTime, service.duration)} />
+          </div>
+        </div>
 
-        <Section label="¿Cómo terminó la cita?">
-          <div className="bg-white rounded-2xl px-4 flex flex-col">
-            <button onClick={() => handleOutcomeSelect('completada')} className="flex items-center gap-3 py-4 text-left active:opacity-70">
-              <div className="w-9 h-9 rounded-full bg-[#F0FDF4] flex items-center justify-center shrink-0">
-                <CheckCircle2 size={18} color="#15803D" strokeWidth={2} />
-              </div>
-              <div className="flex-1 min-w-0 flex flex-col gap-1">
-                <p className={FIELD_LABEL}>Completada</p>
-                <p className="text-[14px] text-[#1e1e1e] leading-5">El servicio se realizó correctamente</p>
-              </div>
-              <ChevronRight size={16} color="#b0b5c8" strokeWidth={2} />
-            </button>
-            <Divider />
-            <button onClick={() => handleOutcomeSelect('no-show')} className="flex items-center gap-3 py-4 text-left active:opacity-70">
-              <div className="w-9 h-9 rounded-full bg-[#FFF1F2] flex items-center justify-center shrink-0">
-                <UserX size={18} color="#BE123C" strokeWidth={2} />
-              </div>
-              <div className="flex-1 min-w-0 flex flex-col gap-1">
-                <p className={FIELD_LABEL}>El cliente no llegó</p>
-                <p className="text-[14px] text-[#1e1e1e] leading-5">Se registrará como no-show</p>
-              </div>
-              <ChevronRight size={16} color="#b0b5c8" strokeWidth={2} />
-            </button>
+        <div className="grid grid-cols-2 gap-3">
+          <ActionButton onClick={() => handleOutcomeSelect('reprogramar')}>Reprogramar</ActionButton>
+          <ActionButton onClick={() => handleOutcomeSelect('no-show')}>Cliente no llegó</ActionButton>
+        </div>
+
+        <Section label="Servicios de la cita">
+          <div className="flex flex-col gap-2">
+            {items.map((item, idx) => <ServiceLine key={idx} item={item} detail={durationOf(item)} />)}
           </div>
         </Section>
-
-        <button
-          onClick={() => handleOutcomeSelect('reprogramar')}
-          className="w-full bg-white rounded-2xl px-3 py-3 flex items-center justify-center gap-2 active:opacity-70 transition-opacity"
-        >
-          <CalendarClock size={16} color="#121e6c" strokeWidth={2} />
-          <span className="text-[14px] font-bold text-[#121e6c]">¿La cita se movió? Reprogramar</span>
-        </button>
       </div>
     );
+    cta = <PrimaryButton onClick={() => handleOutcomeSelect('completada')}>Completada</PrimaryButton>;
   } else if (step === 'noshow-confirm') {
     const retained = items.filter(i => i.prepaid).reduce((s, i) => s + i.price, 0);
     onBack = () => setStep('outcome');
+    ctaSummary = undefined;
     body = (
-      <CheckoutStatusScreen
-        tone="danger"
-        icon={<UserX size={28} strokeWidth={2} />}
-        title={appointment.clientName ? `${appointment.clientName} no se presentó` : 'El cliente no se presentó'}
-        description={retained > 0
-          ? `El prepago de ${formatCOP(retained)} queda retenido según la política de cancelación.`
-          : 'No se generará ningún cobro.'}
-      />
-    );
-    footer = (
-      <div className="flex flex-col gap-2">
-        <button
-          onClick={handleConfirmNoShow}
-          className="w-full h-12 rounded-full font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-          style={{ backgroundColor: '#BE123C' }}
-        >
-          <UserX size={17} color="white" strokeWidth={2} />
-          Confirmar no-show
-        </button>
-        <SecondaryButton onClick={() => setStep('outcome')}>Volver</SecondaryButton>
+      <div className="flex flex-col gap-6">
+        <CheckoutStatusScreen
+          tone="danger"
+          icon={<UserX size={28} strokeWidth={2} />}
+          title={appointment.clientName ? `${appointment.clientName} no se presentó` : 'El cliente no se presentó'}
+          description={retained > 0
+            ? `El prepago de ${formatCOP(retained)} queda retenido según la política de cancelación.`
+            : 'No se generará ningún cobro.'}
+        />
+        <ActionButton onClick={() => setStep('outcome')}>Volver</ActionButton>
       </div>
     );
+    cta = <PrimaryButton onClick={handleConfirmNoShow}>Confirmar no-show</PrimaryButton>;
   } else if (step === 'items') {
     onBack = () => setStep('outcome');
     body = (
       <div className="flex flex-col gap-8">
-        {clientSection}
+        {clientField}
 
         <Section label="Servicios realizados">
-          <Card>
-            {items.map((_, idx) => (
-              <div key={idx} className="flex flex-col gap-4">
-                {idx > 0 && <Divider />}
-                <ServiceLine items={items} index={idx} onRemove={removeItem} />
-              </div>
+          <div className="flex flex-col gap-2">
+            {items.map((item, idx) => (
+              <ServiceLine
+                key={idx}
+                item={item}
+                detail={durationOf(item)}
+                onRemove={canRemoveLine(items, idx) ? () => removeItem(idx) : undefined}
+              />
             ))}
-            <Divider />
-            <button
-              onClick={() => setOverlay('service')}
-              className="flex items-center justify-center gap-1.5 text-[14px] font-bold text-[#121e6c] active:opacity-60"
-            >
-              <Plus size={15} color="#121e6c" strokeWidth={2.5} />
+            <ActionButton onClick={() => setOverlay('service')}>
+              <Plus size={16} color="#121e6c" strokeWidth={2.5} />
               Agregar servicio
-            </button>
-          </Card>
+            </ActionButton>
+          </div>
         </Section>
 
         <Section label="Resumen">
@@ -369,12 +325,13 @@ export function ServiceClosureScreen({
         </Section>
       </div>
     );
-    footer = (
+    cta = (
       <PrimaryButton onClick={() => saldoPendiente > 0 ? setStep('payment') : handleFinalize()}>
         {saldoPendiente > 0 ? 'Continuar al cobro' : 'Finalizar servicio'}
       </PrimaryButton>
     );
   } else if (step === 'payment') {
+    ctaSummary = undefined;
     if (payState === 'processing') {
       viewKey = 'processing';
       onBack = undefined;
@@ -390,7 +347,7 @@ export function ServiceClosureScreen({
     } else if (payState === 'pending') {
       viewKey = 'pending';
       onBack = undefined;
-      showClose = false;
+      onClose = undefined;
       body = (
         <CheckoutStatusScreen
           tone="warning"
@@ -400,7 +357,7 @@ export function ServiceClosureScreen({
           note="Puedes volver a la cita. Actualizaremos el estado automáticamente cuando recibamos la respuesta."
         />
       );
-      footer = <PrimaryButton onClick={onExit}>Volver a la cita</PrimaryButton>;
+      cta = <PrimaryButton onClick={onExit}>Volver a la cita</PrimaryButton>;
     } else if (payState === 'register-failed') {
       viewKey = 'register-failed';
       onBack = undefined;
@@ -409,36 +366,35 @@ export function ServiceClosureScreen({
           tone="warning"
           icon={<AlertTriangle size={28} strokeWidth={2} />}
           title="Pago confirmado"
-          description="No pudimos registrar el cierre."
+          description="No pudimos terminar de registrar el servicio."
           note={`Reintentar el registro no vuelve a cobrar. Referencia de pago: ${paymentRefRef.current}`}
         />
       );
-      footer = (
+      cta = (
         <PrimaryButton onClick={handleRetryRegister} loading={retryingRegister}>
-          {retryingRegister ? 'Registrando…' : <><RefreshCw size={16} color="white" strokeWidth={2.5} /> Reintentar registro</>}
+          {retryingRegister ? 'Registrando…' : 'Reintentar registro'}
         </PrimaryButton>
       );
     } else if (payState === 'declined') {
       viewKey = 'declined';
       onBack = () => setPayState('idle');
       body = (
-        <CheckoutStatusScreen
-          tone="danger"
-          icon={<XCircle size={30} strokeWidth={2} />}
-          title="Pago no aprobado"
-          description="No se pudo procesar el pago. Reintenta con el mismo método o elige otro."
-          note={methodLabel ? `Método: ${methodLabel} · ${formatCOP(chargeNow)}` : undefined}
-        />
-      );
-      footer = (
-        <div className="flex flex-col gap-2">
-          <PrimaryButton onClick={handleCharge}>Reintentar {formatCOP(chargeNow)}</PrimaryButton>
-          <SecondaryButton onClick={() => setPayState('idle')}>Cambiar método</SecondaryButton>
+        <div className="flex flex-col gap-6">
+          <CheckoutStatusScreen
+            tone="danger"
+            icon={<XCircle size={30} strokeWidth={2} />}
+            title="Pago no aprobado"
+            description="No se pudo procesar el pago. Reintenta con el mismo método o elige otro."
+            note={methodLabel ? `Método: ${methodLabel} · ${formatCOP(chargeNow)}` : undefined}
+          />
+          <ActionButton onClick={() => setPayState('idle')}>Cambiar método</ActionButton>
         </div>
       );
+      cta = <PrimaryButton onClick={handleCharge}>Reintentar</PrimaryButton>;
     } else {
       const canCharge = Boolean(paymentMethod) && !tipError && methodsState === 'ok';
       onBack = () => setStep('items');
+      ctaSummary = summary;
       body = (
         <div className="flex flex-col gap-8">
           <Section label="Resumen">
@@ -490,7 +446,7 @@ export function ServiceClosureScreen({
           <PrototypePanel mock={mock} onMock={setMock} onMethodsDown={simulateMethodsDown} />
         </div>
       );
-      footer = (
+      cta = (
         <PrimaryButton onClick={handleCharge} disabled={!canCharge}>
           Cobrar {formatCOP(chargeNow)}
         </PrimaryButton>
@@ -502,7 +458,8 @@ export function ServiceClosureScreen({
     const retainedCommission = totalCommission(items.filter(i => i.prepaid));
     const who = isNoShow ? appointment.clientName : clientName;
     onBack = undefined;
-    showClose = false;
+    onClose = undefined;
+    ctaSummary = undefined;
 
     const checklist = ['La cita fue actualizada en la agenda'];
     if (isNoShow) {
@@ -530,28 +487,20 @@ export function ServiceClosureScreen({
         checklist={checklist}
       />
     );
-    footer = <PrimaryButton onClick={onFinish}>Volver a la agenda</PrimaryButton>;
+    cta = <PrimaryButton onClick={onFinish}>Volver a la agenda</PrimaryButton>;
   }
 
   return (
-    <DetailPageShell
+    <CheckoutStepLayout
       key={viewKey}
-      title="Cierre del servicio"
       onBack={onBack}
       backDisabled={busy}
-      rightAction={showClose ? (
-        <button
-          onClick={onExit}
-          disabled={busy}
-          aria-label="Abandonar cierre"
-          className="w-10 h-10 -mr-2 flex items-center justify-center shrink-0 transition-opacity active:opacity-60 disabled:opacity-30"
-        >
-          <X size={22} color="#121e6c" strokeWidth={2} />
-        </button>
-      ) : undefined}
-      footer={footer}
+      onClose={onClose}
+      closeDisabled={busy}
+      summary={cta ? ctaSummary : undefined}
+      cta={cta}
     >
       {body}
-    </DetailPageShell>
+    </CheckoutStepLayout>
   );
 }
