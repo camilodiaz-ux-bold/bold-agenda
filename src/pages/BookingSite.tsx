@@ -102,12 +102,24 @@ function BranchHero({ branch, height = 200, children }: { branch: BookingBranch;
   );
 }
 
+/** Prototipo: false = entra directo a la sucursal por defecto; true = muestra el selector de sucursales. */
+const BOOKING_MULTI_BRANCH_ENABLED = false;
+const DEFAULT_BOOKING_BRANCH_ID = 'norte';
+
+/** `?branch=<id>` si es válido; si no, Norte cuando el multi-sede está apagado. */
+function resolveInitialBranch(): BookingBranch | null {
+  const fromQuery = new URLSearchParams(window.location.search).get('branch');
+  const byId = (id: string | null) => BOOKING_BRANCHES.find(b => b.id === id) ?? null;
+  return byId(fromQuery) ?? (BOOKING_MULTI_BRANCH_ENABLED ? null : byId(DEFAULT_BOOKING_BRANCH_ID));
+}
+
 export function BookingSite() {
   const storeState = store.get();
   const storePolicy = storeState.bookingPolicy;
 
-  const [step, setStep] = useState<BookingStep>('branch-select');
-  const [selectedBranch, setSelectedBranch] = useState<BookingBranch | null>(null);
+  const [initialBranch] = useState(resolveInitialBranch);
+  const [step, setStep] = useState<BookingStep>(initialBranch ? 'landing' : 'branch-select');
+  const [selectedBranch, setSelectedBranch] = useState<BookingBranch | null>(initialBranch);
   const [activeTab, setActiveTab] = useState<'servicios' | 'detalles' | 'resenas'>('servicios');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
@@ -184,7 +196,7 @@ export function BookingSite() {
 
   function goBack() {
     switch (step) {
-      case 'landing': return setStep('branch-select');
+      case 'landing': return BOOKING_MULTI_BRANCH_ENABLED ? setStep('branch-select') : undefined;
       case 'professional': return setStep('landing');
       case 'datetime': return setStep('professional');
       case 'clientinfo': return setStep('datetime');
@@ -292,7 +304,7 @@ export function BookingSite() {
   }
 
   // Public booking disabled
-  if (!storePolicy.publicBookingEnabled && step === 'branch-select') {
+  if (!storePolicy.publicBookingEnabled && (step === 'branch-select' || step === 'landing')) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-5 px-8" style={{ backgroundColor: '#f7f8fb' }}>
         <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center" style={{ boxShadow: '0 2px 8px rgba(18,30,108,0.1)' }}>
@@ -404,13 +416,15 @@ export function BookingSite() {
             {/* Hero + back */}
             <div className="relative shrink-0">
               <BranchHero branch={selectedBranch} height={200}>
-                <button
-                  onClick={goBack}
-                  className="absolute top-4 left-4 w-9 h-9 rounded-full flex items-center justify-center transition-all active:opacity-70"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
-                >
-                  <ArrowLeft size={18} color="#fff" strokeWidth={2} />
-                </button>
+                {BOOKING_MULTI_BRANCH_ENABLED && (
+                  <button
+                    onClick={goBack}
+                    className="absolute top-4 left-4 w-9 h-9 rounded-full flex items-center justify-center transition-all active:opacity-70"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+                  >
+                    <ArrowLeft size={18} color="#fff" strokeWidth={2} />
+                  </button>
+                )}
               </BranchHero>
             </div>
 
@@ -997,9 +1011,10 @@ export function BookingSite() {
             </div>
             <button
               onClick={() => {
-                setStep('branch-select');
-                setSelectedBranch(null);
+                setStep(BOOKING_MULTI_BRANCH_ENABLED ? 'branch-select' : 'landing');
+                setSelectedBranch(BOOKING_MULTI_BRANCH_ENABLED ? null : initialBranch);
                 setSelectedItems({});
+                setActiveTab('servicios'); setSearchQuery(''); setActiveCategory('Todos');
                 setSelectedDate('');
                 setSelectedTime('');
                 setClientName(''); setClientPhone(''); setClientCedula(''); setClientEmail('');
