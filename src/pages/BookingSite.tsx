@@ -1,20 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
-  ArrowLeft, CheckCircle2, MapPin, Clock, CreditCard, Link2,
+  ArrowLeft, CheckCircle2, MapPin, Clock, AlertCircle,
   ChevronRight, Smartphone, CalendarOff, Star, Search, Plus,
   Minus, X, Navigation, Copy, Phone,
   Users,
 } from 'lucide-react';
 import { formatCOP, formatDuration } from '../data/appointments';
-import { BOOKING_BRANCHES, type BookingBranch, type BookingProfessional } from '../data/bookingData';
+import { BOOKING_BRANCHES, type BookingBranch } from '../data/bookingData';
+import { store, addMinutes, PROTOTYPE_TODAY } from '../store/prototypeStore';
 import {
-  store, getAvailableSlots, resolveProf as resolveStoreProf,
-  addMinutes, PROTOTYPE_TODAY,
-} from '../store/prototypeStore';
-import type { Service, Appointment, Client } from '../types';
+  eligibleProfessionals, getBookingSlots, createHold, releaseHold, consumeHold,
+  validateHold, holdMsLeft, HOLD_WARN_MS, type SlotHold,
+} from '../lib/slotHold';
+import type { Service, Appointment, Client, Professional } from '../types';
 import { getServiceIcon, getServiceColor } from '../lib/serviceVisuals';
 
-type BookingStep = 'branch-select' | 'landing' | 'professional' | 'datetime' | 'clientinfo' | 'payment' | 'confirmed';
+type BookingStep = 'branch-select' | 'landing' | 'professional' | 'datetime' | 'clientinfo' | 'review' | 'slot-unavailable' | 'confirmed';
 
 type SelectedItems = Record<string, { service: Service; qty: number }>;
 
@@ -135,13 +136,21 @@ export function BookingSite() {
   const [resolvedProfId, setResolvedProfId] = useState('');
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
-  const [clientCedula, setClientCedula] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'link' | null>(null);
+  // Hold temporal del horario elegido (simulado, en memoria)
+  const [hold, setHold] = useState<SlotHold | null>(null);
+  const [, setTick] = useState(0);
   const [avismeMsgVisible, setAvismeMsgVisible] = useState(false);
 
   const days = getNextDays(14);
+
+  // El hold es silencioso; solo refrescamos para el aviso discreto cuando está por vencer.
+  useEffect(() => {
+    if (!hold || !['clientinfo', 'review'].includes(step)) return;
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [hold, step]);
 
   // Services are a global catalog configured in Ajustes → Servicios — the same
   // Service entity drives both the admin app and this public catalog.
@@ -153,6 +162,8 @@ export function BookingSite() {
 
   // First service for downstream booking slot calc (prototype simplification)
   const firstItem = Object.values(selectedItems)[0];
+  // Profesionales activos que realizan todos los servicios elegidos (relación service/professional del store)
+  const eligible = eligibleProfessionals(Object.values(selectedItems).map(i => i.service));
   const selectedServiceForFlow: Service | null = firstItem ? firstItem.service : null;
 
   const branchCategories = ['Todos', ...Array.from(new Set(services.map(s => s.category).filter(Boolean)))];
@@ -199,14 +210,20 @@ export function BookingSite() {
       case 'landing': return BOOKING_MULTI_BRANCH_ENABLED ? setStep('branch-select') : undefined;
       case 'professional': return setStep('landing');
       case 'datetime': return setStep('professional');
-      case 'clientinfo': return setStep('datetime');
-      case 'payment': return setStep('clientinfo');
+      case 'clientinfo':
+        // Volver a fecha/hora libera el hold; se conservan servicio, profesional, fecha y datos.
+        releaseHold(hold?.id);
+        setHold(null);
+        setSelectedTime('');
+        return setStep('datetime');
+      case 'review': return setStep('clientinfo');
       default: return;
     }
   }
 
   function goToReservar() {
-    setSelectedProfId('any');
+    // Conserva el profesional elegido si todavía puede hacer los servicios.
+    if (selectedProfId !== 'any' && !eligible.some(p => p.id === selectedProfId)) setSelectedProfId('any');
     setSelectedDate('');
     setSelectedTime('');
     setStep('professional');
@@ -219,13 +236,14 @@ export function BookingSite() {
     setStep('datetime');
   }
 
-  function selectDateTime(date: string, time: string) {
+  /** Al elegir horario se crea el hold; con 'any' se asigna el primer profesional que lo soporta. */
+  function selectDateTime(date: string, time: string, professionalIds: string[]) {
+    if (!selectedServiceForFlow) return;
+    const profId = selectedProfId === 'any' ? professionalIds[0] : selectedProfId;
+    const next = createHold(hold?.id, profId, date, time, selectedServiceForFlow.duration);
+    setHold(next);
     setSelectedDate(date);
     setSelectedTime(time);
-    const s = store.get();
-    const profId = selectedProfId === 'any'
-      ? resolveStoreProf(selectedServiceForFlow!, date, time, s.appointments, s.availabilityBlocks)
-      : selectedProfId;
     setResolvedProfId(profId);
     setStep('clientinfo');
   }
@@ -234,18 +252,14 @@ export function BookingSite() {
     const errors: Record<string, string> = {};
     if (!clientName.trim()) errors.name = 'Campo requerido';
     if (clientPhone.replace(/\D/g, '').length < 10) errors.phone = 'Ingresa un número válido de 10 dígitos';
-    if (!clientCedula.trim()) errors.cedula = 'Campo requerido';
+    if (!clientEmail.trim()) errors.email = 'Campo requerido';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail.trim())) errors.email = 'Ingresa un correo válido';
     setClientErrors(errors);
     return Object.keys(errors).length === 0;
   }
 
   function submitClientInfo() {
-    if (!validateClientInfo()) return;
-    if (selectedServiceForFlow?.requiresDeposit) {
-      setStep('payment');
-    } else {
-      finalizeBooking(null);
-    }
+    if (validateClientInfo()) setStep('review');
   }
 
   const copyAddress = useCallback(() => {
@@ -255,46 +269,55 @@ export function BookingSite() {
     setTimeout(() => setCopyMsg(false), 2000);
   }, [selectedBranch]);
 
-  function finalizeBooking(method: 'card' | 'link' | null = null) {
+  function finalizeBooking() {
     if (!selectedServiceForFlow) return;
+    // Revalida hold/slot justo antes de crear la cita.
+    const check = validateHold(hold?.id, selectedServiceForFlow);
+    if (check !== 'ok' || !hold) {
+      setHold(null);
+      setSelectedTime('');
+      setStep('slot-unavailable');
+      return;
+    }
     const s = store.get();
-    const profId = selectedProfId === 'any'
-      ? resolveStoreProf(selectedServiceForFlow, selectedDate, selectedTime, s.appointments, s.availabilityBlocks)
-      : selectedProfId;
+    const profId = hold.professionalId;
     setResolvedProfId(profId);
 
+    const phone = clientPhone.replace(/\D/g, '');
+    const email = clientEmail.trim();
     const newApt: Appointment = {
       id: `apt_${Date.now()}`,
       professionalId: profId,
       serviceId: selectedServiceForFlow.id,
       clientName: clientName.trim(),
-      clientPhone: clientPhone.replace(/\D/g, ''),
-      clientCedula: clientCedula.trim(),
+      clientPhone: phone,
       date: selectedDate,
       startTime: selectedTime,
       status: 'confirmada',
-      paymentStatus: selectedServiceForFlow.requiresDeposit ? 'pagado-anticipado' : 'pendiente',
-      paymentMethod: selectedServiceForFlow.requiresDeposit ? 'anticipado' : undefined,
+      // Booking V1 sin prepago: toda reserva pública entra como reserva normal.
+      paymentStatus: 'pendiente',
       policySnapshot: { cancellationWindowHours: s.bookingPolicy.cancellationWindowHours },
-      originalPrice: selectedServiceForFlow.requiresDeposit ? selectedServiceForFlow.price : undefined,
     };
 
-    const phone = clientPhone.replace(/\D/g, '');
+    // Cliente existente por celular o correo (nunca por documento); si no, se crea.
     const updatedClients = [...s.clients];
-    const existingIdx = updatedClients.findIndex(c => c.phone === phone || c.cedula === clientCedula.trim());
+    const existingIdx = updatedClients.findIndex(
+      c => c.phone === phone || (!!c.email && c.email.toLowerCase() === email.toLowerCase()),
+    );
     if (existingIdx >= 0) {
       const ec = updatedClients[existingIdx];
-      updatedClients[existingIdx] = { ...ec, visitCount: ec.visitCount + 1, lastVisit: selectedDate };
+      updatedClients[existingIdx] = { ...ec, email: ec.email ?? email, visitCount: ec.visitCount + 1, lastVisit: selectedDate };
     } else {
       const newClient: Client = {
-        id: `c_${Date.now()}`, name: clientName.trim(), phone, cedula: clientCedula.trim(),
-        email: clientEmail.trim() || undefined, totalSpent: 0, visitCount: 1, lastVisit: selectedDate,
+        id: `c_${Date.now()}`, name: clientName.trim(), phone, cedula: '',
+        email, totalSpent: 0, visitCount: 1, lastVisit: selectedDate,
       };
       updatedClients.push(newClient);
     }
 
     store.set(prev => ({ ...prev, appointments: [...prev.appointments, newApt], clients: updatedClients }));
-    if (method !== null) setPaymentMethod(method);
+    consumeHold(hold.id);
+    setHold(null);
     setStep('confirmed');
   }
 
@@ -324,15 +347,15 @@ export function BookingSite() {
 
   // Step-level header (for steps after landing)
   const STEP_TITLES: Partial<Record<BookingStep, string>> = {
-    professional: 'Elige tu profesional',
+    professional: 'Selecciona un profesional',
     datetime: 'Fecha y hora',
     clientinfo: 'Tus datos',
-    payment: 'Pago anticipado',
-    confirmed: '¡Reservado!',
+    review: 'Revisa tu reserva',
+    confirmed: 'Cita confirmada',
   };
 
-  const showGlobalHeader = !['branch-select', 'landing'].includes(step);
-  const showBack = !['branch-select', 'landing', 'confirmed'].includes(step);
+  const showGlobalHeader = !['branch-select', 'landing', 'slot-unavailable'].includes(step);
+  const showBack = !['branch-select', 'landing', 'slot-unavailable', 'confirmed'].includes(step);
 
   return (
     <div className="h-full flex flex-col relative overflow-hidden" style={{ backgroundColor: '#f7f8fb' }}>
@@ -554,12 +577,6 @@ export function BookingSite() {
                                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                                   <span className="text-xs text-[#b0b5c8]">{formatDuration(svc.duration)}</span>
                                   <span className="text-xs font-bold text-[#121e6c]">{formatCOP(svc.price)}</span>
-                                  {svc.requiresDeposit && (
-                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                                      style={{ backgroundColor: '#F0FDFA', color: '#0D9488' }}>
-                                      Pago anticipado
-                                    </span>
-                                  )}
                                 </div>
                               </div>
                             </div>
@@ -763,28 +780,35 @@ export function BookingSite() {
               ))}
             </div>
 
-            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mt-1">¿Con quién quieres tu cita?</p>
+            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mt-1">Selecciona un profesional</p>
 
-            {/* Cualquiera */}
-            <button
-              onClick={() => selectProf('any')}
-              className="w-full bg-white rounded-2xl px-4 py-4 text-left flex items-center gap-3 transition-all active:opacity-70"
-              style={{ border: '1.5px solid #f0f0f4' }}
-            >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#EEF0FB' }}>
-                <Users size={20} color="#121e6c" strokeWidth={1.8} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#1e1e1e]">Cualquiera disponible</p>
-                <p className="text-xs text-[#969696] mt-0.5">Te asignamos al profesional con el mejor horario</p>
-              </div>
-              <ChevronRight size={16} color="#b0b5c8" strokeWidth={2} />
-            </button>
+            {eligible.length === 0 ? (
+              <p className="text-sm text-[#969696] text-center py-8">
+                Ningún profesional atiende esta combinación de servicios. Vuelve y ajusta tu selección.
+              </p>
+            ) : (
+              <>
+                {/* Cualquier profesional disponible (primera opción, seleccionada por defecto) */}
+                <button
+                  onClick={() => selectProf('any')}
+                  className="w-full bg-white rounded-2xl px-4 py-4 text-left flex items-center gap-3 transition-all active:opacity-70"
+                  style={{ border: selectedProfId === 'any' ? '2px solid #FF2947' : '1.5px solid #f0f0f4' }}
+                >
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#EEF0FB' }}>
+                    <Users size={20} color="#121e6c" strokeWidth={1.8} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-[#1e1e1e]">Cualquier profesional disponible</p>
+                    <p className="text-xs text-[#969696] mt-0.5">Verás los horarios de todo el equipo que realiza este servicio</p>
+                  </div>
+                  <ChevronRight size={16} color="#b0b5c8" strokeWidth={2} />
+                </button>
 
-            {/* Professional cards */}
-            {selectedBranch.professionals.map(prof => (
-              <ProfessionalCard key={prof.id} prof={prof} onSelect={() => selectProf(prof.id)} />
-            ))}
+                {eligible.map(prof => (
+                  <ProfessionalCard key={prof.id} prof={prof} selected={selectedProfId === prof.id} onSelect={() => selectProf(prof.id)} />
+                ))}
+              </>
+            )}
           </div>
         )}
 
@@ -826,8 +850,11 @@ export function BookingSite() {
             {selectedDate ? (
               <div className="px-4">
                 {(() => {
-                  const s = store.get();
-                  const slots = getAvailableSlots(selectedServiceForFlow, selectedDate, selectedProfId, s.appointments, s.availabilityBlocks);
+                  const st = store.get();
+                  const slots = getBookingSlots({
+                    service: selectedServiceForFlow, date: selectedDate, profId: selectedProfId,
+                    eligible, appointments: st.appointments, blocks: st.availabilityBlocks, ownHoldId: hold?.id,
+                  });
                   if (slots.length === 0) {
                     return (
                       <div className="flex flex-col items-center gap-4 py-10">
@@ -852,10 +879,10 @@ export function BookingSite() {
                     <>
                       <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest mb-3">Horarios disponibles</p>
                       <div className="flex flex-wrap gap-2">
-                        {slots.map(slot => {
+                        {slots.map(({ time: slot, professionalIds }) => {
                           const isSel = slot === selectedTime;
                           return (
-                            <button key={slot} onClick={() => selectDateTime(selectedDate, slot)}
+                            <button key={slot} onClick={() => selectDateTime(selectedDate, slot, professionalIds)}
                               className="w-[calc(33.333%-6px)] h-10 rounded-xl text-sm font-semibold border-2 transition-all active:opacity-70"
                               style={{ backgroundColor: isSel ? '#121e6c' : '#fff', color: isSel ? '#fff' : '#121e6c', borderColor: isSel ? '#121e6c' : '#e8eaf0' }}>
                               {slot}
@@ -883,14 +910,13 @@ export function BookingSite() {
             {selectedServiceForFlow && selectedDate && selectedTime && (
               <div className="bg-white rounded-xl px-3 py-2.5 border border-gray-100">
                 <p className="text-xs font-semibold text-[#121e6c]">{selectedServiceForFlow.name}</p>
-                <p className="text-xs text-[#969696] mt-0.5">{formatBookingDate(selectedDate)} · {selectedTime}</p>
+                <p className="text-xs text-[#969696] mt-0.5">{resolvedProf?.name ? `${resolvedProf.name} · ` : ''}{formatBookingDate(selectedDate)} · {selectedTime}</p>
               </div>
             )}
             {([
               { key: 'name', label: 'Nombre completo', value: clientName, onChange: setClientName, type: 'text', placeholder: 'Tu nombre completo', required: true },
-              { key: 'phone', label: 'Teléfono de contacto', value: clientPhone, onChange: setClientPhone, type: 'tel', placeholder: '3001234567', required: true },
-              { key: 'cedula', label: 'Número de cédula', value: clientCedula, onChange: setClientCedula, type: 'number', placeholder: '12345678', required: true },
-              { key: 'email', label: 'Email (opcional)', value: clientEmail, onChange: setClientEmail, type: 'email', placeholder: 'tucorreo@gmail.com', required: false },
+              { key: 'phone', label: 'Celular', value: clientPhone, onChange: setClientPhone, type: 'tel', placeholder: '3001234567', required: true },
+              { key: 'email', label: 'Correo electrónico', value: clientEmail, onChange: setClientEmail, type: 'email', placeholder: 'tucorreo@gmail.com', required: true },
             ] as const).map(({ key, label, value, onChange, type, placeholder, required }) => (
               <div key={key} className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-[#606060]">
@@ -912,41 +938,68 @@ export function BookingSite() {
             <button onClick={submitClientInfo} className="w-full h-12 rounded-full font-bold text-sm text-white mt-2 transition-all active:scale-[0.98]" style={{ backgroundColor: '#FF2947' }}>
               Continuar
             </button>
-            <p className="text-[11px] text-[#b0b5c8] text-center leading-relaxed">
-              Al continuar aceptas los términos del servicio y la política de privacidad del salón.
-            </p>
+            {(() => {
+              const left = holdMsLeft(hold?.id);
+              const soon = left !== null && left < HOLD_WARN_MS;
+              return (
+                <p className="text-[11px] text-center leading-relaxed" style={{ color: soon ? '#B45309' : '#b0b5c8' }}>
+                  {soon
+                    ? 'Tu horario está por vencer. Continúa para no perderlo.'
+                    : 'Este horario se reservará temporalmente mientras completas tus datos.'}
+                </p>
+              );
+            })()}
           </div>
         )}
 
         {/* ══════════════════════════════════════════════════
-            PAYMENT
+            REVIEW
         ══════════════════════════════════════════════════ */}
-        {step === 'payment' && selectedServiceForFlow && (
+        {step === 'review' && selectedServiceForFlow && selectedDate && selectedTime && (
           <div className="px-4 pt-4 pb-20 flex flex-col gap-4">
-            <div className="bg-white rounded-2xl px-4 py-4 flex flex-col gap-1 border border-gray-100">
-              <p className="text-sm font-bold text-[#1e1e1e]">{selectedServiceForFlow.name}</p>
-              <p className="text-2xl font-bold text-[#121e6c] tabular-nums mt-1">{formatCOP(selectedServiceForFlow.price)}</p>
-            </div>
-            <div className="bg-[#FFFBEB] rounded-xl px-4 py-3">
-              <p className="text-xs text-[#B45309] leading-relaxed">Este servicio requiere pago anticipado para confirmar la reserva.</p>
-            </div>
-            <p className="text-xs font-semibold text-[#b0b5c8] uppercase tracking-widest">Elige tu método de pago</p>
-            {([
-              { method: 'card' as const, label: 'Tarjeta · Checkout Bold', sub: 'Débito o crédito', Icon: CreditCard },
-              { method: 'link' as const, label: 'Link de pago', sub: 'Recibirás un link por WhatsApp', Icon: Link2 },
-            ]).map(({ method, label, sub, Icon }) => (
-              <button key={method} onClick={() => finalizeBooking(method)}
-                className="w-full flex items-center gap-3 bg-white border-2 border-gray-100 rounded-2xl px-4 py-4 text-left transition-all active:opacity-70">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#EEF0FB' }}>
-                  <Icon size={18} color="#121e6c" strokeWidth={2} />
+            <div className="bg-white rounded-2xl px-4 py-4 flex flex-col gap-2.5 border border-gray-100">
+              {[
+                ['Servicio', selectedServiceForFlow.name],
+                ['Profesional', resolvedProf?.name ?? '—'],
+                ['Fecha', formatBookingDate(selectedDate)],
+                ['Hora', `${selectedTime} – ${addMinutes(selectedTime, selectedServiceForFlow.duration)}`],
+                ['Nombre', clientName.trim()],
+                ['Celular', formatPhone(clientPhone)],
+                ['Correo', clientEmail.trim()],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-start gap-2">
+                  <span className="text-xs text-[#b0b5c8] w-20 shrink-0">{label}</span>
+                  <span className="text-xs font-semibold text-[#1e1e1e] break-words min-w-0">{value}</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-[#1e1e1e]">{label}</p>
-                  <p className="text-xs text-[#969696] mt-0.5">{sub}</p>
-                </div>
-                <ChevronRight size={16} color="#b0b5c8" strokeWidth={2} />
-              </button>
-            ))}
+              ))}
+            </div>
+            <button onClick={finalizeBooking} className="w-full h-12 rounded-full font-bold text-sm text-white mt-2 transition-all active:scale-[0.98]" style={{ backgroundColor: '#FF2947' }}>
+              Confirmar cita
+            </button>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════
+            SLOT UNAVAILABLE (hold expirado o horario tomado)
+        ══════════════════════════════════════════════════ */}
+        {step === 'slot-unavailable' && (
+          <div className="h-full px-6 flex flex-col items-center justify-center gap-5 text-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FFFBEB' }}>
+              <AlertCircle size={30} color="#B45309" strokeWidth={2} />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-[#121e6c]">Este horario ya no está disponible</p>
+              <p className="text-sm text-[#969696] mt-2 leading-relaxed max-w-[280px]">
+                Alguien más acaba de reservarlo. Elige otro horario para continuar.
+              </p>
+            </div>
+            <button
+              onClick={() => setStep('datetime')}
+              className="w-full max-w-[320px] h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
+              style={{ backgroundColor: '#FF2947' }}
+            >
+              Elegir otro horario
+            </button>
           </div>
         )}
 
@@ -959,7 +1012,7 @@ export function BookingSite() {
               <CheckCircle2 size={32} color="#15803D" strokeWidth={2} />
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold text-[#1e1e1e]">¡Reserva confirmada!</p>
+              <p className="text-xl font-bold text-[#1e1e1e]">Cita confirmada</p>
               <p className="text-sm text-[#969696] mt-1.5 leading-relaxed max-w-[280px]">
                 Enviamos una confirmación a tu WhatsApp. Desde ese mensaje puedes consultar, reprogramar o cancelar tu cita.
               </p>
@@ -973,9 +1026,8 @@ export function BookingSite() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-[#1e1e1e]">{selectedServiceForFlow.name}</p>
-                  <p className="text-xs text-[#969696] mt-0.5">{resolvedProf?.name ?? 'Profesional asignada'}</p>
+                  <p className="text-xs text-[#969696] mt-0.5">{resolvedProf?.name ?? 'Profesional'}</p>
                 </div>
-                <p className="ml-auto text-sm font-bold text-[#121e6c] tabular-nums">{formatCOP(selectedServiceForFlow.price)}</p>
               </div>
               <div className="h-px bg-gray-100" />
               <div className="flex flex-col gap-1.5">
@@ -998,15 +1050,9 @@ export function BookingSite() {
                   <span className="text-xs font-semibold text-[#1e1e1e]">{clientName}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#b0b5c8] w-16 shrink-0">WhatsApp</span>
+                  <span className="text-xs text-[#b0b5c8] w-16 shrink-0">Celular</span>
                   <span className="text-xs font-semibold text-[#1e1e1e]">{formatPhone(clientPhone)}</span>
                 </div>
-                {paymentMethod && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#b0b5c8] w-16 shrink-0">Pago</span>
-                    <span className="text-xs font-semibold" style={{ color: '#0D9488' }}>Prepagado · {formatCOP(selectedServiceForFlow.price)}</span>
-                  </div>
-                )}
               </div>
             </div>
             <button
@@ -1017,8 +1063,8 @@ export function BookingSite() {
                 setActiveTab('servicios'); setSearchQuery(''); setActiveCategory('Todos');
                 setSelectedDate('');
                 setSelectedTime('');
-                setClientName(''); setClientPhone(''); setClientCedula(''); setClientEmail('');
-                setPaymentMethod(null);
+                setClientName(''); setClientPhone(''); setClientEmail('');
+                setSelectedProfId('any');
               }}
               className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98]"
               style={{ backgroundColor: '#121e6c' }}
@@ -1076,15 +1122,6 @@ export function BookingSite() {
                   <p className="text-sm font-bold text-[#121e6c]">{formatCOP(serviceDetail.price)}</p>
                 </div>
               </div>
-
-              {/* Deposit note */}
-              {serviceDetail.requiresDeposit && (
-                <div className="bg-[#FFFBEB] rounded-xl px-4 py-3 mb-4">
-                  <p className="text-xs text-[#B45309] leading-relaxed font-medium">
-                    Este servicio requiere <strong>pago anticipado</strong> al confirmar la reserva. El monto se aplica al valor final del servicio.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* CTA footer */}
@@ -1156,47 +1193,25 @@ export function BookingSite() {
   );
 }
 
-// ── Professional card (extracted to avoid repetition) ──────────────────────
-function ProfessionalCard({ prof, onSelect }: { prof: BookingProfessional; onSelect: () => void }) {
+// ── Professional card (datos del store: rol e iniciales) ───────────────────
+function ProfessionalCard({ prof, selected, onSelect }: { prof: Professional; selected: boolean; onSelect: () => void }) {
   return (
     <button
       onClick={onSelect}
-      className="w-full bg-white rounded-2xl px-4 py-4 text-left flex items-start gap-3 transition-all active:opacity-70"
-      style={{ border: '1.5px solid #f0f0f4' }}
+      className="w-full bg-white rounded-2xl px-4 py-4 text-left flex items-center gap-3 transition-all active:opacity-70"
+      style={{ border: selected ? '2px solid #FF2947' : '1.5px solid #f0f0f4' }}
     >
-      {/* Avatar */}
       <div
         className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-white font-bold text-sm"
         style={{ backgroundColor: prof.color }}
       >
         {prof.initials}
       </div>
-
-      {/* Info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-bold text-[#1e1e1e]">{prof.name}</p>
-          {prof.available && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-              style={{ backgroundColor: '#F0FDF4', color: '#15803D' }}>
-              Disponible
-            </span>
-          )}
-        </div>
+        <p className="text-sm font-bold text-[#1e1e1e]">{prof.name}</p>
         <p className="text-xs text-[#969696] mt-0.5">{prof.role}</p>
-        <p className="text-xs text-[#b0b5c8] mt-0.5 truncate">{prof.specialty}</p>
-
-        <div className="flex items-center gap-3 mt-2">
-          <div className="flex items-center gap-1">
-            <StarRow rating={prof.rating} size={11} />
-            <span className="text-xs font-bold text-[#1e1e1e] ml-0.5">{prof.rating}</span>
-            <span className="text-[11px] text-[#969696]">({prof.reviewCount})</span>
-          </div>
-          <span className="text-[11px] text-[#b0b5c8]">{prof.yearsExp} años de exp.</span>
-        </div>
       </div>
-
-      <ChevronRight size={16} color="#b0b5c8" strokeWidth={2} className="shrink-0 mt-1" />
+      <ChevronRight size={16} color="#b0b5c8" strokeWidth={2} className="shrink-0" />
     </button>
   );
 }
