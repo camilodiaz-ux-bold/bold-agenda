@@ -451,22 +451,24 @@ export function BookingSite() {
 
             {/* Branch info card */}
             <div className="bg-white px-5 pt-5 pb-0 shrink-0">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-4">
                 <div
-                  className="w-10 h-10 shrink-0 rounded-full bg-[#121e6c] flex items-center justify-center"
+                  className="w-12 h-12 shrink-0 rounded-full bg-[#121e6c] flex items-center justify-center"
                   style={{ boxShadow: '0px 4px 6px rgba(18,30,108,0.08)' }}
                 >
-                  <img src={profileIcon} alt="" width={20} height={20} />
+                  <img src={profileIcon} alt="" width={24} height={24} />
                 </div>
-                <h1 className="text-xl font-black text-[#121e6c] leading-tight">{selectedBranch.name}</h1>
-              </div>
-              <span className="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full mb-2"
-                style={{ backgroundColor: '#EEF0FB', color: '#121e6c' }}>
-                {selectedBranch.category}
-              </span>
-              <div className="flex items-center gap-1.5 mb-3">
-                <MapPin size={12} color="#969696" strokeWidth={2} />
-                <p className="text-xs text-[#606060]">{selectedBranch.address} · {selectedBranch.neighborhood}</p>
+                <div className="min-w-0 flex flex-col items-start gap-1.5">
+                  <h1 className="text-xl font-black text-[#121e6c] leading-tight">{selectedBranch.name}</h1>
+                  <span className="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                    style={{ backgroundColor: '#EEF0FB', color: '#121e6c' }}>
+                    {selectedBranch.category}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <MapPin size={12} color="#969696" strokeWidth={2} />
+                    <p className="text-xs text-[#606060]">{selectedBranch.address} · {selectedBranch.neighborhood}</p>
+                  </div>
+                </div>
               </div>
 
               {/* Stats row */}
