@@ -14,6 +14,7 @@ import {
 } from '../lib/slotHold';
 import type { Service, Appointment, Client, Professional } from '../types';
 import { getServiceIcon, getServiceColor } from '../lib/serviceVisuals';
+import profileIcon from '../assets/booking/profile-icon.svg';
 
 type BookingStep = 'branch-select' | 'landing' | 'professional' | 'datetime' | 'clientinfo' | 'review' | 'slot-unavailable' | 'confirmed';
 
@@ -450,7 +451,13 @@ export function BookingSite() {
 
             {/* Branch info card */}
             <div className="bg-white px-5 pt-5 pb-0 shrink-0">
-              <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="w-10 h-10 shrink-0 rounded-full bg-[#121e6c] flex items-center justify-center"
+                  style={{ boxShadow: '0px 4px 6px rgba(18,30,108,0.08)' }}
+                >
+                  <img src={profileIcon} alt="" width={20} height={20} />
+                </div>
                 <h1 className="text-xl font-black text-[#121e6c] leading-tight">{selectedBranch.name}</h1>
               </div>
               <span className="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full mb-2"
