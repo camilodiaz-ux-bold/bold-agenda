@@ -436,23 +436,20 @@ export function BookingSite() {
         ══════════════════════════════════════════════════ */}
         {step === 'landing' && selectedBranch && (
           <div className="flex flex-col min-h-full">
-            {/* Hero + back */}
-            <div className="relative shrink-0">
-              <BranchHero branch={selectedBranch} height={200}>
-                {BOOKING_MULTI_BRANCH_ENABLED && (
-                  <button
-                    onClick={goBack}
-                    className="absolute top-4 left-4 w-9 h-9 rounded-full flex items-center justify-center transition-all active:opacity-70"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
-                  >
-                    <ArrowLeft size={18} color="#fff" strokeWidth={2} />
-                  </button>
-                )}
-              </BranchHero>
-            </div>
+            {/* Banner del perfil fuera de V1; back solo con multi-sede */}
+            {BOOKING_MULTI_BRANCH_ENABLED && (
+              <div className="bg-white px-4 pt-4 shrink-0">
+                <button
+                  onClick={goBack}
+                  className="w-8 h-8 flex items-center justify-center rounded-full transition-all active:bg-gray-100"
+                >
+                  <ArrowLeft size={18} color="#121e6c" strokeWidth={2} />
+                </button>
+              </div>
+            )}
 
             {/* Branch info card */}
-            <div className="bg-white px-5 pt-4 pb-0 shrink-0">
+            <div className="bg-white px-5 pt-5 pb-0 shrink-0">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <h1 className="text-xl font-black text-[#121e6c] leading-tight">{selectedBranch.name}</h1>
               </div>
