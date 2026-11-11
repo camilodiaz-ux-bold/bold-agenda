@@ -1,4 +1,8 @@
 import { useState, useEffect, Fragment } from 'react';
+import chevronIcon from '../assets/servicios/chevron.svg';
+import searchIcon from '../assets/servicios/search.svg';
+import addIcon from '../assets/servicios/add.svg';
+import backIcon from '../assets/servicios/back.svg';
 import {
   Briefcase, Users, ShoppingBag, Shield, ChevronRight,
   Check, AlertTriangle, RotateCcw, ToggleLeft, ToggleRight,
@@ -36,6 +40,7 @@ type DetailView =
   | { screen: 'equipo-prof'; profId: string }
   | { screen: 'servicios' }
   | { screen: 'servicios-svc'; svcId: string }
+  | { screen: 'servicios-new' }
   | { screen: 'politica' };
 
 const LABEL_CLZ = 'text-xs font-semibold text-[#606060]';
@@ -53,10 +58,11 @@ export function AjustesPage({
 }: Props) {
   const [detail, setDetail] = useState<DetailView>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [svcQuery, setSvcQuery] = useState('');
   const isAdmin = role === 'admin';
 
   useEffect(() => {
-    const isSecondLevel = detail?.screen === 'equipo-prof' || detail?.screen === 'servicios-svc';
+    const isSecondLevel = detail?.screen === 'equipo-prof' || detail?.screen === 'servicios-svc' || detail?.screen === 'servicios-new';
     onSecondLevelChange?.(isSecondLevel);
     return () => onSecondLevelChange?.(false);
   }, [detail?.screen, onSecondLevelChange]);
@@ -146,40 +152,109 @@ export function AjustesPage({
     );
   }
 
+  // ── Crear servicio ──────────────────────────────────────────────────────
+  if (detail?.screen === 'servicios-new') {
+    const blank: Service = {
+      id: `svc-${Date.now()}`,
+      name: '', description: '', category: SERVICE_CATEGORIES[0],
+      icon: SERVICE_ICON_OPTIONS[0].key, color: Object.keys(SERVICE_COLORS)[0],
+      duration: 30, price: 0, requiresDeposit: false, active: true, commissionPercent: 0,
+    };
+    return (
+      <ServiceDetail
+        svc={blank}
+        isNew
+        appointments={appointments}
+        isAdmin={isAdmin}
+        onSave={(created) => {
+          onUpdateServices([...services, created]);
+          setDetail({ screen: 'servicios' });
+        }}
+        onBack={() => setDetail({ screen: 'servicios' })}
+      />
+    );
+  }
+
   // ── Servicios list detail ───────────────────────────────────────────────
   if (detail?.screen === 'servicios') {
+    const q = svcQuery.trim().toLowerCase();
+    const filtered = q ? services.filter(s => s.name.toLowerCase().includes(q)) : services;
+    const goBack = () => { setSvcQuery(''); setDetail(null); };
     return (
       <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
-        <DetailHeader title="Servicios" onBack={() => setDetail(null)} />
+        <header className="shrink-0 px-3 pt-10 pb-4 flex items-start">
+          <button onClick={goBack} aria-label="Volver" className="w-6 h-6 shrink-0 active:opacity-60">
+            <img src={backIcon} alt="" className="w-6 h-6" />
+          </button>
+          <h1 className="flex-1 text-center text-[16px] font-semibold leading-[20px] text-[#121e6c]">Servicios</h1>
+          <span className="w-6 h-6 shrink-0" aria-hidden />
+        </header>
         <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-4 flex flex-col gap-2">
-            {services.map(svc => {
-              const active = (svc as any).active !== false;
-              const count = aptCount(appointments, a => a.serviceId === svc.id);
-              return (
+          <div className="px-[18px] flex flex-col gap-3 pb-32">
+            <div className="flex items-center gap-4">
+              <label className="flex-1 min-w-0 flex items-center gap-3 h-10 p-3 bg-white rounded-[30px]">
+                <img src={searchIcon} alt="" className="w-6 h-6 shrink-0" />
+                <input
+                  type="text"
+                  value={svcQuery}
+                  onChange={e => setSvcQuery(e.target.value)}
+                  placeholder="Buscar servicio"
+                  className="flex-1 min-w-0 px-1 bg-transparent outline-none text-[14px] leading-[20px] text-[#1e1e1e] placeholder:text-[#606060]"
+                />
+              </label>
+              {isAdmin && (
                 <button
-                  key={svc.id}
-                  onClick={() => setDetail({ screen: 'servicios-svc', svcId: svc.id })}
-                  className="flex items-center gap-3 bg-white rounded-[16px] p-[12px] active:opacity-70 transition-all"
-                  style={{ opacity: active ? 1 : 0.55 }}
+                  onClick={() => setDetail({ screen: 'servicios-new' })}
+                  className="h-10 flex items-center shrink-0 active:opacity-60"
                 >
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-[#1e1e1e]">{svc.name}</p>
-                      {!active && <span className="text-[10px] font-semibold text-[#969696] bg-gray-100 rounded-full px-1.5 py-0.5">Inactivo</span>}
-                    </div>
-                    <p className="text-xs text-[#969696] mt-0.5">
-                      {formatDuration(svc.duration)}{svc.requiresDeposit ? ' · Pago anticipado' : ''}
-                    </p>
-                    {count > 0 && <p className="text-[10px] text-[#b0b5c8] mt-0.5">{count} cita{count > 1 ? 's' : ''} activa{count > 1 ? 's' : ''}</p>}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-bold tabular-nums text-[#121e6c]">{formatCOP(svc.price)}</span>
-                    <ChevronRight size={16} color="#b0b5c8" strokeWidth={2} />
-                  </div>
+                  <img src={addIcon} alt="" className="w-6 h-6" />
+                  <span className="pl-2 text-[12px] font-bold leading-[16px] underline text-[#121e6c]">Crear</span>
                 </button>
-              );
-            })}
+              )}
+            </div>
+
+            {services.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 py-16 text-center">
+                <p className="text-[14px] text-[#606060]">No tienes servicios todavía</p>
+                {isAdmin && (
+                  <button
+                    onClick={() => setDetail({ screen: 'servicios-new' })}
+                    className="h-12 px-8 rounded-full font-bold text-sm text-white active:scale-[0.98]"
+                    style={{ backgroundColor: '#FF2947' }}
+                  >
+                    Agregar servicio
+                  </button>
+                )}
+              </div>
+            ) : filtered.length === 0 ? (
+              <p className="py-12 text-center text-[14px] text-[#606060]">Sin resultados para “{svcQuery}”</p>
+            ) : (
+              filtered.map(svc => {
+                const active = (svc as any).active !== false;
+                return (
+                  <button
+                    key={svc.id}
+                    onClick={() => setDetail({ screen: 'servicios-svc', svcId: svc.id })}
+                    className="w-full flex items-start gap-3 bg-white rounded-[16px] py-3 pl-3 pr-2 text-left active:opacity-70 transition-opacity"
+                    style={{ opacity: active ? 1 : 0.55 }}
+                  >
+                    <div className="flex-1 min-w-0 flex flex-col gap-2 justify-center">
+                      <p className="text-[14px] font-bold leading-[20px] text-[#121e6c]">
+                        {svc.name}
+                        {!active && <span className="ml-2 text-[10px] font-semibold text-[#969696] bg-gray-100 rounded-full px-1.5 py-0.5 align-middle">Inactivo</span>}
+                      </p>
+                      <div className="flex flex-col gap-[2px] text-[14px] leading-[20px] text-[#1e1e1e]">
+                        <p>{formatDuration(svc.duration)}</p>
+                        <p>{formatCOP(svc.price)}</p>
+                      </div>
+                    </div>
+                    <div className="relative shrink-0 w-7 h-7">
+                      <img src={chevronIcon} alt="" className="absolute block inset-[7.14%] w-[85.72%] h-[85.72%] max-w-none" />
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -825,8 +900,8 @@ function ProfDetail({ prof, services, appointments, isAdmin, onSave, onBack }: {
 
 const DURATION_OPTIONS: number[] = [15, 30, 45, 60, 75, 90, 105, 120, 150, 180, 210, 240, 300];
 
-function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
-  svc: Service; appointments: Appointment[]; isAdmin: boolean;
+function ServiceDetail({ svc, isNew = false, appointments, isAdmin, onSave, onBack }: {
+  svc: Service; isNew?: boolean; appointments: Appointment[]; isAdmin: boolean;
   onSave: (s: Service) => void; onBack: () => void;
 }) {
   const [name, setName] = useState(svc.name);
@@ -860,10 +935,12 @@ function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
   // Normalize the original the same way local state defaults optional fields,
   // so an untouched form (e.g. active undefined → true) doesn't read as dirty.
   const originalNormalized: Service = { ...svc, active: (svc as any).active !== false };
-  const dirty = JSON.stringify(candidate) !== JSON.stringify(originalNormalized);
+  const dirty = isNew
+    ? name.trim().length > 0
+    : JSON.stringify(candidate) !== JSON.stringify(originalNormalized);
 
   function handleSave() {
-    onSave(candidate);
+    onSave({ ...candidate, name: name.trim() });
   }
 
   function handleBack() {
@@ -876,7 +953,7 @@ function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: '#F7F8FB' }}>
-      <DetailHeader title={svc.name} onBack={handleBack} />
+      <DetailHeader title={isNew ? 'Crear servicio' : svc.name} onBack={handleBack} />
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
         {count > 0 && (
           <p className="text-[10px] text-[#b0b5c8]">{count} cita{count > 1 ? 's' : ''} activa{count > 1 ? 's' : ''}</p>
@@ -1097,7 +1174,7 @@ function ServiceDetail({ svc, appointments, isAdmin, onSave, onBack }: {
             className="w-full h-12 rounded-full font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
             style={{ backgroundColor: '#FF2947' }}
           >
-            Guardar cambios
+            {isNew ? 'Crear servicio' : 'Guardar cambios'}
           </button>
         </div>
       )}
